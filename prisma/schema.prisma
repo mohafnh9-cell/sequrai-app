@@ -1,0 +1,205 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Plan {
+  TRIAL
+  BUILDER
+  STUDIO
+  AGENCY
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum Provider {
+  GITHUB
+  VERCEL
+  SUPABASE
+  FIREBASE
+  REPLIT
+  LOVABLE
+  BOLT
+  OTHER
+}
+
+enum ProjectStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum ScanStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum ScanTrigger {
+  MANUAL
+  MCP
+  GITHUB_PUSH
+  GITHUB_PR
+  SCHEDULED
+}
+
+enum Severity {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum VulnCategory {
+  SECRETS
+  SQL_INJECTION
+  XSS
+  CORS
+  SUPABASE_RLS
+  FIREBASE_RULES
+  DEPENDENCIES
+  AUTH
+  API_SECURITY
+  CONFIG
+}
+
+enum VulnStatus {
+  OPEN
+  FIXED
+  IGNORED
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  plan        Plan     @default(TRIAL)
+  stripeId    String?  @unique
+  trialEndsAt DateTime?
+
+  members     OrganizationMember[]
+  projects    Project[]
+  invitations Invitation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String @id @default(cuid())
+  userId         String
+  organizationId String
+  role           Role   @default(MEMBER)
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, organizationId])
+  @@map("organization_members")
+}
+
+model Invitation {
+  id             String    @id @default(cuid())
+  email          String
+  organizationId String
+  role           Role      @default(MEMBER)
+  token          String    @unique @default(cuid())
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("invitations")
+}
+
+model Project {
+  id             String        @id @default(cuid())
+  organizationId String
+  name           String
+  repoUrl        String?
+  publicUrl      String?
+  provider       Provider      @default(OTHER)
+  status         ProjectStatus @default(ACTIVE)
+  securityScore  Int?
+  lastScanAt     DateTime?
+  description    String?
+
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  scans           Scan[]
+  vulnerabilities Vulnerability[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("projects")
+}
+
+model Scan {
+  id          String      @id @default(cuid())
+  projectId   String
+  status      ScanStatus  @default(PENDING)
+  trigger     ScanTrigger @default(MANUAL)
+  startedAt   DateTime?
+  finishedAt  DateTime?
+  summary     String?
+  scoreBefore Int?
+  scoreAfter  Int?
+  errorMessage String?
+
+  project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  vulnerabilities Vulnerability[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("scans")
+}
+
+model Vulnerability {
+  id             String       @id @default(cuid())
+  scanId         String
+  projectId      String
+  severity       Severity
+  category       VulnCategory
+  title          String
+  description    String       @db.Text
+  impact         String?      @db.Text
+  recommendation String?      @db.Text
+  filePath       String?
+  lineNumber     Int?
+  status         VulnStatus   @default(OPEN)
+  aiFixPrompt    String?      @db.Text
+  cursorPrompt   String?      @db.Text
+  claudePrompt   String?      @db.Text
+  codeSnippet    String?      @db.Text
+
+  scan    Scan    @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("vulnerabilities")
+}
