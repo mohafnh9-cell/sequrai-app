@@ -32,7 +32,7 @@ export default function IntegrationsPage() {
       await supabase.auth.signInWithOAuth({
         provider: "github",
         options: {
-          scopes: "repo read:user",
+          scopes: "repo read:user user:email",
           redirectTo: `${window.location.origin}/auth/callback?next=/integrations`,
           queryParams: { prompt: "consent" },
         },

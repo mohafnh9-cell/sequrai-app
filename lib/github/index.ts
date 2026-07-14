@@ -17,7 +17,7 @@ export async function getGitHubRepos(accessToken: string): Promise<GitHubRepo[]>
 
   while (true) {
     const res = await fetch(
-      `https://api.github.com/user/repos?per_page=100&page=${page}&sort=updated&affiliation=owner,collaborator`,
+      `https://api.github.com/user/repos?per_page=100&page=${page}&sort=updated&affiliation=owner,collaborator,organization_member`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -26,7 +26,9 @@ export async function getGitHubRepos(accessToken: string): Promise<GitHubRepo[]>
       }
     );
 
-    if (!res.ok) break;
+    if (!res.ok) {
+      throw new Error(`GitHub API returned ${res.status}`);
+    }
     const data: GitHubRepo[] = await res.json();
     if (data.length === 0) break;
     repos.push(...data);
@@ -35,6 +37,25 @@ export async function getGitHubRepos(accessToken: string): Promise<GitHubRepo[]>
   }
 
   return repos;
+}
+
+export async function getGitHubTokenScopes(accessToken: string): Promise<string[]> {
+  const res = await fetch("https://api.github.com/user", {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: "application/vnd.github.v3+json",
+    },
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    throw new Error(`GitHub API returned ${res.status}`);
+  }
+
+  return (res.headers.get("x-oauth-scopes") ?? "")
+    .split(",")
+    .map((scope) => scope.trim())
+    .filter(Boolean);
 }
 
 export async function getGitHubUser(accessToken: string) {
