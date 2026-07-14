@@ -31,7 +31,12 @@ export function OrgSetupForm() {
       fd.set("name", values.name);
       const result = await createOrganizationAction(fd);
       if (result?.error) {
-        setError("name", { message: String(result.error) });
+        const err = result.error as Record<string, string[]> | string;
+        const msg =
+          typeof err === "string"
+            ? err
+            : err._root?.[0] ?? err.name?.[0] ?? "Something went wrong. Please try again.";
+        setError("name", { message: msg });
       }
     });
   };

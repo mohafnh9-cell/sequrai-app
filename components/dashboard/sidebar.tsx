@@ -7,7 +7,6 @@ import {
   LayoutDashboard,
   FolderGit2,
   Settings,
-  CreditCard,
   LogOut,
   ChevronDown,
   Plus,
@@ -15,7 +14,6 @@ import {
   Sparkles,
   Clock,
   Puzzle,
-  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -34,14 +32,13 @@ import { createClient } from "@/lib/supabase/client";
 const PRIMARY_NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/projects", label: "Projects", icon: FolderGit2 },
+  { href: "/integrations", label: "Integrations", icon: Puzzle },
   { href: "/security", label: "Security", icon: ShieldAlert, comingSoon: true },
   { href: "/ai-fixes", label: "AI Fixes", icon: Sparkles, comingSoon: true },
   { href: "/timeline", label: "Timeline", icon: Clock, comingSoon: true },
-  { href: "/integrations", label: "Integrations", icon: Puzzle, comingSoon: true },
 ] as const;
 
 const SETTINGS_NAV = [
-  { href: "/billing", label: "Billing", icon: CreditCard },
   { href: "/settings", label: "Settings", icon: Settings },
 ] as const;
 
