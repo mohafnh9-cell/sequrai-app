@@ -11,6 +11,21 @@ export interface GitHubRepo {
   default_branch: string;
 }
 
+export async function getGitHubRepoById(
+  accessToken: string,
+  repoId: number
+): Promise<GitHubRepo | null> {
+  const res = await fetch(`https://api.github.com/repositories/${repoId}`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: "application/vnd.github.v3+json",
+    },
+    cache: "no-store",
+  });
+  if (!res.ok) return null;
+  return res.json() as Promise<GitHubRepo>;
+}
+
 export async function getGitHubRepos(accessToken: string): Promise<GitHubRepo[]> {
   const repos: GitHubRepo[] = [];
   let page = 1;

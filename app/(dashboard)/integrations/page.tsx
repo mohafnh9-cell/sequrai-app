@@ -74,21 +74,49 @@ export default function IntegrationsPage() {
     if (!toSave.length) return;
 
     setStep("saving");
-    const res = await fetch("/api/github/connect", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ repos: toSave }),
-    });
+    setErrorMsg("");
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 20_000);
+    try {
+      const res = await fetch("/api/github/connect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repos: toSave }),
+        signal: controller.signal,
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { saved?: number; error?: string; needsReauth?: boolean }
+        | null;
+      if (data?.needsReauth || res.status === 403) {
+        localStorage.setItem("sequrai_github_connect", "1");
+        await supabase.auth.signInWithOAuth({
+          provider: "github",
+          options: {
+            scopes: "repo read:user user:email",
+            redirectTo: `${window.location.origin}/auth/callback?next=/integrations`,
+            queryParams: { prompt: "consent" },
+          },
+        });
+        return;
+      }
+      if (!res.ok) {
+        throw new Error(data?.error || `Could not save repositories (${res.status}).`);
+      }
 
-    const data = await res.json();
-    if (!res.ok) {
-      setErrorMsg(data.error || "Failed to save repos");
+      setSavedCount(data?.saved ?? toSave.length);
+      setStep("done");
+    } catch (error) {
+      setErrorMsg(
+        error instanceof DOMException && error.name === "AbortError"
+          ? "Saving took too long. Please try again."
+          : error instanceof Error
+            ? error.message
+            : "Failed to save repositories."
+      );
       setStep("error");
-      return;
+    } finally {
+      window.clearTimeout(timeout);
     }
-
-    setSavedCount(data.saved);
-    setStep("done");
   };
 
   const filtered = repos.filter(
