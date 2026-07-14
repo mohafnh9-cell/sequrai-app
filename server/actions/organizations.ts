@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { OrganizationInsert } from "@/types/database";
 import { z } from "zod";
 
 // ─── Organization Server Actions ──────────────────────────────────────────────
@@ -34,29 +33,12 @@ export async function createOrganizationAction(formData: FormData) {
 
   const slug = `${slugify(parsed.data.name)}-${Math.random().toString(36).slice(2, 6)}`;
 
-  const payload: OrganizationInsert = {
-    name: parsed.data.name,
-    slug,
-    plan: "FREE",
-  };
+  const { error } = await supabase.rpc("create_organization_with_owner", {
+    organization_name: parsed.data.name,
+    organization_slug: slug,
+  });
 
-  const { data: org, error: orgError } = await supabase
-    .from("organizations")
-    .insert(payload)
-    .select()
-    .single();
-
-  if (orgError) return { error: { _root: [orgError.message] } };
-
-  const { error: memberError } = await supabase
-    .from("organization_members")
-    .insert({
-      organization_id: org.id,
-      user_id: user.id,
-      role: "OWNER",
-    });
-
-  if (memberError) return { error: { _root: [memberError.message] } };
+  if (error) return { error: { _root: [error.message] } };
 
   revalidatePath("/dashboard");
   redirect("/dashboard");
