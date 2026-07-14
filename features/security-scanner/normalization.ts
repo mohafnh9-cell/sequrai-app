@@ -1,0 +1,70 @@
+import { DEFAULT_BINARY_EXTENSIONS } from "./constants";
+import type { ScanConfig } from "./config";
+import { extensionOf, sanitizePath } from "./path";
+import type { InputFile, NormalizedFile, ScanOmission } from "./types";
+
+function looksBinary(content: string): boolean {
+  return content.includes("\0");
+}
+
+export function normalizeFiles(
+  files: InputFile[],
+  config: ScanConfig,
+): { files: NormalizedFile[]; omissions: ScanOmission[]; bytes: number; truncated: boolean } {
+  const normalized: NormalizedFile[] = [];
+  const omissions: ScanOmission[] = [];
+  let bytes = 0;
+  let truncated = false;
+
+  for (const input of [...files].sort((a, b) => a.path.localeCompare(b.path))) {
+    const path = sanitizePath(input.path);
+    if (!path) {
+      omissions.push({ path: input.path, reason: "invalid-path" });
+      continue;
+    }
+    const segments = path.split("/");
+    if (
+      segments.some((segment) => config.ignoredSegments.includes(segment)) ||
+      path.startsWith("public/assets/") ||
+      path.endsWith(".map") ||
+      /\.min\.(?:js|css)$/i.test(path) ||
+      /\.generated\.[^.]+$/i.test(path)
+    ) {
+      omissions.push({ path, reason: "ignored" });
+      continue;
+    }
+    const extension = extensionOf(path);
+    if (
+      extension === ".md" &&
+      !/(?:^|\/)(?:readme|security|auth|configuration|config|deployment|environment)[^/]*\.md$/i.test(path)
+    ) {
+      omissions.push({ path, reason: "ignored" });
+      continue;
+    }
+    if (
+      DEFAULT_BINARY_EXTENSIONS.has(extension) ||
+      looksBinary(input.content) ||
+      (config.includeExtensions &&
+        !config.includeExtensions.includes(extension) &&
+        !path.endsWith(".env.example") &&
+        !/(?:^|\/)Dockerfile$/i.test(path))
+    ) {
+      omissions.push({ path, reason: "binary" });
+      continue;
+    }
+    const size = new TextEncoder().encode(input.content).byteLength;
+    if (size > config.maxFileBytes) {
+      omissions.push({ path, reason: "file-too-large" });
+      continue;
+    }
+    if (normalized.length >= config.maxFiles || bytes + size > config.maxTotalBytes) {
+      omissions.push({ path, reason: "total-limit" });
+      truncated = true;
+      continue;
+    }
+    const content = input.content.replace(/\r\n?/g, "\n");
+    normalized.push({ path, content, lines: content.split("\n"), extension, bytes: size });
+    bytes += size;
+  }
+  return { files: normalized, omissions, bytes, truncated };
+}

@@ -14,9 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { EmptyState } from "@/components/shared/EmptyState";
-import { MetricCard } from "@/components/shared/MetricCard";
 import { ProjectDeleteButton } from "@/features/projects/components/ProjectDeleteButton";
+import { ProjectScanOverview } from "@/features/security-scanner/components/ProjectScanOverview";
 import { formatDate } from "@/lib/utils";
 import type { ProjectRow } from "@/types/database";
 import type { Metadata } from "next";
@@ -70,7 +69,7 @@ export default async function ProjectDetailPage({
   const p = project as ProjectRow;
 
   return (
-    <div className="p-6 space-y-6 max-w-4xl">
+    <div className="p-6 space-y-8 max-w-6xl">
       {/* Back */}
       <Button variant="ghost" size="sm" asChild className="gap-1.5 -ml-1">
         <Link href="/projects">
@@ -110,32 +109,10 @@ export default async function ProjectDetailPage({
         </div>
       </div>
 
-      {/* Metric cards */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <MetricCard
-          title="Security Score"
-          value="—"
-          subtitle="No scans yet"
-          valueColor="text-muted-foreground"
-        />
-        <MetricCard
-          title="Open Issues"
-          value="—"
-          subtitle="Scanner not active"
-          valueColor="text-muted-foreground"
-        />
-        <MetricCard
-          title="Last Scan"
-          value="Never"
-          subtitle="Ready to scan"
-          valueColor="text-muted-foreground"
-        />
-      </div>
-
       {/* Details */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6">
         {/* Description + links */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="space-y-4">
           <Card className="border-border/50">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -198,23 +175,12 @@ export default async function ProjectDetailPage({
           </Card>
         </div>
 
-        {/* Quick actions / Coming soon */}
-        <div className="space-y-4">
-          <Card className="border-border/50">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Security
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <EmptyState
-                title="Scanner coming soon"
-                description="Security scanning will be available in a future release."
-              />
-            </CardContent>
-          </Card>
-        </div>
       </div>
+
+      <ProjectScanOverview
+        projectId={p.id}
+        repositoryConnected={Boolean(p.github_repo)}
+      />
     </div>
   );
 }

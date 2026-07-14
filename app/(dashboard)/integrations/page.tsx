@@ -54,7 +54,7 @@ export default function IntegrationsPage() {
     const pending = localStorage.getItem("sequrai_github_connect");
     if (pending) {
       localStorage.removeItem("sequrai_github_connect");
-      fetchRepos();
+      queueMicrotask(() => void fetchRepos());
     }
   }, [fetchRepos]);
 

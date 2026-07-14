@@ -18,6 +18,20 @@ export type ProjectFramework =
   | "ASTRO"
   | "OTHER";
 export type SubscriptionStatus = "active" | "trialing" | "past_due" | "canceled" | "unpaid";
+export type ScanType = "full" | "incremental" | "file";
+export type ScanStatus =
+  | "queued"
+  | "fetching_repository"
+  | "indexing"
+  | "scanning"
+  | "calculating_score"
+  | "completed"
+  | "failed"
+  | "cancelled";
+export type FindingSeverity = "critical" | "high" | "medium" | "low" | "info";
+export type FindingConfidence = "high" | "medium" | "low";
+export type FindingStatus = "open" | "fixed" | "ignored" | "false_positive";
+export type FindingCategory = string;
 
 // ─── Row Types (what comes out of the DB) ────────────────────────────────────
 
@@ -56,6 +70,13 @@ export type ProjectRow = {
   github_repo: string | null;
   production_url: string | null;
   framework: ProjectFramework | null;
+  github_repository_id: number | null;
+  github_default_branch: string | null;
+  github_last_commit_sha: string | null;
+  github_is_private: boolean | null;
+  github_connected_at: string | null;
+  security_score: number | null;
+  last_scan_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -72,6 +93,82 @@ export type SubscriptionRow = {
   updated_at: string;
 };
 
+export type ScanRow = {
+  id: string;
+  organization_id: string;
+  project_id: string;
+  repository_id: string;
+  triggered_by_user_id: string;
+  trigger_type: "manual" | "webhook" | "scheduled" | "mcp";
+  scan_type: ScanType;
+  status: ScanStatus;
+  progress: number;
+  progress_message: string | null;
+  branch: string | null;
+  commit_sha: string | null;
+  security_score: number | null;
+  score_breakdown: Json;
+  detected_stack: Json;
+  omissions: Json;
+  metrics: Json;
+  summary: string | null;
+  files_discovered: number;
+  files_analyzed: number;
+  findings_count: number;
+  critical_count: number;
+  high_count: number;
+  medium_count: number;
+  low_count: number;
+  info_count: number;
+  error_code: string | null;
+  error_message: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  failed_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ScanFindingRow = {
+  id: string;
+  scan_id: string;
+  organization_id: string;
+  project_id: string;
+  repository_id: string;
+  rule_id: string;
+  severity: FindingSeverity;
+  confidence: FindingConfidence;
+  category: FindingCategory;
+  title: string;
+  description: string;
+  impact: string | null;
+  recommendation: string;
+  file_path: string;
+  start_line: number;
+  end_line: number | null;
+  code_snippet: string | null;
+  evidence: string | null;
+  fingerprint: string;
+  status: FindingStatus;
+  metadata: Json;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RepositoryScanStateRow = {
+  id: string;
+  repository_id: string;
+  organization_id: string;
+  active_scan_id: string | null;
+  last_scan_id: string | null;
+  last_commit_sha: string | null;
+  last_full_scan_at: string | null;
+  last_security_score: number | null;
+  open_findings_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
 // ─── Insert Types (what you send to create a row) ────────────────────────────
 
 export type ProfileInsert = Omit<ProfileRow, "created_at" | "updated_at">;
@@ -82,12 +179,33 @@ export type OrganizationInsert = Omit<OrganizationRow, "id" | "created_at" | "up
 export type OrganizationMemberInsert = Omit<OrganizationMemberRow, "id" | "created_at"> & {
   id?: string;
 };
-export type ProjectInsert = Omit<ProjectRow, "id" | "created_at" | "updated_at"> & {
+export type ProjectInsert = Omit<
+  ProjectRow,
+  | "id"
+  | "created_at"
+  | "updated_at"
+  | "github_repository_id"
+  | "github_default_branch"
+  | "github_last_commit_sha"
+  | "github_is_private"
+  | "github_connected_at"
+  | "security_score"
+  | "last_scan_at"
+> & {
   id?: string;
+  github_repository_id?: number | null;
+  github_default_branch?: string | null;
+  github_last_commit_sha?: string | null;
+  github_is_private?: boolean | null;
+  github_connected_at?: string | null;
+  security_score?: number | null;
+  last_scan_at?: string | null;
 };
 export type SubscriptionInsert = Omit<SubscriptionRow, "id" | "created_at" | "updated_at"> & {
   id?: string;
 };
+export type ScanInsert = Omit<ScanRow, "id" | "created_at" | "updated_at"> & { id?: string };
+export type ScanFindingInsert = Omit<ScanFindingRow, "id" | "created_at" | "updated_at"> & { id?: string };
 
 // ─── Update Types ─────────────────────────────────────────────────────────────
 
@@ -95,6 +213,12 @@ export type ProfileUpdate = Partial<Omit<ProfileRow, "id" | "created_at">>;
 export type OrganizationUpdate = Partial<Omit<OrganizationRow, "id" | "created_at">>;
 export type ProjectUpdate = Partial<Omit<ProjectRow, "id" | "organization_id" | "created_at">>;
 export type SubscriptionUpdate = Partial<Omit<SubscriptionRow, "id" | "organization_id" | "created_at">>;
+export type ScanUpdate = Partial<
+  Omit<
+    ScanRow,
+    "id" | "organization_id" | "project_id" | "repository_id" | "triggered_by_user_id" | "created_at"
+  >
+>;
 
 // ─── Joined / Extended Types ──────────────────────────────────────────────────
 

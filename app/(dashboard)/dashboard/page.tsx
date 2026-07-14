@@ -80,6 +80,43 @@ export default async function DashboardPage() {
     .order("created_at", { ascending: false })
     .limit(5);
 
+  const { data: recentScans } = await supabase
+    .from("scans")
+    .select(
+      "repository_id, security_score, critical_count, findings_count, status, completed_at, created_at"
+    )
+    .eq("organization_id", org.id)
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  const latestCompletedByRepository = new Map<
+    string,
+    { security_score: number | null; critical_count: number }
+  >();
+  for (const scan of recentScans ?? []) {
+    if (
+      scan.status === "completed" &&
+      !latestCompletedByRepository.has(scan.repository_id)
+    ) {
+      latestCompletedByRepository.set(scan.repository_id, scan);
+    }
+  }
+  const scored = [...latestCompletedByRepository.values()].filter(
+    (scan) => scan.security_score !== null
+  );
+  const averageScore =
+    scored.length > 0
+      ? Math.round(
+          scored.reduce((total, scan) => total + (scan.security_score ?? 0), 0) /
+            scored.length
+        )
+      : null;
+  const criticalIssues = [...latestCompletedByRepository.values()].reduce(
+    (total, scan) => total + scan.critical_count,
+    0
+  );
+  const recentActivity = recentScans?.length ?? 0;
+
   const totalProjects = projectCount ?? 0;
   const planLabel =
     org.plan === "FREE"
@@ -112,10 +149,10 @@ export default async function DashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Security Score"
-          value="—"
-          subtitle="No scans yet"
+          value={averageScore ?? "—"}
+          subtitle={averageScore === null ? "No scans yet" : "Average latest score"}
           icon={Shield}
-          valueColor="text-muted-foreground"
+          valueColor={averageScore === null ? "text-muted-foreground" : undefined}
         />
         <MetricCard
           title="Projects"
@@ -125,17 +162,16 @@ export default async function DashboardPage() {
         />
         <MetricCard
           title="Critical Issues"
-          value="—"
-          subtitle="Scanner not active"
+          value={criticalIssues}
+          subtitle="Across latest scans"
           icon={ShieldAlert}
-          valueColor="text-muted-foreground"
+          valueColor={criticalIssues > 0 ? "text-red-500" : "text-emerald-500"}
         />
         <MetricCard
           title="Recent Activity"
-          value="—"
-          subtitle="No scans yet"
+          value={recentActivity}
+          subtitle="Latest recorded scans"
           icon={Activity}
-          valueColor="text-muted-foreground"
         />
       </div>
 
@@ -205,12 +241,23 @@ export default async function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            <EmptyState
-              icon={Shield}
-              title="No critical issues"
-              description="Run a scan to detect vulnerabilities in your projects."
-              variant="success"
-            />
+            {criticalIssues > 0 ? (
+              <EmptyState
+                icon={ShieldAlert}
+                title={`${criticalIssues} critical ${
+                  criticalIssues === 1 ? "issue" : "issues"
+                } detected`}
+                description="Open a scanned project to review the findings requiring immediate attention."
+                action={{ label: "Review projects", href: "/projects" }}
+              />
+            ) : (
+              <EmptyState
+                icon={Shield}
+                title="No critical issues"
+                description="Run a scan to detect vulnerabilities in your projects."
+                variant="success"
+              />
+            )}
           </CardContent>
         </Card>
       </div>

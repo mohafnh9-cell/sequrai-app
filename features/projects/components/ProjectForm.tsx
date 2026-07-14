@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -40,7 +40,7 @@ export function ProjectForm({
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = useForm<ProjectFormValues>({
     resolver: zodResolver(projectSchema),
@@ -53,7 +53,7 @@ export function ProjectForm({
     },
   });
 
-  const framework = watch("framework");
+  const framework = useWatch({ control, name: "framework" });
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">

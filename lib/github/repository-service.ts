@@ -1,0 +1,289 @@
+import "server-only";
+
+import {
+  DEFAULT_BINARY_EXTENSIONS,
+  DEFAULT_IGNORED_SEGMENTS,
+  SOURCE_EXTENSIONS,
+} from "@/features/security-scanner/constants";
+import { extensionOf, sanitizePath } from "@/features/security-scanner/path";
+
+const GITHUB_API = "https://api.github.com";
+const API_VERSION = "2022-11-28";
+
+export const GITHUB_SCAN_LIMITS = {
+  maxFiles: 200,
+  maxFileBytes: 256_000,
+  maxTotalBytes: 5_000_000,
+  maxDepth: 18,
+  timeoutMs: 25_000,
+  fetchConcurrency: 8,
+} as const;
+
+export type GitHubRepositoryRef = { owner: string; repo: string };
+export type RepositoryFile = { path: string; content: string; size: number; sha: string };
+export type RepositorySnapshot = {
+  repositoryId: number;
+  owner: string;
+  repo: string;
+  isPrivate: boolean;
+  defaultBranch: string;
+  commitSha: string;
+  files: RepositoryFile[];
+  discoveredFiles: number;
+  totalBytes: number;
+  omissions: Array<{ path?: string; reason: string; count?: number }>;
+};
+
+export class GitHubServiceError extends Error {
+  constructor(
+    public readonly code:
+      | "GITHUB_AUTH"
+      | "GITHUB_FORBIDDEN"
+      | "GITHUB_NOT_FOUND"
+      | "GITHUB_RATE_LIMIT"
+      | "GITHUB_TIMEOUT"
+      | "GITHUB_RESPONSE",
+    message: string,
+    public readonly status: number
+  ) {
+    super(message);
+    this.name = "GitHubServiceError";
+  }
+}
+
+export function parseGitHubRepository(value: string): GitHubRepositoryRef {
+  const trimmed = value.trim().replace(/\.git$/, "").replace(/\/+$/, "");
+  let path = trimmed;
+
+  if (trimmed.startsWith("git@github.com:")) {
+    path = trimmed.slice("git@github.com:".length);
+  } else if (/^https?:\/\//i.test(trimmed)) {
+    let url: URL;
+    try {
+      url = new URL(trimmed);
+    } catch {
+      throw new Error("Invalid GitHub repository");
+    }
+    if (url.protocol !== "https:" || url.hostname.toLowerCase() !== "github.com") {
+      throw new Error("Repository must be hosted on github.com");
+    }
+    path = url.pathname;
+  }
+
+  const parts = path.split("/").filter(Boolean);
+  if (
+    parts.length !== 2 ||
+    !/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/.test(parts[0]) ||
+    !/^[A-Za-z0-9._-]{1,100}$/.test(parts[1])
+  ) {
+    throw new Error("GitHub repository must be in owner/repository format");
+  }
+  return { owner: parts[0], repo: parts[1] };
+}
+
+type GitHubRepo = {
+  id: number;
+  private: boolean;
+  default_branch: string;
+  full_name: string;
+};
+type GitHubCommit = { sha: string; commit: { tree: { sha: string } } };
+type GitHubTree = {
+  truncated: boolean;
+  tree: Array<{ path: string; mode: string; type: "blob" | "tree" | "commit"; sha: string; size?: number }>;
+};
+type GitHubBlob = { encoding: "base64" | "utf-8"; content: string; size: number; sha: string };
+
+function isRelevantPath(path: string): { include: boolean; reason?: string } {
+  const safe = sanitizePath(path);
+  if (!safe) return { include: false, reason: "invalid_path" };
+  const segments = safe.split("/");
+  if (
+    segments.some((segment) => DEFAULT_IGNORED_SEGMENTS.includes(segment)) ||
+    safe.startsWith("target/") ||
+    safe.startsWith(".cache/") ||
+    safe.startsWith("public/assets/")
+  ) {
+    return { include: false, reason: "ignored_path" };
+  }
+  const extension = extensionOf(safe);
+  if (
+    extension === ".md" &&
+    !/(?:^|\/)(?:readme|security|auth|configuration|config|deployment|environment)[^/]*\.md$/i.test(safe)
+  ) {
+    return { include: false, reason: "irrelevant_markdown" };
+  }
+  if (DEFAULT_BINARY_EXTENSIONS.has(extension)) {
+    return { include: false, reason: "binary_extension" };
+  }
+  if (
+    safe.endsWith(".map") ||
+    /\.min\.(?:js|css)$/i.test(safe) ||
+    /\.generated\.[^.]+$/i.test(safe)
+  ) {
+    return { include: false, reason: "generated_file" };
+  }
+  if (safe.endsWith(".env.example")) return { include: true };
+  if (/(?:^|\/)Dockerfile$/i.test(safe)) return { include: true };
+  if (!SOURCE_EXTENSIONS.has(extension)) {
+    return { include: false, reason: "unsupported_format" };
+  }
+  return { include: true };
+}
+
+export class GitHubRepositoryService {
+  private readonly controller = new AbortController();
+  private readonly deadline: ReturnType<typeof setTimeout>;
+
+  constructor(private readonly accessToken: string) {
+    if (!accessToken) throw new Error("GitHub access token is required");
+    this.deadline = setTimeout(() => this.controller.abort(), GITHUB_SCAN_LIMITS.timeoutMs);
+  }
+
+  dispose() {
+    clearTimeout(this.deadline);
+  }
+
+  async fetchSnapshot(ref: GitHubRepositoryRef, requestedBranch?: string): Promise<RepositorySnapshot> {
+    try {
+      const base = `/repos/${encodeURIComponent(ref.owner)}/${encodeURIComponent(ref.repo)}`;
+      const repository = await this.request<GitHubRepo>(base);
+      const branch = requestedBranch?.trim() || repository.default_branch;
+      const commit = await this.request<GitHubCommit>(`${base}/commits/${encodeURIComponent(branch)}`);
+      const tree = await this.request<GitHubTree>(
+        `${base}/git/trees/${encodeURIComponent(commit.commit.tree.sha)}?recursive=1`
+      );
+
+      const omissions: RepositorySnapshot["omissions"] = [];
+      if (tree.truncated) omissions.push({ reason: "github_tree_truncated" });
+
+      const blobs = tree.tree.filter((entry) => entry.type === "blob");
+      const candidates = blobs.filter((entry) => {
+        const relevance = isRelevantPath(entry.path);
+        if (!relevance.include) {
+          omissions.push({ path: entry.path, reason: relevance.reason ?? "unsupported_format" });
+          return false;
+        }
+        const depth = entry.path.split("/").length;
+        if (depth > GITHUB_SCAN_LIMITS.maxDepth) {
+          omissions.push({ path: entry.path, reason: "max_depth" });
+          return false;
+        }
+        if ((entry.size ?? 0) > GITHUB_SCAN_LIMITS.maxFileBytes) {
+          omissions.push({ path: entry.path, reason: "max_file_size" });
+          return false;
+        }
+        return true;
+      });
+
+      const selected: typeof candidates = [];
+      let selectedBytes = 0;
+      for (const entry of candidates) {
+        if (selected.length >= GITHUB_SCAN_LIMITS.maxFiles) break;
+        const size = entry.size ?? 0;
+        if (selectedBytes + size > GITHUB_SCAN_LIMITS.maxTotalBytes) {
+          omissions.push({ path: entry.path, reason: "max_total_size" });
+          continue;
+        }
+        selected.push(entry);
+        selectedBytes += size;
+      }
+      if (candidates.length > selected.length) {
+        omissions.push({
+          reason: "max_file_count",
+          count: candidates.length - selected.length,
+        });
+      }
+
+      const files: RepositoryFile[] = [];
+      let totalBytes = 0;
+      for (let offset = 0; offset < selected.length; offset += GITHUB_SCAN_LIMITS.fetchConcurrency) {
+        const batch = selected.slice(offset, offset + GITHUB_SCAN_LIMITS.fetchConcurrency);
+        const fetched = await Promise.all(
+          batch.map(async (entry) => ({
+            entry,
+            blob: await this.request<GitHubBlob>(
+              `${base}/git/blobs/${encodeURIComponent(entry.sha)}`
+            ),
+          }))
+        );
+        for (const { entry, blob } of fetched) {
+          if (blob.size > GITHUB_SCAN_LIMITS.maxFileBytes) {
+            omissions.push({ path: entry.path, reason: "max_file_size" });
+            continue;
+          }
+          const bytes = Buffer.from(
+            blob.content.replace(/\s/g, ""),
+            blob.encoding === "base64" ? "base64" : "utf8"
+          );
+          if (bytes.includes(0)) {
+            omissions.push({ path: entry.path, reason: "binary_file" });
+            continue;
+          }
+          if (totalBytes + bytes.byteLength > GITHUB_SCAN_LIMITS.maxTotalBytes) {
+            omissions.push({ path: entry.path, reason: "max_total_size" });
+            continue;
+          }
+          files.push({
+            path: entry.path,
+            content: bytes.toString("utf8"),
+            size: bytes.byteLength,
+            sha: blob.sha,
+          });
+          totalBytes += bytes.byteLength;
+        }
+      }
+
+      return {
+        repositoryId: repository.id,
+        owner: ref.owner,
+        repo: ref.repo,
+        isPrivate: repository.private,
+        defaultBranch: repository.default_branch,
+        commitSha: commit.sha,
+        files,
+        discoveredFiles: blobs.length,
+        totalBytes,
+        omissions,
+      };
+    } catch (error) {
+      if (error instanceof GitHubServiceError) throw error;
+      if (this.controller.signal.aborted) {
+        throw new GitHubServiceError("GITHUB_TIMEOUT", "GitHub repository fetch timed out", 504);
+      }
+      throw error;
+    } finally {
+      this.dispose();
+    }
+  }
+
+  private async request<T>(path: string): Promise<T> {
+    const response = await fetch(`${GITHUB_API}${path}`, {
+      headers: {
+        Authorization: `Bearer ${this.accessToken}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": API_VERSION,
+        "User-Agent": "SequrAI-Scanner/1.0",
+      },
+      cache: "no-store",
+      signal: this.controller.signal,
+    });
+    if (!response.ok) {
+      const remaining = response.headers.get("x-ratelimit-remaining");
+      if (response.status === 429 || (response.status === 403 && remaining === "0")) {
+        throw new GitHubServiceError("GITHUB_RATE_LIMIT", "GitHub API rate limit reached", 429);
+      }
+      if (response.status === 401) {
+        throw new GitHubServiceError("GITHUB_AUTH", "GitHub authorization has expired", 401);
+      }
+      if (response.status === 403) {
+        throw new GitHubServiceError("GITHUB_FORBIDDEN", "GitHub repository access was denied", 403);
+      }
+      if (response.status === 404) {
+        throw new GitHubServiceError("GITHUB_NOT_FOUND", "GitHub repository was not found or is inaccessible", 404);
+      }
+      throw new GitHubServiceError("GITHUB_RESPONSE", `GitHub API request failed (${response.status})`, 502);
+    }
+    return (await response.json()) as T;
+  }
+}
