@@ -1,0 +1,49 @@
+export interface GitHubRepo {
+  id: number;
+  name: string;
+  full_name: string;
+  description: string | null;
+  html_url: string;
+  private: boolean;
+  language: string | null;
+  updated_at: string;
+  stargazers_count: number;
+  default_branch: string;
+}
+
+export async function getGitHubRepos(accessToken: string): Promise<GitHubRepo[]> {
+  const repos: GitHubRepo[] = [];
+  let page = 1;
+
+  while (true) {
+    const res = await fetch(
+      `https://api.github.com/user/repos?per_page=100&page=${page}&sort=updated&affiliation=owner,collaborator`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          Accept: "application/vnd.github.v3+json",
+        },
+      }
+    );
+
+    if (!res.ok) break;
+    const data: GitHubRepo[] = await res.json();
+    if (data.length === 0) break;
+    repos.push(...data);
+    if (data.length < 100) break;
+    page++;
+  }
+
+  return repos;
+}
+
+export async function getGitHubUser(accessToken: string) {
+  const res = await fetch("https://api.github.com/user", {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      Accept: "application/vnd.github.v3+json",
+    },
+  });
+  if (!res.ok) return null;
+  return res.json();
+}

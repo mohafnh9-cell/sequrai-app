@@ -161,8 +161,8 @@ export default async function DashboardPage() {
               <EmptyState
                 icon={FolderGit2}
                 title="No projects yet"
-                description="Connect your first project to start scanning."
-                action={{ label: "Add project", href: "/projects/new" }}
+                description="Connect your GitHub repos or add a project manually."
+                action={{ label: "Connect GitHub", href: "/integrations" }}
               />
             ) : (
               <div className="space-y-2">
