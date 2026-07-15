@@ -18,6 +18,12 @@ export default function IntegrationsPage() {
   const [search, setSearch] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [savedCount, setSavedCount] = useState(0);
+  const [webhookSummary, setWebhookSummary] = useState<{
+    created: number;
+    existing: number;
+    skipped: number;
+    warnings: string[];
+  } | null>(null);
 
   const fetchRepos = useCallback(async () => {
     setStep("loading");
@@ -86,7 +92,15 @@ export default function IntegrationsPage() {
         signal: controller.signal,
       });
       const data = (await res.json().catch(() => null)) as
-        | { saved?: number; error?: string; needsReauth?: boolean }
+        | {
+            saved?: number;
+            error?: string;
+            needsReauth?: boolean;
+            webhooksCreated?: number;
+            webhooksExisting?: number;
+            webhooksSkipped?: number;
+            webhookWarnings?: string[];
+          }
         | null;
       if (data?.needsReauth || res.status === 403) {
         localStorage.setItem("sequrai_github_connect", "1");
@@ -106,6 +120,12 @@ export default function IntegrationsPage() {
       }
 
       setSavedCount(data?.saved ?? toSave.length);
+      setWebhookSummary({
+        created: data?.webhooksCreated ?? 0,
+        existing: data?.webhooksExisting ?? 0,
+        skipped: data?.webhooksSkipped ?? 0,
+        warnings: data?.webhookWarnings ?? [],
+      });
       setStep("done");
     } catch (error) {
       setErrorMsg(
@@ -183,12 +203,38 @@ export default function IntegrationsPage() {
           )}
 
           {step === "done" && (
-            <div className="flex items-center gap-3 text-sm text-emerald-400">
-              <Check className="h-4 w-4" />
-              <span>{savedCount} repositories connected successfully.</span>
-              <Button variant="ghost" size="sm" onClick={() => { setStep("selecting"); setSavedCount(0); }}>
-                Edit selection
-              </Button>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 text-sm text-emerald-400">
+                <Check className="h-4 w-4" />
+                <span>{savedCount} repositories connected successfully.</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setStep("selecting");
+                    setSavedCount(0);
+                    setWebhookSummary(null);
+                  }}
+                >
+                  Edit selection
+                </Button>
+              </div>
+              {webhookSummary && (
+                <div className="rounded-md border border-border/50 bg-secondary/20 p-3 text-xs space-y-1">
+                  <p className="font-medium text-foreground">GitHub webhooks</p>
+                  <p className="text-muted-foreground">
+                    {webhookSummary.created} created · {webhookSummary.existing} already active
+                    {webhookSummary.skipped > 0 ? ` · ${webhookSummary.skipped} skipped` : ""}
+                  </p>
+                  {webhookSummary.warnings.length > 0 && (
+                    <ul className="text-amber-500 space-y-0.5 list-disc pl-4">
+                      {webhookSummary.warnings.map((warning) => (
+                        <li key={warning}>{warning}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -289,8 +335,8 @@ export default function IntegrationsPage() {
             <CardTitle className="text-sm">GitHub Security Automation</CardTitle>
           </div>
           <CardDescription className="text-xs">
-            Add this webhook in each GitHub repository to enable automatic incremental scans on
-            push and Pull Request analysis.
+            Webhooks are registered automatically when you connect repositories. Manual setup is
+            only needed if automation was skipped.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 pt-0 text-sm">

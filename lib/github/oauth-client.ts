@@ -10,7 +10,7 @@ export async function startGitHubOAuth(nextPath: string) {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "github",
     options: {
-      scopes: "repo read:user user:email",
+      scopes: "repo admin:repo_hook read:user user:email",
       redirectTo: `${window.location.origin}/auth/callback`,
       queryParams: { prompt: "consent" },
     },

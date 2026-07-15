@@ -3,6 +3,11 @@ import { z } from "zod";
 import { getGitHubRepoById, type GitHubRepo } from "@/lib/github";
 import { resolveGitHubAccessToken } from "@/lib/github/resolve-token";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/server/security-scanner/admin-client";
+import {
+  registerProjectWebhook,
+  webhookErrorMessage,
+} from "@/server/github-automation/register-webhook";
 
 const requestSchema = z.object({
   repos: z
@@ -39,7 +44,7 @@ async function upsertConnectedProject(
   supabase: Awaited<ReturnType<typeof createClient>>,
   organizationId: string,
   repo: GitHubRepo
-) {
+): Promise<string> {
   const { data: existing } = await supabase
     .from("projects")
     .select("id")
@@ -77,28 +82,32 @@ async function upsertConnectedProject(
       });
       throw new Error("Could not update the connected repository in Supabase");
     }
-    return;
+    return existing.id;
   }
 
   const fullInsert = {
     ...baseProjectFields(repo, organizationId),
     ...extendedProjectFields(repo),
   };
-  let { error } = await supabase.from("projects").insert(fullInsert);
+  let insertResult = await supabase.from("projects").insert(fullInsert).select("id").single();
 
-  if (error && isMissingColumnError(error.code)) {
-    ({ error } = await supabase
+  if (insertResult.error && isMissingColumnError(insertResult.error.code)) {
+    insertResult = await supabase
       .from("projects")
-      .insert(baseProjectFields(repo, organizationId)));
+      .insert(baseProjectFields(repo, organizationId))
+      .select("id")
+      .single();
   }
 
-  if (error) {
+  if (insertResult.error || !insertResult.data) {
     console.error("github_connect_project_insert_failed", {
-      code: error.code,
+      code: insertResult.error?.code,
       organizationId,
     });
     throw new Error("Could not save the repository in Supabase");
   }
+
+  return insertResult.data.id;
 }
 
 async function connectRepositories(request: Request) {
@@ -148,14 +157,61 @@ async function connectRepositories(request: Request) {
     return NextResponse.json({ error: "Repository access could not be verified" }, { status: 403 });
   }
 
-  let saved = 0;
-  for (const repo of verifiedRepos) {
-    if (!repo) continue;
-    await upsertConnectedProject(supabase, organizationId, repo);
-    saved++;
+  let admin: ReturnType<typeof createAdminClient> | null = null;
+  try {
+    admin = createAdminClient();
+  } catch {
+    admin = null;
   }
 
-  return NextResponse.json({ saved, total: selectedIds.length });
+  let saved = 0;
+  let webhooksCreated = 0;
+  let webhooksExisting = 0;
+  let webhooksSkipped = 0;
+  const webhookWarnings: string[] = [];
+
+  for (const repo of verifiedRepos) {
+    if (!repo) continue;
+    const projectId = await upsertConnectedProject(supabase, organizationId, repo);
+    saved++;
+
+    if (!admin) {
+      webhooksSkipped++;
+      webhookWarnings.push(`${repo.full_name}: automation service not configured`);
+      continue;
+    }
+
+    try {
+      const result = await registerProjectWebhook(admin, {
+        accessToken: providerToken,
+        organizationId,
+        projectId,
+        repo,
+      });
+      if (result.status === "created") webhooksCreated++;
+      else if (result.status === "existing") webhooksExisting++;
+      else {
+        webhooksSkipped++;
+        webhookWarnings.push(`${repo.full_name}: ${result.reason}`);
+      }
+    } catch (error) {
+      webhooksSkipped++;
+      webhookWarnings.push(`${repo.full_name}: ${webhookErrorMessage(error)}`);
+      console.warn("github_webhook_register_failed", {
+        repo: repo.full_name,
+        message: webhookErrorMessage(error),
+      });
+    }
+  }
+
+  return NextResponse.json({
+    saved,
+    total: selectedIds.length,
+    webhooksCreated,
+    webhooksExisting,
+    webhooksSkipped,
+    webhookWarnings,
+  });
 }
 
 export async function POST(request: Request) {
