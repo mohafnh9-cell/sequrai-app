@@ -10,7 +10,6 @@ import {
   LogOut,
   ChevronDown,
   Plus,
-  ShieldAlert,
   Sparkles,
   Clock,
   Puzzle,
@@ -33,9 +32,8 @@ const PRIMARY_NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/projects", label: "Projects", icon: FolderGit2 },
   { href: "/integrations", label: "Integrations", icon: Puzzle },
-  { href: "/security", label: "Security", icon: ShieldAlert, comingSoon: true },
-  { href: "/ai-fixes", label: "AI Fixes", icon: Sparkles, comingSoon: true },
-  { href: "/timeline", label: "Timeline", icon: Clock, comingSoon: true },
+  { href: "/ai-fixes", label: "AI Fixes", icon: Sparkles },
+  { href: "/timeline", label: "Timeline", icon: Clock },
 ] as const;
 
 const SETTINGS_NAV = [
@@ -116,7 +114,6 @@ export function DashboardSidebar({ user, orgName }: DashboardSidebarProps) {
               label={item.label}
               icon={item.icon}
               active={isActive(item.href)}
-              comingSoon={"comingSoon" in item ? item.comingSoon : false}
             />
           ))}
         </div>

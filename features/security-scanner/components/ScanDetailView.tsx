@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
+import { ScanSecurityIntelligence } from "@/features/ai-security-engine/components/ScanSecurityIntelligence";
 import {
   Select,
   SelectContent,
@@ -326,6 +327,11 @@ export function ScanDetailView({
           <CardContent className="text-2xl font-bold">{new Set(findings.map(findingFile).filter(Boolean)).size}</CardContent>
         </Card>
       </div>
+
+      <ScanSecurityIntelligence
+        scanId={scanId}
+        scanCompleted={!active && (scan.status?.toLowerCase() === "completed")}
+      />
 
       {severitySummary.length > 0 && (
         <div className="flex flex-wrap gap-2">

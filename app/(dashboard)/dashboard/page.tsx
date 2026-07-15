@@ -8,8 +8,6 @@ import {
   Activity,
   Plus,
   ArrowRight,
-  Sparkles,
-  Clock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -17,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { MetricCard } from "@/components/shared/MetricCard";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { DashboardSecurityIntelligence } from "@/features/ai-security-engine/components/DashboardSecurityIntelligence";
 import { formatRelativeDate } from "@/lib/utils";
 import type { Metadata } from "next";
 
@@ -262,49 +261,7 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
-      {/* Coming soon modules */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <ComingSoonCard
-          icon={Sparkles}
-          title="AI Fixes"
-          description="Auto-generated security patches using Claude AI."
-        />
-        <ComingSoonCard
-          icon={Clock}
-          title="Timeline"
-          description="Security history and scan activity over time."
-        />
-        <ComingSoonCard
-          icon={Activity}
-          title="AI Recommendations"
-          description="Proactive security advice for your stack."
-        />
-      </div>
-    </div>
-  );
-}
-
-function ComingSoonCard({
-  icon: Icon,
-  title,
-  description,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="rounded-xl border border-dashed border-border p-5 space-y-3">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary">
-        <Icon className="h-4 w-4 text-muted-foreground" />
-      </div>
-      <div>
-        <p className="text-sm font-medium">{title}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-      </div>
-      <Badge variant="outline" className="text-xs text-muted-foreground">
-        Coming soon
-      </Badge>
+      <DashboardSecurityIntelligence />
     </div>
   );
 }
