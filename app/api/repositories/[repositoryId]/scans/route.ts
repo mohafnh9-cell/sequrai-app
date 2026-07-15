@@ -6,7 +6,7 @@ import {
   ScanRequestError,
 } from "@/server/security-scanner/request-context";
 import { GitHubServiceError, parseGitHubRepository } from "@/lib/github/repository-service";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createAdminClient, mapDatabaseError } from "@/server/security-scanner/admin-client";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -38,7 +38,14 @@ function responseForError(error: unknown) {
     component: "repository-scans-api",
     event: "request_failed",
     errorType: error instanceof Error ? error.name : "unknown",
+    message: error instanceof Error ? error.message : "unknown",
   });
+  if (error instanceof Error && error.message) {
+    return NextResponse.json(
+      { error: error.message, code: "SCAN_REQUEST_FAILED" },
+      { status: 500 }
+    );
+  }
   return NextResponse.json(
     { error: "The scan request could not be completed", code: "SCAN_REQUEST_FAILED" },
     { status: 500 }
@@ -159,7 +166,7 @@ export async function POST(
           { status: 409 }
         );
       }
-      throw new Error(`Could not create scan: ${insertError.message}`);
+      throw mapDatabaseError(insertError, "Could not create scan");
     }
 
     const { error: stateError } = await supabase.from("repository_scan_state").upsert(
@@ -180,7 +187,7 @@ export async function POST(
           failed_at: new Date().toISOString(),
         })
         .eq("id", scan.id);
-      throw new Error(`Could not initialize scan state: ${stateError.message}`);
+      throw mapDatabaseError(stateError, "Could not initialize scan state");
     }
 
     // Serverless runtimes cannot guarantee work after a response. V1 therefore
