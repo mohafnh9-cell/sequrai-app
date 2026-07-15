@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { createClient } from "@/lib/supabase/client";
+import { startGitHubOAuth } from "@/lib/github/oauth-client";
 import type { GitHubRepo } from "@/lib/github";
 
 type Step = "idle" | "loading" | "selecting" | "saving" | "done" | "error";
@@ -18,7 +18,6 @@ export default function IntegrationsPage() {
   const [search, setSearch] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [savedCount, setSavedCount] = useState(0);
-  const supabase = createClient();
 
   const fetchRepos = useCallback(async () => {
     setStep("loading");
@@ -29,14 +28,16 @@ export default function IntegrationsPage() {
 
     if (data.needsReauth || res.status === 403) {
       localStorage.setItem("sequrai_github_connect", "1");
-      await supabase.auth.signInWithOAuth({
-        provider: "github",
-        options: {
-          scopes: "repo read:user user:email",
-          redirectTo: `${window.location.origin}/auth/callback?next=/integrations`,
-          queryParams: { prompt: "consent" },
-        },
-      });
+      try {
+        await startGitHubOAuth("/integrations");
+      } catch (oauthError) {
+        setErrorMsg(
+          oauthError instanceof Error
+            ? oauthError.message
+            : "Could not start GitHub authorization."
+        );
+        setStep("error");
+      }
       return;
     }
 
@@ -48,7 +49,7 @@ export default function IntegrationsPage() {
 
     setRepos(data.repos);
     setStep("selecting");
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     const pending = localStorage.getItem("sequrai_github_connect");
@@ -89,14 +90,15 @@ export default function IntegrationsPage() {
         | null;
       if (data?.needsReauth || res.status === 403) {
         localStorage.setItem("sequrai_github_connect", "1");
-        await supabase.auth.signInWithOAuth({
-          provider: "github",
-          options: {
-            scopes: "repo read:user user:email",
-            redirectTo: `${window.location.origin}/auth/callback?next=/integrations`,
-            queryParams: { prompt: "consent" },
-          },
-        });
+        try {
+          await startGitHubOAuth("/integrations");
+        } catch (oauthError) {
+          throw new Error(
+            oauthError instanceof Error
+              ? oauthError.message
+              : "Could not start GitHub authorization."
+          );
+        }
         return;
       }
       if (!res.ok) {

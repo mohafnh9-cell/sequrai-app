@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Loader2, Play, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/client";
+import { startGitHubOAuth } from "@/lib/github/oauth-client";
 
 type State = "idle" | "running" | "error";
 
@@ -20,19 +20,11 @@ export function RunSecurityScanButton({
   const router = useRouter();
   const [state, setState] = useState<State>("idle");
   const [error, setError] = useState("");
-  const supabase = createClient();
 
-  async function reconnectGitHub() {
+  const reconnectGitHub = useCallback(async () => {
     localStorage.setItem(scanRetryKey(projectId), "1");
-    await supabase.auth.signInWithOAuth({
-      provider: "github",
-      options: {
-        scopes: "repo read:user user:email",
-        redirectTo: `${window.location.origin}/auth/callback?next=/projects/${projectId}`,
-        queryParams: { prompt: "consent" },
-      },
-    });
-  }
+    await startGitHubOAuth(`/projects/${projectId}`);
+  }, [projectId]);
 
   const runScan = useCallback(async () => {
     setState("running");
@@ -63,7 +55,7 @@ export function RunSecurityScanButton({
       setError(cause instanceof Error ? cause.message : "The scan could not be started.");
       setState("error");
     }
-  }, [projectId, router, supabase]);
+  }, [projectId, reconnectGitHub, router]);
 
   useEffect(() => {
     const pending = localStorage.getItem(scanRetryKey(projectId));
