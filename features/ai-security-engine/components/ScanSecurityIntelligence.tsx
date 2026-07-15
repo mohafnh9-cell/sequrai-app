@@ -61,9 +61,15 @@ export function ScanSecurityIntelligence({
         method: "POST",
       });
       const body = (await response.json().catch(() => null)) as
-        | { intelligence?: Intelligence | null; error?: string }
+        | { intelligence?: Intelligence | null; error?: string; code?: string }
         | null;
-      if (!response.ok) throw new Error(body?.error || "AI analysis failed");
+      if (!response.ok) {
+        throw new Error(
+          body?.code === "AI_SCHEMA_MISSING"
+            ? "Run migration 005_ai_security_engine.sql in Supabase, then try again."
+            : body?.error || "AI analysis failed"
+        );
+      }
       setIntelligence(body?.intelligence ?? null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "AI analysis failed");

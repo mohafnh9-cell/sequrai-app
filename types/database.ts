@@ -77,6 +77,9 @@ export type ProjectRow = {
   github_connected_at: string | null;
   security_score: number | null;
   last_scan_at: string | null;
+  webhook_enabled?: boolean | null;
+  repository_health?: string | null;
+  github_webhook_id?: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -167,6 +170,50 @@ export type RepositoryScanStateRow = {
   open_findings_count: number;
   created_at: string;
   updated_at: string;
+};
+
+export type RepositoryHealthRow = {
+  id: string;
+  organization_id: string;
+  project_id: string;
+  health_status: "excellent" | "good" | "needs_attention" | "critical";
+  security_score: number | null;
+  risk_score: number | null;
+  open_findings_count: number;
+  critical_open_count: number;
+  score_trend: number;
+  factors: Json;
+  calculated_at: string;
+  updated_at: string;
+};
+
+export type RepositoryActivityRow = {
+  id: string;
+  organization_id: string;
+  project_id: string;
+  scan_id: string | null;
+  event_type: string;
+  title: string;
+  description: string | null;
+  metadata: Json;
+  occurred_at: string;
+  created_at: string;
+};
+
+export type SecurityNotificationRow = {
+  id: string;
+  organization_id: string;
+  project_id: string | null;
+  user_id: string | null;
+  channel: "in_app" | "email" | "slack" | "discord";
+  notification_type: string;
+  title: string;
+  body: string;
+  severity: "info" | "warning" | "critical";
+  read_at: string | null;
+  delivered_at: string | null;
+  metadata: Json;
+  created_at: string;
 };
 
 // ─── Insert Types (what you send to create a row) ────────────────────────────

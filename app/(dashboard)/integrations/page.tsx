@@ -281,11 +281,40 @@ export default function IntegrationsPage() {
         </CardContent>
       </Card>
 
-      {/* Coming soon integrations */}
+      {/* GitHub webhook automation */}
+      <Card className="border-border/50">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2">
+            <Webhook className="h-4 w-4 text-primary" />
+            <CardTitle className="text-sm">GitHub Security Automation</CardTitle>
+          </div>
+          <CardDescription className="text-xs">
+            Add this webhook in each GitHub repository to enable automatic incremental scans on
+            push and Pull Request analysis.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 pt-0 text-sm">
+          <div>
+            <p className="text-xs text-muted-foreground mb-1">Payload URL</p>
+            <code className="block rounded-md bg-secondary/50 px-3 py-2 text-xs break-all">
+              {typeof window !== "undefined"
+                ? `${window.location.origin}/api/webhooks/github`
+                : "https://sequrai-app.vercel.app/api/webhooks/github"}
+            </code>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Events: <span className="text-foreground">push, pull_request, delete, repository</span>.
+            Set the same secret as <code className="text-foreground">GITHUB_WEBHOOK_SECRET</code> in
+            Vercel.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Channel integrations */}
       <div className="grid gap-4 sm:grid-cols-2">
         {[
-          { name: "Webhooks", description: "Send security events to your own endpoints.", icon: Webhook },
           { name: "Slack", description: "Get notified about critical issues in Slack.", icon: Zap },
+          { name: "Discord", description: "Security alerts in your Discord server.", icon: Zap },
         ].map((item) => (
           <Card key={item.name} className="border-border/50 opacity-50">
             <CardHeader className="pb-3">

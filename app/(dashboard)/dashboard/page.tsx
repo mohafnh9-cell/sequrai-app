@@ -16,6 +16,7 @@ import { MetricCard } from "@/components/shared/MetricCard";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DashboardSecurityIntelligence } from "@/features/ai-security-engine/components/DashboardSecurityIntelligence";
+import { SecurityActivityFeed } from "@/features/github-automation/components/SecurityActivityFeed";
 import { formatRelativeDate } from "@/lib/utils";
 import type { Metadata } from "next";
 
@@ -262,6 +263,8 @@ export default async function DashboardPage() {
       </div>
 
       <DashboardSecurityIntelligence />
+
+      <SecurityActivityFeed />
     </div>
   );
 }

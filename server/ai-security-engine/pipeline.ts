@@ -34,25 +34,60 @@ export async function runAISecurityAnalysis(
     throw new AISecurityEngineError("ANALYSIS_EXISTS", "AI analysis already completed for this scan");
   }
 
-  const reportId =
-    existing?.id ??
-    (
-      await admin
-        .from("ai_reports")
-        .insert({
-          organization_id: context.organizationId,
-          project_id: context.projectId,
-          scan_id: scanId,
-          status: "processing",
-          security_score: context.securityScore,
-          prompt_version: PROMPT_VERSION,
-        })
-        .select("id")
-        .single()
-    ).data?.id;
+  let reportId = existing?.id;
+
+  if (reportId) {
+    await admin
+      .from("ai_reports")
+      .update({
+        status: "processing",
+        error_message: null,
+        security_score: context.securityScore,
+        prompt_version: PROMPT_VERSION,
+      })
+      .eq("id", reportId);
+  } else {
+    const { data: created, error: insertError } = await admin
+      .from("ai_reports")
+      .insert({
+        organization_id: context.organizationId,
+        project_id: context.projectId,
+        scan_id: scanId,
+        status: "processing",
+        security_score: context.securityScore,
+        prompt_version: PROMPT_VERSION,
+      })
+      .select("id")
+      .single();
+
+    if (insertError) {
+      console.error("ai_report_insert_failed", {
+        code: insertError.code,
+        message: insertError.message,
+        scanId,
+      });
+      if (
+        insertError.code === "42P01" ||
+        insertError.code === "PGRST205" ||
+        insertError.code === "PGRST204"
+      ) {
+        throw new AISecurityEngineError(
+          "AI_SCHEMA_MISSING",
+          "AI tables are missing. Run migration 005_ai_security_engine.sql in Supabase SQL Editor.",
+          503
+        );
+      }
+      throw new AISecurityEngineError(
+        "REPORT_CREATE_FAILED",
+        insertError.message || "Could not create AI report",
+        500
+      );
+    }
+    reportId = created.id;
+  }
 
   if (!reportId) {
-    throw new AISecurityEngineError("REPORT_CREATE_FAILED", "Could not create AI report");
+    throw new AISecurityEngineError("REPORT_CREATE_FAILED", "Could not create AI report", 500);
   }
 
   try {

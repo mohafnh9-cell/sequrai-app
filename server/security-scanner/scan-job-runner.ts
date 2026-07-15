@@ -2,7 +2,8 @@ import "server-only";
 
 import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { scanRepository as scanRepositoryFiles } from "@/features/security-scanner";
+import { scanRepository as scanRepositoryFiles, scoreFindings } from "@/features/security-scanner";
+import type { Confidence, Finding as ScannerFinding, Severity } from "@/features/security-scanner";
 import {
   GitHubRepositoryService,
   GitHubServiceError,
@@ -16,6 +17,9 @@ type ScanContext = {
   githubRepo: string;
   branch?: string;
   providerToken: string;
+  scanType?: "full" | "incremental";
+  baseCommitSha?: string;
+  headCommitSha?: string;
 };
 
 type Finding = {
@@ -125,13 +129,24 @@ export class InlineScanJobRunner implements ScanJobRunner {
 
       const ref = parseGitHubRepository(context.githubRepo);
       const github = new GitHubRepositoryService(context.providerToken);
-      const snapshot = await github.fetchSnapshot(ref, context.branch);
+      const isIncremental =
+        context.scanType === "incremental" &&
+        Boolean(context.baseCommitSha && context.headCommitSha);
+
+      const snapshot = isIncremental
+        ? await github.fetchCompareSnapshot(
+            ref,
+            context.baseCommitSha!,
+            context.headCommitSha!
+          )
+        : await github.fetchSnapshot(ref, context.branch);
       logScan("info", "repository_fetched", {
         scanId: context.scanId,
         repositoryId: context.repositoryId,
         filesDiscovered: snapshot.discoveredFiles,
         filesSelected: snapshot.files.length,
         omittedFiles: snapshot.omissions.length,
+        scanType: isIncremental ? "incremental" : "full",
       });
 
       await Promise.all([
@@ -164,16 +179,63 @@ export class InlineScanJobRunner implements ScanJobRunner {
       await this.updateScan(context.scanId, {
         status: "scanning",
         progress: 60,
-        progress_message: "Running deterministic security rules",
+        progress_message: isIncremental
+          ? "Running incremental security rules"
+          : "Running deterministic security rules",
       });
+
+      if (isIncremental && snapshot.files.length === 0) {
+        const previousScore = await this.loadPreviousScore(context);
+        await this.completeEmptyIncremental(context, snapshot, previousScore);
+        return;
+      }
+
       const result = await scanRepositoryFiles(snapshot.files);
-      const rows = result.findings.map((finding) => findingRow(context, finding));
+      let rows = result.findings.map((finding) => findingRow(context, finding));
+      let scoreBreakdown = result.score;
+      let stack = result.stack;
+      let metrics = {
+        ...result.metrics,
+        changedPaths: snapshot.changedPaths ?? [],
+        scanType: isIncremental ? "incremental" : "full",
+      } as Record<string, unknown>;
+
+      if (isIncremental && snapshot.changedPaths?.length) {
+        const merged = await this.mergeIncrementalFindings(
+          context,
+          snapshot.changedPaths,
+          result.findings
+        );
+        rows = merged.rows;
+        scoreBreakdown = scoreFindings(
+          merged.findings.map((finding, index) => ({
+            id: `merged-${index}`,
+            ruleId: finding.ruleId,
+            fingerprint: finding.fingerprint,
+            severity: finding.severity as Severity,
+            confidence: finding.confidence as Confidence,
+            category: finding.category,
+            title: finding.title,
+            description: finding.description,
+            location: finding.location,
+            evidence: finding.evidence,
+            remediation: finding.remediation,
+            metadata: finding.metadata as Record<string, string | number | boolean> | undefined,
+          })) satisfies ScannerFinding[]
+        );
+        metrics = {
+          ...metrics,
+          mergedFindings: merged.findings.length,
+          incrementalFindings: result.findings.length,
+        };
+      }
       logScan("info", "rules_completed", {
         scanId: context.scanId,
         rulesRun: result.metrics.rulesRun,
         ruleFailures: result.metrics.ruleFailures,
         findings: rows.length,
         durationMs: result.metrics.durationMs,
+        scanType: isIncremental ? "incremental" : "full",
       });
 
       if (rows.length > 0) {
@@ -187,19 +249,19 @@ export class InlineScanJobRunner implements ScanJobRunner {
         progress_message: "Calculating security score",
       });
       const completedAt = new Date().toISOString();
-      const score = Math.max(0, Math.min(100, Math.round(result.score.score)));
-      const counts = result.score.counts;
+      const score = Math.max(0, Math.min(100, Math.round(scoreBreakdown.score)));
+      const counts = scoreBreakdown.counts;
       await this.updateScan(context.scanId, {
         status: "completed",
         progress: 100,
-        progress_message: "Scan completed",
+        progress_message: isIncremental ? "Incremental scan completed" : "Scan completed",
         security_score: score,
-        score_breakdown: result.score,
-        metrics: result.metrics,
-        detected_stack: result.stack,
+        score_breakdown: scoreBreakdown,
+        metrics,
+        detected_stack: stack,
         omissions: [...snapshot.omissions, ...(result.omissions ?? [])],
-        summary: `${rows.length} finding${rows.length === 1 ? "" : "s"} detected; security grade ${result.score.grade}.`,
-        files_analyzed: result.metrics.scannedFiles,
+        summary: `${rows.length} finding${rows.length === 1 ? "" : "s"} detected; security grade ${scoreBreakdown.grade}.`,
+        files_analyzed: isIncremental ? snapshot.files.length : result.metrics.scannedFiles,
         findings_count: rows.length,
         critical_count: counts.critical,
         high_count: counts.high,
@@ -217,7 +279,7 @@ export class InlineScanJobRunner implements ScanJobRunner {
         active_scan_id: null,
         last_scan_id: context.scanId,
         last_commit_sha: snapshot.commitSha,
-        last_full_scan_at: completedAt,
+        ...(isIncremental ? {} : { last_full_scan_at: completedAt }),
         last_security_score: score,
         open_findings_count: rows.length,
       });
@@ -252,6 +314,116 @@ export class InlineScanJobRunner implements ScanJobRunner {
       });
       throw error;
     }
+  }
+
+  private async loadPreviousScore(context: ScanContext): Promise<number | null> {
+    const { data } = await this.supabase
+      .from("repository_scan_state")
+      .select("last_security_score")
+      .eq("repository_id", context.repositoryId)
+      .maybeSingle();
+    return data?.last_security_score ?? null;
+  }
+
+  private async mergeIncrementalFindings(
+    context: ScanContext,
+    changedPaths: string[],
+    newFindings: Array<{
+      ruleId: string;
+      fingerprint: string;
+      severity: string;
+      category: string;
+      title: string;
+      description: string;
+      confidence: string;
+      location: { path: string; line: number; column?: number };
+      evidence?: string;
+      remediation: string;
+      metadata?: Record<string, unknown>;
+    }>
+  ) {
+    const changedSet = new Set(changedPaths);
+    const { data: lastScan } = await this.supabase
+      .from("scans")
+      .select("id")
+      .eq("repository_id", context.repositoryId)
+      .eq("status", "completed")
+      .neq("id", context.scanId)
+      .order("completed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let retained: typeof newFindings = [];
+    if (lastScan?.id) {
+      const { data: previousRows } = await this.supabase
+        .from("scan_findings")
+        .select(
+          "rule_id, severity, category, title, description, confidence, file_path, start_line, evidence, recommendation, metadata, fingerprint"
+        )
+        .eq("scan_id", lastScan.id)
+        .eq("status", "open");
+
+      retained =
+        previousRows
+          ?.filter((row) => !changedSet.has(row.file_path))
+          .map((row) => ({
+            ruleId: row.rule_id,
+            fingerprint: row.fingerprint,
+            severity: row.severity,
+            category: row.category,
+            title: row.title,
+            description: row.description,
+            confidence: row.confidence,
+            location: { path: row.file_path, line: row.start_line },
+            evidence: row.evidence ?? undefined,
+            remediation: row.recommendation,
+            metadata: (row.metadata as Record<string, unknown>) ?? undefined,
+          })) ?? [];
+    }
+
+    const mergedFindings = [...retained, ...newFindings];
+    const rows = mergedFindings.map((finding) => findingRow(context, finding));
+    return { findings: mergedFindings, rows };
+  }
+
+  private async completeEmptyIncremental(
+    context: ScanContext,
+    snapshot: {
+      commitSha: string;
+      discoveredFiles: number;
+      omissions: Array<{ path?: string; reason: string; count?: number }>;
+      changedPaths?: string[];
+      defaultBranch: string;
+    },
+    previousScore: number | null
+  ) {
+    const score = previousScore ?? 100;
+    const completedAt = new Date().toISOString();
+    await this.updateScan(context.scanId, {
+      status: "completed",
+      progress: 100,
+      progress_message: "No scannable file changes detected",
+      security_score: score,
+      metrics: { scanType: "incremental", changedPaths: snapshot.changedPaths ?? [] },
+      summary: "Incremental scan completed with no scannable file changes.",
+      files_discovered: snapshot.discoveredFiles,
+      files_analyzed: 0,
+      completed_at: completedAt,
+      branch: context.branch ?? snapshot.defaultBranch,
+      commit_sha: snapshot.commitSha,
+      omissions: snapshot.omissions,
+    });
+    await this.supabase
+      .from("projects")
+      .update({ security_score: score, last_scan_at: completedAt })
+      .eq("id", context.repositoryId)
+      .eq("organization_id", context.organizationId);
+    await this.updateState(context, {
+      active_scan_id: null,
+      last_scan_id: context.scanId,
+      last_commit_sha: snapshot.commitSha,
+      last_security_score: score,
+    });
   }
 
   private async updateScan(scanId: string, values: Record<string, unknown>) {

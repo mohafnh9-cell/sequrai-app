@@ -16,6 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ProjectDeleteButton } from "@/features/projects/components/ProjectDeleteButton";
 import { ProjectScanOverview } from "@/features/security-scanner/components/ProjectScanOverview";
+import { RepositorySecuritySummary } from "@/features/github-automation/components/RepositorySecuritySummary";
+import { SecurityActivityFeed } from "@/features/github-automation/components/SecurityActivityFeed";
 import { formatDate } from "@/lib/utils";
 import type { ProjectRow } from "@/types/database";
 import type { Metadata } from "next";
@@ -67,6 +69,19 @@ export default async function ProjectDetailPage({
   if (error || !project) notFound();
 
   const p = project as ProjectRow;
+
+  const [{ data: health }, { data: scanState }] = await Promise.all([
+    supabase
+      .from("repository_health")
+      .select("*")
+      .eq("project_id", p.id)
+      .maybeSingle(),
+    supabase
+      .from("repository_scan_state")
+      .select("last_commit_sha, last_security_score, open_findings_count")
+      .eq("repository_id", p.id)
+      .maybeSingle(),
+  ]);
 
   return (
     <div className="p-6 space-y-8 max-w-6xl">
@@ -176,6 +191,16 @@ export default async function ProjectDetailPage({
         </div>
 
       </div>
+
+      <RepositorySecuritySummary
+        health={health}
+        scanState={scanState}
+        lastScanAt={p.last_scan_at}
+        securityScore={p.security_score}
+        webhookEnabled={(p as ProjectRow & { webhook_enabled?: boolean }).webhook_enabled}
+      />
+
+      <SecurityActivityFeed projectId={p.id} />
 
       <ProjectScanOverview
         projectId={p.id}

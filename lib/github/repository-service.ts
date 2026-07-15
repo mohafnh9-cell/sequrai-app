@@ -32,7 +32,12 @@ export type RepositorySnapshot = {
   discoveredFiles: number;
   totalBytes: number;
   omissions: Array<{ path?: string; reason: string; count?: number }>;
+  changedPaths?: string[];
+  baseCommitSha?: string;
 };
+
+const CRITICAL_FILE_PATTERN =
+  /(?:^|\/)(?:package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|next\.config\.(?:js|mjs|ts)|middleware\.(?:js|ts)|auth\.(?:js|ts)|prisma\/schema\.prisma)$/i;
 
 export class GitHubServiceError extends Error {
   constructor(
@@ -93,6 +98,21 @@ type GitHubTree = {
   tree: Array<{ path: string; mode: string; type: "blob" | "tree" | "commit"; sha: string; size?: number }>;
 };
 type GitHubBlob = { encoding: "base64" | "utf-8"; content: string; size: number; sha: string };
+type GitHubCompareFile = {
+  filename: string;
+  previous_filename?: string;
+  status: "added" | "modified" | "removed" | "renamed" | "copied" | "changed" | "unchanged";
+  sha: string | null;
+  additions: number;
+  deletions: number;
+};
+type GitHubCompare = {
+  status: string;
+  ahead_by: number;
+  behind_by: number;
+  files?: GitHubCompareFile[];
+  commits: Array<{ sha: string }>;
+};
 
 function isRelevantPath(path: string): { include: boolean; reason?: string } {
   const safe = sanitizePath(path);
@@ -142,6 +162,94 @@ export class GitHubRepositoryService {
 
   dispose() {
     clearTimeout(this.deadline);
+  }
+
+  async fetchCompareSnapshot(
+    ref: GitHubRepositoryRef,
+    baseSha: string,
+    headSha: string
+  ): Promise<RepositorySnapshot> {
+    try {
+      const base = `/repos/${encodeURIComponent(ref.owner)}/${encodeURIComponent(ref.repo)}`;
+      const repository = await this.request<GitHubRepo>(base);
+      const compare = await this.request<{
+        files?: Array<{
+          filename: string;
+          status: string;
+          sha: string;
+          previous_filename?: string;
+        }>;
+      }>(`${base}/compare/${encodeURIComponent(baseSha)}...${encodeURIComponent(headSha)}`);
+
+      const changedEntries =
+        compare.files?.filter((file) =>
+          ["added", "modified", "renamed", "changed"].includes(file.status)
+        ) ?? [];
+
+      const changedPaths = changedEntries.map(
+        (file) => file.previous_filename ?? file.filename
+      );
+      const omissions: RepositorySnapshot["omissions"] = [];
+      const files: RepositoryFile[] = [];
+      let totalBytes = 0;
+
+      for (const entry of changedEntries) {
+        const path = entry.previous_filename ?? entry.filename;
+        const relevance = isRelevantPath(path);
+        if (!relevance.include) {
+          omissions.push({ path, reason: relevance.reason ?? "unsupported_format" });
+          continue;
+        }
+        if (CRITICAL_FILE_PATTERN.test(path)) {
+          omissions.push({ path, reason: "critical_file_detected" });
+        }
+        const blob = await this.request<GitHubBlob>(
+          `${base}/git/blobs/${encodeURIComponent(entry.sha)}`
+        );
+        if (blob.size > GITHUB_SCAN_LIMITS.maxFileBytes) {
+          omissions.push({ path, reason: "max_file_size" });
+          continue;
+        }
+        const bytes = Buffer.from(
+          blob.content.replace(/\s/g, ""),
+          blob.encoding === "base64" ? "base64" : "utf8"
+        );
+        if (bytes.includes(0)) {
+          omissions.push({ path, reason: "binary_file" });
+          continue;
+        }
+        files.push({
+          path,
+          content: bytes.toString("utf8"),
+          size: bytes.byteLength,
+          sha: blob.sha,
+        });
+        totalBytes += bytes.byteLength;
+      }
+
+      return {
+        repositoryId: repository.id,
+        owner: ref.owner,
+        repo: ref.repo,
+        isPrivate: repository.private,
+        defaultBranch: repository.default_branch,
+        commitSha: headSha,
+        files,
+        discoveredFiles: changedPaths.length,
+        totalBytes,
+        omissions,
+        changedPaths,
+        baseCommitSha: baseSha,
+      };
+    } catch (error) {
+      if (error instanceof GitHubServiceError) throw error;
+      if (this.controller.signal.aborted) {
+        throw new GitHubServiceError("GITHUB_TIMEOUT", "GitHub compare fetch timed out", 504);
+      }
+      throw error;
+    } finally {
+      this.dispose();
+    }
   }
 
   async fetchSnapshot(ref: GitHubRepositoryRef, requestedBranch?: string): Promise<RepositorySnapshot> {

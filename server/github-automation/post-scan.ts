@@ -1,0 +1,146 @@
+import "server-only";
+
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { runAISecurityAnalysis } from "@/server/ai-security-engine/pipeline";
+import {
+  recordRepositoryActivity,
+  recordTimelineEvent,
+  updateRepositoryHealth,
+} from "./activity";
+import { calculateRepositoryHealth, securityCheckStatus } from "./health";
+import { notifyOrganizationMembers } from "./notifications";
+
+export async function finalizeScanAutomation(
+  admin: SupabaseClient,
+  input: {
+    organizationId: string;
+    projectId: string;
+    scanId: string;
+    securityScore: number;
+    riskScore: number;
+    criticalCount: number;
+    highCount: number;
+    findingsCount: number;
+    previousScore: number | null;
+    triggerLabel: string;
+  }
+) {
+  const { organizationId, projectId } = input;
+  const scoreDelta =
+    input.previousScore === null ? 0 : input.securityScore - input.previousScore;
+  const checkStatus = securityCheckStatus({
+    securityScore: input.securityScore,
+    criticalCount: input.criticalCount,
+    highCount: input.highCount,
+  });
+  const { status: healthStatus, factors } = calculateRepositoryHealth({
+    securityScore: input.securityScore,
+    riskScore: input.riskScore,
+    openFindings: input.findingsCount,
+    criticalOpen: input.criticalCount,
+    scoreTrend: scoreDelta,
+  });
+
+  await updateRepositoryHealth(admin, {
+    organizationId,
+    projectId,
+    healthStatus,
+    securityScore: input.securityScore,
+    riskScore: input.riskScore,
+    openFindings: input.findingsCount,
+    criticalOpen: input.criticalCount,
+    scoreTrend: scoreDelta,
+    factors,
+  });
+
+  await recordRepositoryActivity(admin, {
+    organizationId,
+    projectId,
+    scanId: input.scanId,
+    eventType: "scan_completed",
+    title: "Security scan completed",
+    description: `${input.findingsCount} finding${input.findingsCount === 1 ? "" : "s"} · Score ${input.securityScore}`,
+    metadata: { securityScore: input.securityScore, checkStatus },
+  });
+
+  await recordTimelineEvent(admin, {
+    organizationId,
+    projectId,
+    scanId: input.scanId,
+    eventType: "incremental_scan_completed",
+    title: "Incremental security scan completed",
+    description: input.triggerLabel,
+    securityScore: input.securityScore,
+    riskScore: input.riskScore,
+    metadata: { scoreDelta, checkStatus },
+  });
+
+  await notifyOrganizationMembers(admin, organizationId, {
+    projectId,
+    notificationType: "scan_completed",
+    title: "Security scan completed",
+    body: `${input.triggerLabel}: score ${input.securityScore}, ${input.findingsCount} findings.`,
+    severity: input.criticalCount > 0 ? "critical" : "info",
+    metadata: { scanId: input.scanId, checkStatus },
+  });
+
+  if (input.criticalCount > 0) {
+    await notifyOrganizationMembers(admin, organizationId, {
+      projectId,
+      notificationType: "critical_finding",
+      title: "Critical vulnerability detected",
+      body: `${input.criticalCount} critical issue${input.criticalCount === 1 ? "" : "s"} found after ${input.triggerLabel}.`,
+      severity: "critical",
+      metadata: { scanId: input.scanId },
+    });
+  } else if (scoreDelta < -5) {
+    await notifyOrganizationMembers(admin, organizationId, {
+      projectId,
+      notificationType: "score_decreased",
+      title: "Security score decreased",
+      body: `Score dropped by ${Math.abs(scoreDelta)} points after ${input.triggerLabel}.`,
+      severity: "warning",
+      metadata: { scanId: input.scanId, scoreDelta },
+    });
+  } else if (scoreDelta > 0) {
+    await recordTimelineEvent(admin, {
+      organizationId,
+      projectId,
+      scanId: input.scanId,
+      eventType: "score_increased",
+      title: `Security score increased by ${scoreDelta} points`,
+      securityScore: input.securityScore,
+      metadata: { scoreDelta },
+    });
+  }
+
+  if (input.triggerLabel.includes("Pull Request")) {
+    await notifyOrganizationMembers(admin, organizationId, {
+      projectId,
+      notificationType: "pull_request_analyzed",
+      title: "Pull Request security analysis complete",
+      body: `Security score: ${input.securityScore}. Check status: ${checkStatus}.`,
+      severity: checkStatus === "failed" ? "critical" : "info",
+      metadata: { scanId: input.scanId, checkStatus },
+    });
+  }
+
+  try {
+    await runAISecurityAnalysis(admin, input.scanId);
+    await recordRepositoryActivity(admin, {
+      organizationId,
+      projectId,
+      scanId: input.scanId,
+      eventType: "ai_analysis_completed",
+      title: "AI security insights generated",
+      description: "Priorities, fixes, and recommendations updated.",
+    });
+  } catch (error) {
+    console.info("post_scan_ai_skipped", {
+      scanId: input.scanId,
+      reason: error instanceof Error ? error.message : "unknown",
+    });
+  }
+
+  return { checkStatus, healthStatus, scoreDelta };
+}
