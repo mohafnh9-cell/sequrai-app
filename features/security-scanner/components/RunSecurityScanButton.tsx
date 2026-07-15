@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertCircle, Loader2, Play, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/client";
 
 type State = "idle" | "running" | "error";
+
+const scanRetryKey = (projectId: string) => `sequrai_github_scan_${projectId}`;
 
 export function RunSecurityScanButton({
   projectId,
@@ -17,8 +20,21 @@ export function RunSecurityScanButton({
   const router = useRouter();
   const [state, setState] = useState<State>("idle");
   const [error, setError] = useState("");
+  const supabase = createClient();
 
-  async function runScan() {
+  async function reconnectGitHub() {
+    localStorage.setItem(scanRetryKey(projectId), "1");
+    await supabase.auth.signInWithOAuth({
+      provider: "github",
+      options: {
+        scopes: "repo read:user user:email",
+        redirectTo: `${window.location.origin}/auth/callback?next=/projects/${projectId}`,
+        queryParams: { prompt: "consent" },
+      },
+    });
+  }
+
+  const runScan = useCallback(async () => {
     setState("running");
     setError("");
 
@@ -26,10 +42,16 @@ export function RunSecurityScanButton({
       const response = await fetch(`/api/repositories/${projectId}/scans`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scanType: "full" }),
       });
       const body = (await response.json().catch(() => null)) as
-        | { scan_id?: string; error?: string }
+        | { scan_id?: string; error?: string; code?: string; needsReauth?: boolean }
         | null;
+
+      if (body?.needsReauth || body?.code === "GITHUB_REAUTH_REQUIRED") {
+        await reconnectGitHub();
+        return;
+      }
 
       if (!response.ok || !body?.scan_id) {
         throw new Error(body?.error || "The scan could not be started.");
@@ -41,12 +63,19 @@ export function RunSecurityScanButton({
       setError(cause instanceof Error ? cause.message : "The scan could not be started.");
       setState("error");
     }
-  }
+  }, [projectId, router, supabase]);
+
+  useEffect(() => {
+    const pending = localStorage.getItem(scanRetryKey(projectId));
+    if (!pending || disabled) return;
+    localStorage.removeItem(scanRetryKey(projectId));
+    queueMicrotask(() => void runScan());
+  }, [disabled, projectId, runScan]);
 
   return (
     <div className="space-y-2">
       <Button
-        onClick={runScan}
+        onClick={() => void runScan()}
         disabled={disabled || state === "running"}
         className="w-full sm:w-auto"
       >

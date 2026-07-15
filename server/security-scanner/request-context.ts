@@ -1,5 +1,6 @@
 import "server-only";
 
+import { resolveGitHubAccessToken } from "@/lib/github/resolve-token";
 import { createClient } from "@/lib/supabase/server";
 import { canAccessRepository } from "./authorization";
 
@@ -53,7 +54,7 @@ export async function getScanRequestContext(repositoryId: string, requireGitHubT
     const {
       data: { session },
     } = await supabase.auth.getSession();
-    providerToken = session?.provider_token ?? undefined;
+    providerToken = await resolveGitHubAccessToken(user.id, session);
     if (!providerToken) {
       throw new ScanRequestError(
         403,

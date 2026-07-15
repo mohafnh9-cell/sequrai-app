@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getGitHubRepoById, type GitHubRepo } from "@/lib/github";
+import { resolveGitHubAccessToken } from "@/lib/github/resolve-token";
 import { createClient } from "@/lib/supabase/server";
 
 const requestSchema = z.object({
@@ -115,7 +116,7 @@ async function connectRepositories(request: Request) {
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  const providerToken = session?.provider_token;
+  const providerToken = await resolveGitHubAccessToken(user.id, session);
   if (!providerToken) {
     return NextResponse.json(
       { error: "Reconnect GitHub before selecting repositories", needsReauth: true },

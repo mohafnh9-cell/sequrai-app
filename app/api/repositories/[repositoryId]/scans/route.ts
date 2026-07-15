@@ -26,7 +26,11 @@ const historySchema = z.object({
 function responseForError(error: unknown) {
   if (error instanceof ScanRequestError || error instanceof GitHubServiceError) {
     return NextResponse.json(
-      { error: error.message, code: error.code },
+      {
+        error: error.message,
+        code: error.code,
+        needsReauth: error.code === "GITHUB_REAUTH_REQUIRED",
+      },
       { status: error.status }
     );
   }

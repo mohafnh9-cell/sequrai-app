@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getGitHubRepos, getGitHubTokenScopes } from "@/lib/github";
+import { resolveGitHubAccessToken } from "@/lib/github/resolve-token";
 
 export async function GET() {
   const cookieStore = await cookies();
@@ -20,13 +21,15 @@ export async function GET() {
     }
   );
 
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const providerToken = session.provider_token;
+  const providerToken = await resolveGitHubAccessToken(session.user.id, session);
 
   if (!providerToken) {
     return NextResponse.json(
