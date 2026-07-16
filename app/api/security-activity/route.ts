@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { getServerAuthContext } from "@/lib/auth/dev-bypass";
 import { z } from "zod";
 
 export const runtime = "nodejs";
@@ -10,19 +10,12 @@ const querySchema = z.object({
 });
 
 export async function GET(request: Request) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await getServerAuthContext();
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!auth.organizationId) return NextResponse.json({ activity: [], notifications: [] });
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
-  if (!membership) return NextResponse.json({ activity: [], notifications: [] });
+  const supabase = auth.supabase;
+  const membership = { organization_id: auth.organizationId };
 
   const url = new URL(request.url);
   const parsed = querySchema.safeParse({

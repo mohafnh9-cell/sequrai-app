@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { getServerAuthContext } from "@/lib/auth/dev-bypass";
 import {
   Rocket,
   FolderGit2,
@@ -18,6 +18,7 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { DashboardSecurityIntelligence } from "@/features/ai-security-engine/components/DashboardSecurityIntelligence";
 import { SecurityActivityFeed } from "@/features/github-automation/components/SecurityActivityFeed";
 import { buildOrgBrain } from "@/server/brain/build-org-brain";
+import { OrgReadinessDimensions } from "@/features/brain/components/OrgReadinessDimensions";
 import { formatRelativeDate } from "@/lib/utils";
 import type { Metadata } from "next";
 
@@ -32,18 +33,25 @@ function readinessBadge(score: number | null, blockers: number) {
 }
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const auth = await getServerAuthContext();
+  if (!auth) redirect("/login");
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("*, organization:organizations(*)")
-    .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
+  const { supabase, user, organizationId } = auth;
+
+  const { data: membership } = organizationId
+    ? await supabase
+        .from("organization_members")
+        .select("*, organization:organizations(*)")
+        .eq("user_id", user.id)
+        .eq("organization_id", organizationId)
+        .limit(1)
+        .maybeSingle()
+    : await supabase
+        .from("organization_members")
+        .select("*, organization:organizations(*)")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
 
   if (!membership) {
     return (
@@ -83,9 +91,12 @@ export default async function DashboardPage() {
     .limit(5);
 
   const totalProjects = brain.projects.length;
-  const totalBlockers = brain.projects.reduce((sum, p) => sum + p.blockersCount, 0);
+  const totalBlockers = brain.totalBlockers;
   const recentActivity = brain.recentActivity.length;
   const averageProductionReady = brain.averageProductionReady;
+  const projectsWithBlockers = brain.projects
+    .filter((project) => project.blockersCount > 0)
+    .sort((a, b) => b.blockersCount - a.blockersCount);
 
   const planLabel =
     org.plan === "FREE"
@@ -158,6 +169,11 @@ export default async function DashboardPage() {
         />
       </div>
 
+      <OrgReadinessDimensions
+        dimensions={brain.averageDimensions}
+        overall={averageProductionReady}
+      />
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="border-border/50">
           <CardHeader className="flex-row items-center justify-between pb-4">
@@ -229,12 +245,28 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent className="pt-0">
             {totalBlockers > 0 ? (
-              <EmptyState
-                icon={ShieldAlert}
-                title={`${totalBlockers} blocker${totalBlockers === 1 ? "" : "s"} across projects`}
-                description="Open a project to review what must be fixed before going to production."
-                action={{ label: "Review projects", href: "/projects" }}
-              />
+              <div className="space-y-2">
+                {projectsWithBlockers.map((project) => (
+                  <Link
+                    key={project.projectId}
+                    href={`/projects/${project.projectId}`}
+                    className="flex items-center justify-between rounded-md border border-border/50 bg-secondary/20 px-3 py-2.5 hover:bg-secondary/40 transition-colors"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium truncate">{project.projectName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Production ready {project.productionReady ?? "—"}%
+                      </p>
+                    </div>
+                    <Badge variant="destructive" className="shrink-0 ml-2">
+                      {project.blockersCount} blocker{project.blockersCount === 1 ? "" : "s"}
+                    </Badge>
+                  </Link>
+                ))}
+                <Button variant="outline" size="sm" asChild className="w-full mt-2">
+                  <Link href="/projects">Review all projects</Link>
+                </Button>
+              </div>
             ) : (
               <EmptyState
                 icon={Rocket}

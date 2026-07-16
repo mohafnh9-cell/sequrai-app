@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { isAuthBypassEnabled } from "@/lib/auth/dev-bypass";
 
 const PROTECTED_PATHS = [
   "/dashboard",
@@ -49,7 +50,7 @@ export async function updateSession(request: NextRequest) {
   const isProtected = PROTECTED_PATHS.some((p) => pathname.startsWith(p));
   const isAuthPath = AUTH_PATHS.some((p) => pathname.startsWith(p));
 
-  if (!user && isProtected) {
+  if (!user && isProtected && !isAuthBypassEnabled()) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirectTo", pathname);

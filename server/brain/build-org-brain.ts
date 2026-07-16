@@ -1,8 +1,40 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { BRAIN_VERSION, type OrgBrainSnapshot, type ProjectBrainSummary } from "@/brain";
+import {
+  BRAIN_VERSION,
+  type OrgBrainSnapshot,
+  type ProjectBrainSummary,
+  type ReadinessDimensionKey,
+  type ReadinessDimensions,
+} from "@/brain";
 import { buildProjectBrain, mergeProjectActivity } from "./build-project-brain";
+
+const DIMENSION_KEYS: ReadinessDimensionKey[] = [
+  "security",
+  "authentication",
+  "databaseDesign",
+  "bestPractices",
+  "architecture",
+  "performance",
+  "deploymentReadiness",
+];
+
+function averageDimensions(
+  dimensionSets: ReadinessDimensions[]
+): ReadinessDimensions {
+  const result = {} as ReadinessDimensions;
+  for (const key of DIMENSION_KEYS) {
+    const values = dimensionSets
+      .map((set) => set[key])
+      .filter((value): value is number => value !== null);
+    result[key] =
+      values.length > 0
+        ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
+        : null;
+  }
+  return result;
+}
 
 export async function buildOrgBrain(
   supabase: SupabaseClient,
@@ -15,6 +47,9 @@ export async function buildOrgBrain(
     .order("updated_at", { ascending: false });
 
   const summaries: ProjectBrainSummary[] = [];
+  const dimensionSets: ReadinessDimensions[] = [];
+  let totalEstimatedMinutes = 0;
+
   for (const project of projects ?? []) {
     const brain = await buildProjectBrain(supabase, project.id);
     if (!brain) continue;
@@ -25,6 +60,10 @@ export async function buildOrgBrain(
       blockersCount: brain.productionReady.blockersCount,
       healthStatus: brain.healthStatus,
     });
+    if (brain.productionReady.overall !== null) {
+      dimensionSets.push(brain.productionReady.dimensions);
+      totalEstimatedMinutes += brain.productionReady.estimatedMinutesToReady;
+    }
   }
 
   const scored = summaries.filter((item) => item.productionReady !== null);
@@ -47,6 +86,9 @@ export async function buildOrgBrain(
   return {
     organizationId,
     averageProductionReady,
+    averageDimensions: averageDimensions(dimensionSets),
+    totalBlockers: summaries.reduce((sum, item) => sum + item.blockersCount, 0),
+    totalEstimatedMinutes,
     projects: summaries,
     todayPriorities: (orgPriorities ?? []).map((item, index) => ({
       rank: item.rank ?? index + 1,

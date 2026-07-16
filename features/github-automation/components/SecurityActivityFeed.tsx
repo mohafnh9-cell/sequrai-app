@@ -47,10 +47,10 @@ export function SecurityActivityFeed({ projectId }: { projectId?: string }) {
       <CardHeader className="pb-4">
         <div className="flex items-center gap-2">
           <Activity className="h-4 w-4 text-primary" />
-          <CardTitle className="text-base">Security Activity</CardTitle>
+          <CardTitle className="text-base">Production Activity</CardTitle>
         </div>
         <CardDescription className="text-xs">
-          Real-time security events from GitHub automation
+          Real-time production events from GitHub automation
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4 pt-0">
@@ -58,7 +58,7 @@ export function SecurityActivityFeed({ projectId }: { projectId?: string }) {
           <p className="text-sm text-muted-foreground">Loading activity…</p>
         ) : activity.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            No activity yet. Connect a GitHub webhook to enable automatic scans on push.
+            No activity yet. Connect a GitHub webhook to enable automatic production checks on push.
           </p>
         ) : (
           <div className="space-y-3">

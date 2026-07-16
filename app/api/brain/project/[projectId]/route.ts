@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { getServerAuthContext } from "@/lib/auth/dev-bypass";
 import { buildProjectBrain } from "@/server/brain/build-project-brain";
 
 export const runtime = "nodejs";
@@ -16,28 +16,27 @@ export async function GET(
     return NextResponse.json({ error: "Invalid project id" }, { status: 400 });
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await getServerAuthContext();
+  if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: project } = await supabase
+  const { data: project } = await auth.supabase
     .from("projects")
     .select("id, organization_id")
     .eq("id", parsed.data.projectId)
     .maybeSingle();
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .eq("organization_id", project.organization_id)
-    .eq("user_id", user.id)
-    .maybeSingle();
-  if (!membership) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!auth.bypass) {
+    const { data: membership } = await auth.supabase
+      .from("organization_members")
+      .select("organization_id")
+      .eq("organization_id", project.organization_id)
+      .eq("user_id", auth.user.id)
+      .maybeSingle();
+    if (!membership) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
-  const brain = await buildProjectBrain(supabase, parsed.data.projectId);
+  const brain = await buildProjectBrain(auth.supabase, parsed.data.projectId);
   if (!brain) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
   return NextResponse.json(

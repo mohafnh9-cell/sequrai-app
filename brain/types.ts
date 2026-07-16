@@ -68,6 +68,9 @@ export type ProjectBrainSummary = {
 export type OrgBrainSnapshot = {
   organizationId: string;
   averageProductionReady: number | null;
+  averageDimensions: ReadinessDimensions;
+  totalBlockers: number;
+  totalEstimatedMinutes: number;
   projects: ProjectBrainSummary[];
   todayPriorities: BrainPriority[];
   recentActivity: BrainActivityEvent[];
