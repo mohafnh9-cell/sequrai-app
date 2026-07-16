@@ -58,8 +58,8 @@ export async function finalizeScanAutomation(
     projectId,
     scanId: input.scanId,
     eventType: "scan_completed",
-    title: "Production readiness check completed",
-    description: `${input.criticalCount + input.highCount} blocker${input.criticalCount + input.highCount === 1 ? "" : "s"} · Score ${input.securityScore}`,
+    title: "GitHub push analyzed",
+    description: `${input.criticalCount + input.highCount} production blocker${input.criticalCount + input.highCount === 1 ? "" : "s"} · Production score ${input.securityScore}`,
     metadata: { securityScore: input.securityScore, checkStatus },
   });
 
@@ -68,7 +68,7 @@ export async function finalizeScanAutomation(
     projectId,
     scanId: input.scanId,
     eventType: "incremental_scan_completed",
-    title: "Incremental production check completed",
+    title: "GitHub push analyzed",
     description: input.triggerLabel,
     securityScore: input.securityScore,
     riskScore: input.riskScore,
@@ -78,8 +78,8 @@ export async function finalizeScanAutomation(
   await notifyOrganizationMembers(admin, organizationId, {
     projectId,
     notificationType: "scan_completed",
-    title: "Production readiness check completed",
-    body: `${input.triggerLabel}: score ${input.securityScore}, ${input.criticalCount + input.highCount} blocker${input.criticalCount + input.highCount === 1 ? "" : "s"}.`,
+    title: "GitHub push analyzed",
+    body: `${input.triggerLabel}: production score ${input.securityScore}, ${input.criticalCount + input.highCount} blocker${input.criticalCount + input.highCount === 1 ? "" : "s"}.`,
     severity: input.criticalCount > 0 ? "critical" : "info",
     metadata: { scanId: input.scanId, checkStatus },
   });
@@ -97,7 +97,7 @@ export async function finalizeScanAutomation(
     await notifyOrganizationMembers(admin, organizationId, {
       projectId,
       notificationType: "score_decreased",
-      title: "Production ready score decreased",
+      title: "Production score decreased",
       body: `Score dropped by ${Math.abs(scoreDelta)} points after ${input.triggerLabel}.`,
       severity: "warning",
       metadata: { scanId: input.scanId, scoreDelta },
@@ -108,7 +108,7 @@ export async function finalizeScanAutomation(
       projectId,
       scanId: input.scanId,
       eventType: "score_increased",
-      title: `Production ready score increased by ${scoreDelta} points`,
+      title: `Production score increased by ${scoreDelta} points`,
       securityScore: input.securityScore,
       metadata: { scoreDelta },
     });
@@ -118,8 +118,8 @@ export async function finalizeScanAutomation(
     await notifyOrganizationMembers(admin, organizationId, {
       projectId,
       notificationType: "pull_request_analyzed",
-      title: "Pull Request production analysis complete",
-      body: `Production ready score: ${input.securityScore}. Check status: ${checkStatus}.`,
+      title: "Pull request analyzed",
+      body: `Production score: ${input.securityScore}. Status: ${checkStatus}.`,
       severity: checkStatus === "failed" ? "critical" : "info",
       metadata: { scanId: input.scanId, checkStatus },
     });
@@ -132,7 +132,7 @@ export async function finalizeScanAutomation(
       projectId,
       scanId: input.scanId,
       eventType: "ai_analysis_completed",
-      title: "AI production insights generated",
+      title: "Production insights updated",
       description: "Priorities, fixes, and recommendations updated.",
     });
   } catch (error) {

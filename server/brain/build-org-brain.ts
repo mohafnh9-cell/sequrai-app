@@ -8,6 +8,8 @@ import {
   type ReadinessDimensionKey,
   type ReadinessDimensions,
 } from "@/brain";
+import { buildProductionRoadmap } from "@/brain/production-experience/roadmap";
+import { getProjectProductionStatus } from "@/brain/production-experience/project-status";
 import { buildProjectBrain, mergeProjectActivity } from "./build-project-brain";
 
 const DIMENSION_KEYS: ReadinessDimensionKey[] = [
@@ -59,6 +61,10 @@ export async function buildOrgBrain(
       productionReady: brain.productionReady.overall,
       blockersCount: brain.productionReady.blockersCount,
       healthStatus: brain.healthStatus,
+      status: getProjectProductionStatus({
+        score: brain.productionReady.overall,
+        blockersCount: brain.productionReady.blockersCount,
+      }),
     });
     if (brain.productionReady.overall !== null) {
       dimensionSets.push(brain.productionReady.dimensions);
@@ -83,20 +89,28 @@ export async function buildOrgBrain(
 
   const recentActivity = await mergeProjectActivity(supabase, organizationId, undefined, 15);
 
+  const todayPriorities = (orgPriorities ?? []).map((item, index) => ({
+    rank: item.rank ?? index + 1,
+    title: item.title,
+    description: item.description,
+    estimatedMinutes: item.estimated_minutes ?? undefined,
+    source: "ai" as const,
+  }));
+
+  const productionRoadmap = buildProductionRoadmap({
+    currentScore: averageProductionReady,
+    priorities: todayPriorities,
+  });
+
   return {
     organizationId,
     averageProductionReady,
     averageDimensions: averageDimensions(dimensionSets),
     totalBlockers: summaries.reduce((sum, item) => sum + item.blockersCount, 0),
     totalEstimatedMinutes,
+    productionRoadmap,
     projects: summaries,
-    todayPriorities: (orgPriorities ?? []).map((item, index) => ({
-      rank: item.rank ?? index + 1,
-      title: item.title,
-      description: item.description,
-      estimatedMinutes: item.estimated_minutes ?? undefined,
-      source: "ai" as const,
-    })),
+    todayPriorities,
     recentActivity,
     snapshotAt: new Date().toISOString(),
     brainVersion: BRAIN_VERSION,

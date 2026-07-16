@@ -1,3 +1,5 @@
+import type { ProjectProductionStatus } from "./production-experience/project-status";
+
 export const BRAIN_VERSION = "0.1.0";
 
 export type ReadinessDimensionKey =
@@ -63,6 +65,23 @@ export type ProjectBrainSummary = {
   productionReady: number | null;
   blockersCount: number;
   healthStatus: string | null;
+  status: ProjectProductionStatus;
+};
+
+export type ProductionRoadmapItem = {
+  rank: number;
+  title: string;
+  description?: string;
+  category: string;
+  scoreDelta: number;
+  estimatedMinutes: number;
+};
+
+export type ProductionRoadmap = {
+  items: ProductionRoadmapItem[];
+  currentScore: number | null;
+  projectedScore: number | null;
+  totalMinutes: number;
 };
 
 export type OrgBrainSnapshot = {
@@ -71,6 +90,7 @@ export type OrgBrainSnapshot = {
   averageDimensions: ReadinessDimensions;
   totalBlockers: number;
   totalEstimatedMinutes: number;
+  productionRoadmap: ProductionRoadmap;
   projects: ProjectBrainSummary[];
   todayPriorities: BrainPriority[];
   recentActivity: BrainActivityEvent[];

@@ -3,10 +3,13 @@ import { FolderGit2, ExternalLink, Calendar } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn, formatRelativeDate } from "@/lib/utils";
+import { PROJECT_STATUS_LABELS, getProjectStatusBadgeVariant } from "@/brain";
+import type { ProjectProductionStatus } from "@/brain";
 import type { ProjectRow } from "@/types/database";
 
 interface ProjectCardProps {
   project: ProjectRow;
+  productionStatus?: ProjectProductionStatus;
 }
 
 const FRAMEWORK_LABELS: Record<string, string> = {
@@ -20,7 +23,7 @@ const FRAMEWORK_LABELS: Record<string, string> = {
   OTHER: "Other",
 };
 
-export function ProjectCard({ project }: ProjectCardProps) {
+export function ProjectCard({ project, productionStatus = "not_scanned" }: ProjectCardProps) {
   return (
     <Link href={`/projects/${project.id}`} className="group">
       <Card className="border-border/50 group-hover:border-border transition-colors h-full cursor-pointer">
@@ -45,6 +48,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
           )}
 
           <div className="flex flex-wrap gap-2">
+            <Badge variant={getProjectStatusBadgeVariant(productionStatus)} className="text-xs">
+              {PROJECT_STATUS_LABELS[productionStatus]}
+            </Badge>
             {!project.github_repo && !project.production_url && (
               <Badge variant="outline" className="text-xs text-muted-foreground">
                 No integrations yet

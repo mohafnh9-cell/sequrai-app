@@ -19,4 +19,25 @@ export {
   DIMENSION_LABELS,
   DIMENSION_WEIGHTS,
 } from "./production-readiness/dimensions";
-export { COPILOT_BRAIN_TOOLS, type CopilotBrainTool, type CopilotReadableContext } from "./copilot-contract";
+export {
+  buildProductionRoadmap,
+  normalizeTimelineTitle,
+  type ProductionRoadmap,
+  type ProductionRoadmapItem,
+} from "./production-experience/roadmap";
+export {
+  getProductionLevel,
+  isReadyToDeploy,
+  isSeniorEngineerApproved,
+  PRODUCTION_LEVELS,
+  type ProductionLevel,
+  type ProductionLevelId,
+} from "./production-experience/levels";
+export {
+  getHeroHeadline,
+  getHeroSubheadline,
+  getProjectProductionStatus,
+  getProjectStatusBadgeVariant,
+  PROJECT_STATUS_LABELS,
+  type ProjectProductionStatus,
+} from "./production-experience/project-status";
