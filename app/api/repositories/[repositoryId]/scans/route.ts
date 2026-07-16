@@ -169,7 +169,7 @@ export async function POST(
       throw mapDatabaseError(insertError, "Could not create scan");
     }
 
-    const { error: stateError } = await supabase.from("repository_scan_state").upsert(
+    const { error: stateError } = await admin.from("repository_scan_state").upsert(
       {
         repository_id: repositoryId,
         organization_id: project.organization_id,
