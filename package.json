@@ -12,7 +12,8 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:security-scanner": "vitest run features/security-scanner"
+    "test:security-scanner": "vitest run features/security-scanner",
+    "mcp": "node mcp/stdio-bridge.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.111.0",

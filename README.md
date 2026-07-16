@@ -78,7 +78,7 @@ Copy `.env.example` to `.env.local` and fill in:
 
 ### 2. Run migrations
 
-Apply SQL migrations in `database/migrations/` to your Supabase project (001 through 008).
+Apply SQL migrations in `database/migrations/` to your Supabase project (001 through 009).
 
 ### 3. Install and run
 
@@ -98,6 +98,43 @@ Open [http://localhost:3000](http://localhost:3000).
 | `POST /api/repositories/{id}/scans` | Trigger a production readiness check |
 | `GET /api/scans/{scanId}/ai-analysis` | AI analysis for a completed scan |
 
+| `POST /api/mcp` | MCP JSON-RPC endpoint (Production Copilot tools) |
+| `GET/POST/DELETE /api/mcp/keys` | Manage MCP API keys |
+
+## MCP Integration (Block 7)
+
+Connect Cursor or Claude Code to your Production Copilot:
+
+1. Run migration **009** in Supabase (`mcp_api_keys` table).
+2. Open **Settings → MCP Integration** and generate an API key.
+3. Add to `~/.cursor/mcp.json`:
+
+```json
+{
+  "sequrai": {
+    "command": "node",
+    "args": ["/absolute/path/to/sequrai-app/mcp/stdio-bridge.mjs"],
+    "env": {
+      "SEQURAI_API_KEY": "seq_live_...",
+      "SEQURAI_API_URL": "https://sequrai-app.vercel.app"
+    }
+  }
+}
+```
+
+### Available MCP tools
+
+| Tool | Description |
+|------|-------------|
+| `list_projects` | List org projects with Production Ready Score |
+| `get_production_readiness` | Full Brain snapshot for a project |
+| `get_today_priorities` | Top priorities to improve PRS |
+| `get_coach_tip` | Senior engineer mentor tip |
+| `get_timeline` | Recent production activity |
+| `explain_issue` | Explain a blocker + Cursor fix prompt |
+| `get_production_blockers` | Blockers from latest scan |
+| `run_production_check` | Trigger a production readiness scan |
+
 ## Scripts
 
 ```bash
@@ -111,7 +148,7 @@ npm run lint         # ESLint
 ## Roadmap
 
 - **Block 5.5** ✅ Production Ready Score, Security Brain v0, UX alignment
-- **Block 7** — MCP integration + Security Copilot
+- **Block 7** ✅ MCP integration + Production Copilot
 - **Block 8** — Vercel/Supabase deep integrations
 
 ## License

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import type { Metadata } from "next";
+import { McpApiKeysPanel } from "@/features/settings/McpApiKeysPanel";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -90,6 +91,22 @@ export default async function SettingsPage() {
           </CardContent>
         </Card>
       )}
+
+      <Separator />
+
+      {/* MCP Integration */}
+      <Card className="border-border/50">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base">MCP Integration</CardTitle>
+          <CardDescription>
+            Connect Cursor or Claude Code to your Production Copilot — check readiness, list
+            blockers, and run production checks from your editor.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <McpApiKeysPanel />
+        </CardContent>
+      </Card>
 
       <Separator />
 
