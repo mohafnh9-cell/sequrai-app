@@ -63,8 +63,8 @@ export function DashboardSecurityIntelligence() {
     return (
       <Card className="border-dashed">
         <CardContent className="py-8 text-center text-sm text-muted-foreground">
-          Complete a scan and run <strong>Generate security plan</strong> on the scan report to
-          activate your AI Security Engineer.
+          Complete a scan and run <strong>Generate production plan</strong> on the scan report to
+          activate your AI Production Engineer.
         </CardContent>
       </Card>
     );
@@ -77,14 +77,14 @@ export function DashboardSecurityIntelligence() {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
               <Brain className="h-4 w-4 text-primary" />
-              AI Security Engineer
+              AI Production Engineer
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <p>{data.latestReport?.executive_summary ?? "Your security intelligence will appear here after AI analysis."}</p>
+            <p>{data.latestReport?.executive_summary ?? "Your production intelligence will appear here after AI analysis."}</p>
             {data.latestReport && (
               <div className="flex flex-wrap gap-2">
-                <Badge variant="outline">Security {data.latestReport.security_score ?? "—"}/100</Badge>
+                <Badge variant="outline">Production {data.latestReport.security_score ?? "—"}/100</Badge>
                 <Badge variant="outline">Risk {data.latestReport.risk_score ?? "—"}/100</Badge>
                 <Badge>{data.latestReport.priority_level ?? "medium"}</Badge>
               </div>
@@ -96,7 +96,7 @@ export function DashboardSecurityIntelligence() {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
               <Sparkles className="h-4 w-4" />
-              Security coach
+              Production coach
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground">
@@ -135,7 +135,7 @@ export function DashboardSecurityIntelligence() {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
               <TrendingUp className="h-4 w-4" />
-              Security insights
+              Production insights
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
@@ -171,7 +171,7 @@ export function DashboardSecurityIntelligence() {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
               <Clock className="h-4 w-4" />
-              Security timeline
+              Production timeline
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">

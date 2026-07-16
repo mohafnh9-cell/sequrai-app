@@ -16,7 +16,8 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ProjectDeleteButton } from "@/features/projects/components/ProjectDeleteButton";
 import { ProjectScanOverview } from "@/features/security-scanner/components/ProjectScanOverview";
-import { RepositorySecuritySummary } from "@/features/github-automation/components/RepositorySecuritySummary";
+import { ProductionReadinessSummary } from "@/features/brain/components/ProductionReadinessSummary";
+import { buildProjectBrain } from "@/server/brain/build-project-brain";
 import { SecurityActivityFeed } from "@/features/github-automation/components/SecurityActivityFeed";
 import { formatDate } from "@/lib/utils";
 import type { ProjectRow } from "@/types/database";
@@ -70,18 +71,7 @@ export default async function ProjectDetailPage({
 
   const p = project as ProjectRow;
 
-  const [{ data: health }, { data: scanState }] = await Promise.all([
-    supabase
-      .from("repository_health")
-      .select("*")
-      .eq("project_id", p.id)
-      .maybeSingle(),
-    supabase
-      .from("repository_scan_state")
-      .select("last_commit_sha, last_security_score, open_findings_count")
-      .eq("repository_id", p.id)
-      .maybeSingle(),
-  ]);
+  const brain = await buildProjectBrain(supabase, p.id);
 
   return (
     <div className="p-6 space-y-8 max-w-6xl">
@@ -192,13 +182,14 @@ export default async function ProjectDetailPage({
 
       </div>
 
-      <RepositorySecuritySummary
-        health={health}
-        scanState={scanState}
-        lastScanAt={p.last_scan_at}
-        securityScore={p.security_score}
-        webhookEnabled={(p as ProjectRow & { webhook_enabled?: boolean }).webhook_enabled}
-      />
+      {brain && (
+        <ProductionReadinessSummary
+          productionReady={brain.productionReady}
+          lastScanAt={brain.lastScanAt}
+          lastCommitSha={brain.lastCommitSha}
+          webhookEnabled={brain.webhookEnabled}
+        />
+      )}
 
       <SecurityActivityFeed projectId={p.id} />
 

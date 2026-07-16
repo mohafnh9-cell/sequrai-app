@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   Shield, Zap, GitBranch, AlertTriangle, CheckCircle2, ArrowRight,
-  Lock, Code2, Bug, Globe, Database, Terminal, ChevronDown,
+  Lock, Code2, Bug, Globe, Database, Terminal, ChevronDown, Rocket,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,40 +10,40 @@ import { LandingNav } from "@/components/landing/nav";
 
 const FEATURES = [
   {
-    icon: Bug,
-    title: "Automated Vulnerability Detection",
+    icon: Rocket,
+    title: "Production Ready Score",
     description:
-      "Continuously scan your codebase for secrets, SQL injection, CORS issues, missing security headers, and more — all without manual effort.",
+      "One score that answers the question every AI builder asks: is my app ready for production? Track security, auth, database design, and deployment readiness in one place.",
+  },
+  {
+    icon: Bug,
+    title: "Deployment Blocker Detection",
+    description:
+      "Find critical issues before they reach production — exposed secrets, missing auth, RLS gaps, CORS misconfigurations, and other patterns common in AI-generated code.",
   },
   {
     icon: Zap,
-    title: "AI Fix Generation",
+    title: "AI-Powered Fixes",
     description:
-      "Each vulnerability comes with a clear explanation, risk assessment, and ready-to-paste prompts for Cursor, Claude Code, or direct code fixes.",
+      "Each blocker comes with a clear explanation and ready-to-paste prompts for Cursor or Claude Code so you can fix issues in minutes, not hours.",
   },
   {
     icon: GitBranch,
-    title: "GitHub Integration",
+    title: "GitHub Automation",
     description:
-      "Trigger scans on every push or PR. Get security feedback as part of your development workflow, before code reaches production.",
+      "Every push and PR triggers an incremental production check. Get feedback in your workflow before code ships.",
   },
   {
     icon: Database,
-    title: "Supabase & Firebase Security",
+    title: "Supabase & Firebase Analysis",
     description:
-      "Specialized detection for RLS policies, service role key misuse, Firebase insecure rules, and common AI-generated backend mistakes.",
-  },
-  {
-    icon: Lock,
-    title: "Security Score Tracking",
-    description:
-      "Track your project's security posture over time. Visualize improvements, regressions, and progress across your entire portfolio.",
+      "Specialized checks for RLS policies, service role key misuse, Firebase insecure rules, and common AI-generated backend mistakes.",
   },
   {
     icon: Terminal,
-    title: "MCP-Ready Architecture",
+    title: "Security Brain (v0)",
     description:
-      "Integrate SequrAI directly into your AI coding environment via MCP. Run scans and get fixes without leaving your editor.",
+      "A unified view of your app's production state — scores, blockers, priorities, and activity — ready for MCP and Security Copilot in future releases.",
   },
 ];
 
@@ -52,25 +52,25 @@ const HOW_IT_WORKS = [
     step: "01",
     title: "Connect your project",
     description:
-      "Link your GitHub repo, Vercel project, or Supabase instance. Or just paste a URL. We handle the rest.",
+      "Link your GitHub repo, Vercel project, or Supabase instance. SequrAI maps your repository to a production profile.",
   },
   {
     step: "02",
-    title: "Automated scan",
+    title: "Analyze production readiness",
     description:
-      "Our security engine analyzes your code for vulnerabilities across 10+ security categories.",
+      "Our engine checks security, auth, database design, best practices, and deployment readiness across 10+ categories.",
   },
   {
     step: "03",
-    title: "Receive AI-powered fixes",
+    title: "Fix blockers with AI",
     description:
-      "Every vulnerability includes a Cursor prompt and Claude Code prompt ready to paste and fix immediately.",
+      "Every blocker includes a Cursor or Claude Code prompt ready to paste — fix critical issues before you deploy.",
   },
   {
     step: "04",
-    title: "Track & maintain security",
+    title: "Deploy with confidence",
     description:
-      "Monitor your security score, set up scheduled scans, and get notified of critical issues instantly.",
+      "Track your Production Ready Score, monitor regressions on every push, and know exactly when your app is ready for production.",
   },
 ];
 
@@ -182,13 +182,13 @@ export default function LandingPage() {
           </div>
 
           <h1 className="mx-auto max-w-4xl text-5xl font-bold tracking-tight text-foreground sm:text-6xl lg:text-7xl">
-            Your{" "}
-            <span className="text-gradient">AI Security Director</span>
-            {" "}for AI-built apps
+            Is your{" "}
+            <span className="text-gradient">AI-built app</span>
+            {" "}ready for production?
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground leading-relaxed">
-            Automated security scanning, vulnerability detection, and AI-powered fix generation — designed for apps built with Cursor, Claude Code, Lovable, Bolt, Supabase, and Firebase.
+            SequrAI is the Production & Security Operating System for AI-built apps. Analyze, improve, and deploy with confidence — built for Cursor, Claude Code, Lovable, Bolt, Supabase, and Firebase.
           </p>
 
           <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
@@ -215,16 +215,16 @@ export default function LandingPage() {
                 <div className="h-2 w-2 rounded-full bg-yellow-500" />
                 <div className="h-2 w-2 rounded-full bg-green-500" />
               </div>
-              <span className="text-xs text-muted-foreground font-mono">sequrai scan — my-app</span>
+              <span className="text-xs text-muted-foreground font-mono">sequrai analyze — my-app</span>
             </div>
             <div className="space-y-2 font-mono text-sm">
-              <p className="text-muted-foreground">$ sequrai scan ./my-ai-app</p>
-              <p className="text-green-400">✓ Scanning 847 files...</p>
-              <p className="text-yellow-400">⚠ CRITICAL: Supabase service_role key exposed in client code</p>
-              <p className="text-yellow-400">⚠ HIGH: CORS wildcard (*) allows any origin</p>
-              <p className="text-yellow-400">⚠ CRITICAL: SQL injection via string interpolation (line 42)</p>
-              <p className="text-red-400">✗ Security Score: 34/100 — 3 critical issues found</p>
-              <p className="text-primary mt-2">→ Run &apos;sequrai fix --cursor&apos; to generate Cursor prompts for all issues</p>
+              <p className="text-muted-foreground">$ sequrai analyze ./my-ai-app</p>
+              <p className="text-green-400">✓ Analyzing 847 files...</p>
+              <p className="text-yellow-400">⚠ BLOCKER: Supabase service_role key exposed in client code</p>
+              <p className="text-yellow-400">⚠ BLOCKER: CORS wildcard (*) allows any origin</p>
+              <p className="text-yellow-400">⚠ BLOCKER: SQL injection via string interpolation (line 42)</p>
+              <p className="text-red-400">✗ Production Ready Score: 34/100 — 3 blockers found</p>
+              <p className="text-primary mt-2">→ Run &apos;sequrai fix --cursor&apos; to generate fix prompts for all blockers</p>
             </div>
           </div>
         </div>

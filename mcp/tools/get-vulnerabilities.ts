@@ -30,6 +30,7 @@ export const getProjectVulnerabilitiesTool = {
     },
     required: ["projectId"],
   },
+  // Block 7 target: GET /api/brain/project/{projectId} + scan findings API
   handler: async (input: Record<string, unknown>, apiKey: string) => {
     const params = new URLSearchParams({ projectId: input.projectId as string });
     if (input.severity) params.set("severity", input.severity as string);

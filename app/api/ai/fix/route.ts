@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 
-// AI fix generation not yet implemented
+const deprecated = {
+  error: "This endpoint is deprecated. Use AI analysis on scan reports via /api/scans/{scanId}/ai-analysis.",
+  migration: "Block 5.5 — production readiness API",
+};
+
 export async function POST() {
-  return NextResponse.json(
-    { error: "AI fix generation not yet implemented" },
-    { status: 501 }
-  );
+  return NextResponse.json(deprecated, { status: 410 });
 }

@@ -1,154 +1,119 @@
-# SequrAI — AI Security Director for AI-built Apps
+# SequrAI — Production & Security OS for AI-built Apps
 
-> Automated security scanning, vulnerability detection, and AI-powered fix generation for apps built with Cursor, Claude Code, Lovable, Bolt, Vercel, Supabase, and Firebase.
+> **Never deploy an AI-built application without SequrAI.**
+
+SequrAI answers the question every AI builder asks: **Is my app ready for production?** It analyzes security, authentication, database design, best practices, and deployment readiness — then gives you AI-powered fixes for every blocker.
+
+Built for apps created with Cursor, Claude Code, Lovable, Bolt, Vercel, Supabase, and Firebase.
 
 ## Stack
 
 - **Framework**: Next.js 16 App Router (TypeScript)
-- **Styling**: Tailwind CSS v4 + custom shadcn/ui components
-- **Database**: PostgreSQL via Supabase + Prisma ORM v7
+- **Styling**: Tailwind CSS v4 + shadcn/ui components
+- **Database**: PostgreSQL via Supabase
 - **Auth**: Supabase Auth (email/password + GitHub OAuth)
 - **Payments**: Stripe (subscriptions + webhooks)
-- **AI**: OpenAI GPT-4o-mini for fix generation
+- **AI**: Anthropic Claude for production analysis and fix generation
 - **Email**: Resend for notifications
 - **Deploy**: Vercel
+
+## Core Concepts
+
+### Production Ready Score (PRS)
+
+The primary metric across the dashboard and project views. Weighted across seven dimensions:
+
+- Security
+- Authentication
+- Database Design
+- Best Practices
+- Architecture
+- Performance
+- Deployment Readiness
+
+### Security Brain v0
+
+Central read-only aggregator that merges scan results, AI priorities, activity feeds, and health state. Engines write data; the Brain reads and exposes unified snapshots via API.
+
+### GitHub Automation
+
+Every push and PR triggers an incremental production check. Results flow into the Brain, update commit status, and notify your team.
 
 ## Project Structure
 
 ```
 sequrai-app/
 ├── app/
-│   ├── (auth)/              # Public auth pages (login, signup)
+│   ├── (auth)/              # Public auth pages
 │   ├── (dashboard)/         # Protected dashboard routes
-│   │   ├── dashboard/       # Main dashboard
-│   │   ├── projects/        # Projects list + detail
-│   │   ├── settings/        # Account, team, billing
-│   │   └── pricing/         # Plan upgrade page
-│   ├── api/                 # API routes
-│   │   ├── projects/        # Projects CRUD
-│   │   ├── scans/           # Scan triggering
-│   │   ├── ai/fix/          # AI fix generation
-│   │   ├── stripe/          # Checkout + webhooks
-│   │   └── mcp/             # MCP tool endpoints
-│   └── auth/callback/       # Supabase OAuth callback
-├── components/
-│   ├── ui/                  # Base UI components (shadcn/ui)
-│   ├── dashboard/           # Dashboard components (sidebar)
-│   ├── landing/             # Landing page components
-│   ├── projects/            # Project components
-│   └── vulnerabilities/     # Vulnerability + AI Fix components
-├── lib/
-│   ├── supabase/            # Supabase client (server + client + middleware)
-│   ├── prisma/              # Prisma client (pg adapter)
-│   ├── stripe/              # Stripe client + plan definitions
-│   ├── openai/              # OpenAI client + fix generation
-│   ├── resend/              # Email notifications
-│   ├── scanner/             # Security scanner engine
-│   └── utils/               # Shared utilities
-├── mcp/
-│   ├── server.ts            # MCP server (Phase 6)
-│   └── tools/               # MCP tool definitions
-├── prisma/
-│   └── schema.prisma        # Database schema
-└── types/
-    └── index.ts             # Shared TypeScript types
+│   └── api/
+│       ├── brain/           # Brain snapshot APIs
+│       ├── repositories/    # Scan triggering
+│       └── scans/           # Scan detail + AI analysis
+├── brain/                   # Production readiness calculator + types
+├── features/
+│   ├── security-scanner/    # Scan engine (rules, scoring)
+│   ├── ai-security-engine/  # Claude-powered analysis
+│   └── github-automation/   # Webhooks, orchestrator, activity
+├── server/
+│   ├── brain/               # Brain builders + persistence
+│   ├── security-scanner/    # Scan job runner
+│   └── github-automation/   # Post-scan pipeline
+└── database/migrations/     # Supabase SQL migrations
 ```
 
 ## Getting Started
 
-### 1. Set up environment variables
+### 1. Environment variables
 
-Copy `.env.local` and fill in your values:
+Copy `.env.example` to `.env.local` and fill in:
 
-```bash
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `ANTHROPIC_API_KEY`
+- `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`
+- `GITHUB_WEBHOOK_SECRET`
+- `NEXT_PUBLIC_APP_URL`
 
-# Database
-DATABASE_URL=postgresql://postgres:[password]@db.[project-ref].supabase.co:5432/postgres
+### 2. Run migrations
 
-# Stripe
-STRIPE_SECRET_KEY=sk_test_...
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-STRIPE_BUILDER_PRICE_ID=price_...
-STRIPE_STUDIO_PRICE_ID=price_...
-STRIPE_AGENCY_PRICE_ID=price_...
+Apply SQL migrations in `database/migrations/` to your Supabase project (001 through 008).
 
-# OpenAI
-OPENAI_API_KEY=sk-...
-
-# Resend
-RESEND_API_KEY=re_...
-
-# App
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-```
-
-### 2. Set up the database
+### 3. Install and run
 
 ```bash
-# Run Prisma migrations
-npx prisma migrate dev --name init
-
-# Or push schema directly (for rapid prototyping)
-npx prisma db push
-```
-
-### 3. Run development server
-
-```bash
+npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Open [http://localhost:3000](http://localhost:3000).
 
-## Pricing Plans
+## API Endpoints
 
-| Plan | Price | Projects | Scans/mo | Members |
-|------|-------|----------|----------|---------|
-| Builder | €49/mo | 5 | 50 | 2 |
-| Studio | €99/mo | 20 | 200 | 10 |
-| Agency | €299/mo | ∞ | ∞ | ∞ |
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/brain/organization` | Org-level production readiness snapshot |
+| `GET /api/brain/project/{projectId}` | Project-level Brain snapshot |
+| `POST /api/repositories/{id}/scans` | Trigger a production readiness check |
+| `GET /api/scans/{scanId}/ai-analysis` | AI analysis for a completed scan |
 
-All plans include a 14-day free trial, no credit card required.
-
-## Security Scanner — Detection Categories
-
-The scanner (Phase 1) detects:
-
-1. **Secrets Exposed** — API keys, tokens, passwords in code
-2. **CORS Permissive** — Wildcard `*` origin policies
-3. **Missing Security Headers** — CSP, HSTS, X-Frame-Options
-4. **SQL Injection** — String interpolation in queries
-5. **Supabase RLS Disabled** — Missing row-level security
-6. **Firebase Insecure Rules** — Public read/write access
-7. **Vulnerable Dependencies** — Known CVEs in package.json
-8. **Auth Bypass** — API routes without authentication
-9. **API Security** — Missing rate limiting, no input validation
-
-## MCP Integration (Phase 6)
-
-The `mcp/` folder contains the architecture for the MCP server. Phase 6 will expose these tools to Cursor and Claude Code:
-
-- `run_security_scan` — Trigger a scan from your editor
-- `get_project_vulnerabilities` — Fetch vulnerabilities with filters
-- `get_security_score` — Get current security score
-- `generate_cursor_fix_prompt` — Generate Cursor-ready fix prompt
-- `generate_claude_fix_prompt` — Generate Claude Code-ready fix prompt
-- `create_fix_proposal` — Create a draft PR
-
-## Deployment
-
-Deploy to Vercel:
+## Scripts
 
 ```bash
-vercel --prod
+npm run dev          # Start dev server
+npm run build        # Production build
+npm run typecheck    # TypeScript check
+npm run test         # Run all tests
+npm run lint         # ESLint
 ```
 
-Set up Stripe webhook:
-```bash
-stripe listen --forward-to localhost:3000/api/stripe/webhook
-```
+## Roadmap
+
+- **Block 5.5** ✅ Production Ready Score, Security Brain v0, UX alignment
+- **Block 7** — MCP integration + Security Copilot
+- **Block 8** — Vercel/Supabase deep integrations
+
+## License
+
+Proprietary — SequrAI © 2026

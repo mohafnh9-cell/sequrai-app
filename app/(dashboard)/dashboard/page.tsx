@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import {
-  Shield,
+  Rocket,
   FolderGit2,
   ShieldAlert,
   Activity,
@@ -17,10 +17,19 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { DashboardSecurityIntelligence } from "@/features/ai-security-engine/components/DashboardSecurityIntelligence";
 import { SecurityActivityFeed } from "@/features/github-automation/components/SecurityActivityFeed";
+import { buildOrgBrain } from "@/server/brain/build-org-brain";
 import { formatRelativeDate } from "@/lib/utils";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Dashboard" };
+
+function readinessBadge(score: number | null, blockers: number) {
+  if (score === null) return { label: "Not scanned", variant: "outline" as const };
+  if (blockers > 0) return { label: `${blockers} blocker${blockers === 1 ? "" : "s"}`, variant: "destructive" as const };
+  if (score >= 85) return { label: "Ready", variant: "default" as const };
+  if (score >= 70) return { label: `${score}%`, variant: "secondary" as const };
+  return { label: `${score}%`, variant: "outline" as const };
+}
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -29,7 +38,6 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Get organization membership
   const { data: membership } = await supabase
     .from("organization_members")
     .select("*, organization:organizations(*)")
@@ -37,17 +45,16 @@ export default async function DashboardPage() {
     .limit(1)
     .maybeSingle();
 
-  // No org → prompt setup
   if (!membership) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-6 p-12">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-          <Shield className="h-8 w-8 text-primary" />
+          <Rocket className="h-8 w-8 text-primary" />
         </div>
         <div className="text-center max-w-sm">
           <h1 className="text-2xl font-bold">Welcome to SequrAI</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Create your organization to start securing your AI-built applications.
+            Create your organization to check if your AI-built apps are production ready.
           </p>
         </div>
         <Button asChild>
@@ -66,13 +73,8 @@ export default async function DashboardPage() {
     plan: string;
   };
 
-  // Fetch projects count
-  const { count: projectCount } = await supabase
-    .from("projects")
-    .select("*", { count: "exact", head: true })
-    .eq("organization_id", org.id);
+  const brain = await buildOrgBrain(supabase, org.id);
 
-  // Fetch recent projects
   const { data: recentProjects } = await supabase
     .from("projects")
     .select("*")
@@ -80,44 +82,11 @@ export default async function DashboardPage() {
     .order("created_at", { ascending: false })
     .limit(5);
 
-  const { data: recentScans } = await supabase
-    .from("scans")
-    .select(
-      "repository_id, security_score, critical_count, findings_count, status, completed_at, created_at"
-    )
-    .eq("organization_id", org.id)
-    .order("created_at", { ascending: false })
-    .limit(100);
+  const totalProjects = brain.projects.length;
+  const totalBlockers = brain.projects.reduce((sum, p) => sum + p.blockersCount, 0);
+  const recentActivity = brain.recentActivity.length;
+  const averageProductionReady = brain.averageProductionReady;
 
-  const latestCompletedByRepository = new Map<
-    string,
-    { security_score: number | null; critical_count: number }
-  >();
-  for (const scan of recentScans ?? []) {
-    if (
-      scan.status === "completed" &&
-      !latestCompletedByRepository.has(scan.repository_id)
-    ) {
-      latestCompletedByRepository.set(scan.repository_id, scan);
-    }
-  }
-  const scored = [...latestCompletedByRepository.values()].filter(
-    (scan) => scan.security_score !== null
-  );
-  const averageScore =
-    scored.length > 0
-      ? Math.round(
-          scored.reduce((total, scan) => total + (scan.security_score ?? 0), 0) /
-            scored.length
-        )
-      : null;
-  const criticalIssues = [...latestCompletedByRepository.values()].reduce(
-    (total, scan) => total + scan.critical_count,
-    0
-  );
-  const recentActivity = recentScans?.length ?? 0;
-
-  const totalProjects = projectCount ?? 0;
   const planLabel =
     org.plan === "FREE"
       ? "Free"
@@ -129,9 +98,12 @@ export default async function DashboardPage() {
       ? "Agency"
       : org.plan;
 
+  const projectReadiness = new Map(
+    brain.projects.map((item) => [item.projectId, item])
+  );
+
   return (
     <div className="p-6 space-y-6 max-w-6xl">
-      {/* Header */}
       <PageHeader
         title="Dashboard"
         description={`${org.name} · ${planLabel} plan`}
@@ -145,14 +117,25 @@ export default async function DashboardPage() {
         }
       />
 
-      {/* Metric cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
-          title="Security Score"
-          value={averageScore ?? "—"}
-          subtitle={averageScore === null ? "No scans yet" : "Average latest score"}
-          icon={Shield}
-          valueColor={averageScore === null ? "text-muted-foreground" : undefined}
+          title="Production Ready Score"
+          value={averageProductionReady ?? "—"}
+          subtitle={
+            averageProductionReady === null
+              ? "Run an analysis to get your score"
+              : "Average across projects"
+          }
+          icon={Rocket}
+          valueColor={
+            averageProductionReady === null
+              ? "text-muted-foreground"
+              : averageProductionReady >= 85
+                ? "text-emerald-500"
+                : averageProductionReady >= 70
+                  ? "text-amber-500"
+                  : "text-red-500"
+          }
         />
         <MetricCard
           title="Projects"
@@ -161,29 +144,27 @@ export default async function DashboardPage() {
           icon={FolderGit2}
         />
         <MetricCard
-          title="Critical Issues"
-          value={criticalIssues}
-          subtitle="Across latest scans"
+          title="Blockers"
+          value={totalBlockers}
+          subtitle="Must fix before production"
           icon={ShieldAlert}
-          valueColor={criticalIssues > 0 ? "text-red-500" : "text-emerald-500"}
+          valueColor={totalBlockers > 0 ? "text-red-500" : "text-emerald-500"}
         />
         <MetricCard
           title="Recent Activity"
           value={recentActivity}
-          subtitle="Latest recorded scans"
+          subtitle="Latest production events"
           icon={Activity}
         />
       </div>
 
-      {/* Main content */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Projects */}
         <Card className="border-border/50">
           <CardHeader className="flex-row items-center justify-between pb-4">
             <div>
               <CardTitle className="text-base">Projects</CardTitle>
               <CardDescription className="text-xs mt-0.5">
-                Your connected projects
+                Production readiness by project
               </CardDescription>
             </div>
             <Button variant="ghost" size="sm" asChild>
@@ -202,59 +183,63 @@ export default async function DashboardPage() {
               />
             ) : (
               <div className="space-y-2">
-                {recentProjects.map((project) => (
-                  <Link
-                    key={project.id}
-                    href={`/projects/${project.id}`}
-                    className="flex items-center justify-between rounded-md border border-border/50 bg-secondary/20 p-3 hover:bg-secondary/40 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-secondary">
-                        <FolderGit2 className="h-4 w-4 text-muted-foreground" />
+                {recentProjects.map((project) => {
+                  const readiness = projectReadiness.get(project.id);
+                  const badge = readinessBadge(
+                    readiness?.productionReady ?? null,
+                    readiness?.blockersCount ?? 0
+                  );
+                  return (
+                    <Link
+                      key={project.id}
+                      href={`/projects/${project.id}`}
+                      className="flex items-center justify-between rounded-md border border-border/50 bg-secondary/20 p-3 hover:bg-secondary/40 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-secondary">
+                          <FolderGit2 className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{project.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {project.framework ?? "No framework"} ·{" "}
+                            {formatRelativeDate(project.created_at)}
+                          </p>
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{project.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {project.framework ?? "No framework"} ·{" "}
-                          {formatRelativeDate(project.created_at)}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant="outline" className="text-xs shrink-0 ml-2">
-                      Ready
-                    </Badge>
-                  </Link>
-                ))}
+                      <Badge variant={badge.variant} className="text-xs shrink-0 ml-2">
+                        {badge.label}
+                      </Badge>
+                    </Link>
+                  );
+                })}
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Critical Issues */}
         <Card className="border-border/50">
           <CardHeader className="flex-row items-center justify-between pb-4">
             <div>
-              <CardTitle className="text-base">Critical Issues</CardTitle>
+              <CardTitle className="text-base">Blockers</CardTitle>
               <CardDescription className="text-xs mt-0.5">
-                Requires immediate attention
+                Issues that block production deployment
               </CardDescription>
             </div>
           </CardHeader>
           <CardContent className="pt-0">
-            {criticalIssues > 0 ? (
+            {totalBlockers > 0 ? (
               <EmptyState
                 icon={ShieldAlert}
-                title={`${criticalIssues} critical ${
-                  criticalIssues === 1 ? "issue" : "issues"
-                } detected`}
-                description="Open a scanned project to review the findings requiring immediate attention."
+                title={`${totalBlockers} blocker${totalBlockers === 1 ? "" : "s"} across projects`}
+                description="Open a project to review what must be fixed before going to production."
                 action={{ label: "Review projects", href: "/projects" }}
               />
             ) : (
               <EmptyState
-                icon={Shield}
-                title="No critical issues"
-                description="Run a scan to detect vulnerabilities in your projects."
+                icon={Rocket}
+                title="No blockers detected"
+                description="Run a production readiness check on your projects to find deployment blockers."
                 variant="success"
               />
             )}

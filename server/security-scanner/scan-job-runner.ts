@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { scanRepository as scanRepositoryFiles, scoreFindings } from "@/features/security-scanner";
 import type { Confidence, Finding as ScannerFinding, Severity } from "@/features/security-scanner";
+import { persistProductionReadiness } from "@/server/brain/persist-readiness";
 import {
   GitHubRepositoryService,
   GitHubServiceError,
@@ -260,7 +261,7 @@ export class InlineScanJobRunner implements ScanJobRunner {
         metrics,
         detected_stack: stack,
         omissions: [...snapshot.omissions, ...(result.omissions ?? [])],
-        summary: `${rows.length} finding${rows.length === 1 ? "" : "s"} detected; security grade ${scoreBreakdown.grade}.`,
+        summary: `${counts.critical + counts.high} blocker${counts.critical + counts.high === 1 ? "" : "s"} · ${counts.medium + counts.low} improvement${counts.medium + counts.low === 1 ? "" : "s"}.`,
         files_analyzed: isIncremental ? snapshot.files.length : result.metrics.scannedFiles,
         findings_count: rows.length,
         critical_count: counts.critical,
@@ -283,6 +284,17 @@ export class InlineScanJobRunner implements ScanJobRunner {
         last_security_score: score,
         open_findings_count: rows.length,
       });
+      await persistProductionReadiness(this.supabase, {
+        organizationId: context.organizationId,
+        projectId: context.repositoryId,
+        scanId: context.scanId,
+        securityScore: score,
+        criticalCount: counts.critical,
+        highCount: counts.high,
+        mediumCount: counts.medium,
+        lowCount: counts.low,
+        infoCount: counts.info,
+      }).catch(() => undefined);
       logScan("info", "scan_completed", {
         scanId: context.scanId,
         repositoryId: context.repositoryId,

@@ -79,10 +79,10 @@ export function RunSecurityScanButton({
           <Play className="mr-2 h-4 w-4" />
         )}
         {state === "running"
-          ? "Starting scan…"
+          ? "Starting check…"
           : state === "error"
-            ? "Retry scan"
-            : "Run Security Scan"}
+            ? "Retry check"
+            : "Check production readiness"}
       </Button>
       {error && (
         <p className="flex items-center gap-1.5 text-xs text-destructive" role="alert">

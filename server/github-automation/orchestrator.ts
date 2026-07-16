@@ -16,6 +16,7 @@ import {
   type GitHubRepositoryPayload,
 } from "./webhook-utils";
 import { recordRepositoryActivity } from "./activity";
+import { estimateRiskFromScan } from "@/brain";
 import { extractCriticalPaths } from "./health";
 
 type ProjectRow = {
@@ -183,7 +184,34 @@ async function runScanAndFinalize(
     throw new Error("Automation scan did not complete");
   }
 
-  const riskScore = Math.max(0, 100 - (completed.security_score ?? 0));
+  const { data: findings } = await admin
+    .from("scan_findings")
+    .select("category")
+    .eq("scan_id", input.scanId);
+
+  const categoryCounts: Record<string, number> = {};
+  for (const row of findings ?? []) {
+    const key = row.category.toLowerCase();
+    categoryCounts[key] = (categoryCounts[key] ?? 0) + 1;
+  }
+
+  const stack = completed.detected_stack as
+    | { frameworks?: string[]; services?: string[] }
+    | undefined;
+
+  const riskScore = estimateRiskFromScan({
+    securityScore: completed.security_score ?? 0,
+    severityCounts: {
+      critical: completed.critical_count ?? 0,
+      high: completed.high_count ?? 0,
+      medium: completed.medium_count ?? 0,
+      low: completed.low_count ?? 0,
+      info: completed.info_count ?? 0,
+    },
+    categoryCounts,
+    findingsCount: completed.findings_count ?? 0,
+    stack,
+  });
   const { checkStatus } = await finalizeScanAutomation(admin, {
     organizationId: input.project.organization_id,
     projectId: input.project.id,
@@ -204,7 +232,7 @@ async function runScanAndFinalize(
       token: input.token,
       state: statusFromSecurityCheck(checkStatus),
       context: "sequrai/security",
-      description: `Score ${completed.security_score} · ${checkStatus.toUpperCase()}`,
+      description: `Production ready ${completed.security_score} · ${checkStatus.toUpperCase()}`,
       targetUrl: input.appUrl
         ? `${input.appUrl}/projects/${input.project.id}/scans/${input.scanId}`
         : undefined,

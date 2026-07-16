@@ -1,16 +1,14 @@
 import { NextResponse } from "next/server";
 
-// Scanner not yet implemented
+const deprecated = {
+  error: "This endpoint is deprecated. Use POST /api/repositories/{projectId}/scans instead.",
+  migration: "Block 5.5 — production readiness API",
+};
+
 export async function GET() {
-  return NextResponse.json(
-    { error: "Scanner not yet implemented" },
-    { status: 501 }
-  );
+  return NextResponse.json(deprecated, { status: 410 });
 }
 
 export async function POST() {
-  return NextResponse.json(
-    { error: "Scanner not yet implemented" },
-    { status: 501 }
-  );
+  return NextResponse.json(deprecated, { status: 410 });
 }

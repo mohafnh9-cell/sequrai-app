@@ -23,10 +23,11 @@ export const runSecurityScanTool = {
     },
     required: ["projectId"],
   },
-  // In Phase 6, this calls the SequrAI API with the user's API key
+  // Block 7 target: POST /api/repositories/{projectId}/scans
   handler: async (input: Record<string, unknown>, apiKey: string) => {
+    const projectId = input.projectId as string;
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL ?? "https://sequrai.com"}/api/scans`,
+      `${process.env.NEXT_PUBLIC_APP_URL ?? "https://sequrai.com"}/api/repositories/${projectId}/scans`,
       {
         method: "POST",
         headers: {

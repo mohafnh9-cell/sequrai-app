@@ -32,7 +32,7 @@ const PRIMARY_NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/projects", label: "Projects", icon: FolderGit2 },
   { href: "/integrations", label: "Integrations", icon: Puzzle },
-  { href: "/ai-fixes", label: "AI Fixes", icon: Sparkles },
+  { href: "/ai-fixes", label: "Fixes", icon: Sparkles },
   { href: "/timeline", label: "Timeline", icon: Clock },
 ] as const;
 

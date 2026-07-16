@@ -18,6 +18,7 @@ export const generateCursorFixPromptTool = {
     },
     required: ["vulnerabilityId"],
   },
+  // Block 7 target: scan finding fix prompts via /api/scans/{scanId}/findings/{findingId}/fix
   handler: async (input: Record<string, unknown>, apiKey: string) => {
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_APP_URL ?? "https://sequrai.com"}/api/ai/fix`,
@@ -61,6 +62,7 @@ export const generateClaudeFixPromptTool = {
     },
     required: ["vulnerabilityId"],
   },
+  // Block 7 target: scan finding fix prompts via /api/scans/{scanId}/findings/{findingId}/fix
   handler: async (input: Record<string, unknown>, apiKey: string) => {
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_APP_URL ?? "https://sequrai.com"}/api/ai/fix`,

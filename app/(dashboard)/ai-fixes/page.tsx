@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "AI Fixes" };
+export const metadata: Metadata = { title: "Fixes" };
 
 export default async function AIFixesPage() {
   const supabase = await createClient();
