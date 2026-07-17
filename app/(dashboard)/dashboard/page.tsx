@@ -76,9 +76,13 @@ export default async function DashboardPage() {
   const projectReadiness = new Map(brain.projects.map((item) => [item.projectId, item]));
 
   const journeyPreviews = await Promise.all(
-    (recentProjects ?? []).map((project) =>
-      getProductionJourneyPreviewByProject(supabase, project.id, user.id)
-    )
+    (recentProjects ?? []).map(async (project) => {
+      try {
+        return await getProductionJourneyPreviewByProject(supabase, project.id, user.id);
+      } catch {
+        return null;
+      }
+    })
   );
   const journeyPreviewByProject = new Map(
     (recentProjects ?? []).map((project, index) => [project.id, journeyPreviews[index]])

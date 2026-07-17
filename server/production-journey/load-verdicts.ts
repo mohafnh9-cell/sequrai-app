@@ -27,9 +27,13 @@ type VerdictRow = {
   generated_at: string;
 };
 
+function isMissingTableError(message: string): boolean {
+  return message.includes("production_verdicts") && message.includes("does not exist");
+}
+
 export async function loadVerdictJourneyRecords(
   client: SupabaseClient,
-  repositoryId: string,
+  projectId: string,
   options?: { limit?: number }
 ): Promise<{ records: VerdictJourneyRecord[]; skippedInvalid: number }> {
   const limit = options?.limit ?? 200;
@@ -53,12 +57,16 @@ export async function loadVerdictJourneyRecords(
       generated_at
     `
     )
-    .eq("repository_id", repositoryId)
+    .eq("project_id", projectId)
     .order("generated_at", { ascending: true })
     .limit(limit);
 
   if (error) {
-    log("verdicts_load_failed", { repositoryId, error: error.message });
+    if (isMissingTableError(error.message)) {
+      log("migration_missing", { projectId });
+      return { records: [], skippedInvalid: 0 };
+    }
+    log("verdicts_load_failed", { projectId, error: error.message });
     throw new Error(error.message);
   }
 
@@ -88,13 +96,13 @@ export async function loadVerdictJourneyRecords(
     } catch (cause) {
       skippedInvalid += 1;
       log("invalid_verdict_skipped", {
-        repositoryId,
+        projectId,
         verdictId: row.id,
         error: cause instanceof Error ? cause.message : "parse_failed",
       });
     }
   }
 
-  log("verdicts_loaded", { repositoryId, count: records.length, skippedInvalid });
+  log("verdicts_loaded", { projectId, count: records.length, skippedInvalid });
   return { records, skippedInvalid };
 }

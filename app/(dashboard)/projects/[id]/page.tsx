@@ -97,7 +97,12 @@ export default async function ProjectDetailPage({
     ? `/projects/${p.id}/scans/${latestScan.id}/report`
     : undefined;
 
-  const journey = await getProductionJourneyByProject(supabase, p.id, user.id, { limit: 30 });
+  let journey = null;
+  try {
+    journey = await getProductionJourneyByProject(supabase, p.id, user.id, { limit: 30 });
+  } catch {
+    journey = null;
+  }
   const journeyPreview = journey ? toJourneyPreview(journey) : null;
 
   return (

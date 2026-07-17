@@ -37,7 +37,7 @@ export default async function ProjectJourneyPage({ params }: JourneyPageProps) {
 
   if (!project) notFound();
 
-  const journey = await getProductionJourneyByProject(supabase, id, user.id);
+  const journey = await getProductionJourneyByProject(supabase, id, user.id).catch(() => null);
 
   const { data: latestScan } = await supabase
     .from("scans")

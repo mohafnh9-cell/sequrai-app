@@ -15,14 +15,19 @@ export async function getRequestLocale(userId?: string | null): Promise<AppLocal
 
   if (userId) {
     const supabase = await createClient();
-    const { data: profile } = await supabase
+    const { data: profile, error } = await supabase
       .from("profiles")
       .select("locale")
       .eq("id", userId)
       .maybeSingle();
 
+    const profileLocale =
+      error?.message.includes("locale") && error.message.includes("does not exist")
+        ? null
+        : profile?.locale;
+
     return resolveLocalePreference(
-      profile?.locale,
+      profileLocale,
       cookieLocale,
       detectLocaleFromAcceptLanguage((await headers()).get("accept-language")),
       DEFAULT_LOCALE

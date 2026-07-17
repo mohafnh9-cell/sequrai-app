@@ -131,7 +131,7 @@ export async function getProductionJourneyByProject(
       projectId,
       error: cause instanceof Error ? cause.message : "unknown",
     });
-    throw cause;
+    return null;
   }
 }
 
