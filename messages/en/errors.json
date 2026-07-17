@@ -1,0 +1,8 @@
+{
+  "repoAccess": "We could not access this repository. Reconnect GitHub and try again.",
+  "reviewSlow": "The review is taking longer than expected.",
+  "scanStart": "The production review could not be started.",
+  "scanLoad": "Could not load this scan.",
+  "generic": "Something went wrong. Please try again.",
+  "githubReconnect": "Reconnect GitHub before selecting repositories."
+}

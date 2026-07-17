@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AlertCircle, Loader2, Play, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { startGitHubOAuth } from "@/lib/github/oauth-client";
+import { useI18n } from "@/lib/i18n/client";
 
 type State = "idle" | "running" | "error";
 
@@ -18,6 +19,8 @@ export function RunSecurityScanButton({
   disabled?: boolean;
 }) {
   const router = useRouter();
+  const { t } = useI18n("projects");
+  const { t: te } = useI18n("errors");
   const [state, setState] = useState<State>("idle");
   const [error, setError] = useState("");
 
@@ -46,16 +49,16 @@ export function RunSecurityScanButton({
       }
 
       if (!response.ok || !body?.scan_id) {
-        throw new Error(body?.error || "The scan could not be started.");
+        throw new Error(body?.error || te("scanStart"));
       }
 
       router.push(`/projects/${projectId}/scans/${body.scan_id}`);
       router.refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "The scan could not be started.");
+      setError(cause instanceof Error ? cause.message : te("scanStart"));
       setState("error");
     }
-  }, [projectId, reconnectGitHub, router]);
+  }, [projectId, reconnectGitHub, router, te]);
 
   useEffect(() => {
     const pending = localStorage.getItem(scanRetryKey(projectId));
@@ -79,10 +82,10 @@ export function RunSecurityScanButton({
           <Play className="mr-2 h-4 w-4" />
         )}
         {state === "running"
-          ? "Starting check…"
+          ? t("startingReview")
           : state === "error"
-            ? "Retry check"
-            : "Check production readiness"}
+            ? t("retryReview")
+            : t("checkReadiness")}
       </Button>
       {error && (
         <p className="flex items-center gap-1.5 text-xs text-destructive" role="alert">

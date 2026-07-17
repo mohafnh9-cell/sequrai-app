@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
+import { I18nShell } from "@/components/shared/I18nShell";
 
-// Force dynamic rendering so this route is never cached at the CDN edge.
-// Prevents stale "Supabase not configured" warnings from persisting after
-// env var changes and redeploys.
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
@@ -11,8 +9,10 @@ export const metadata: Metadata = {
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-6">
-      {children}
-    </div>
+    <I18nShell>
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-6">
+        {children}
+      </div>
+    </I18nShell>
   );
 }

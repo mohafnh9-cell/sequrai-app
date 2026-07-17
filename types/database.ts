@@ -40,6 +40,7 @@ export type ProfileRow = {
   full_name: string | null;
   avatar_url: string | null;
   email: string | null;
+  locale: string | null;
   created_at: string;
   updated_at: string;
 };

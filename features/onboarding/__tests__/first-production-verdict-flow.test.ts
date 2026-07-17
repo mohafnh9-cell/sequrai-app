@@ -150,7 +150,7 @@ describe("Block 6.4 First Production Verdict onboarding flow", () => {
 
   it("mobile and desktop layouts expose progress tracker steps", () => {
     expect(PROGRESS_STEPS).toHaveLength(5);
-    expect(PROGRESS_STEPS[0].label).toBe("GitHub connected");
-    expect(PROGRESS_STEPS[4].label).toBe("Ready to start building");
+    expect(PROGRESS_STEPS[0].labelKey).toBe("progress.github");
+    expect(PROGRESS_STEPS[4].labelKey).toBe("progress.ready");
   });
 });

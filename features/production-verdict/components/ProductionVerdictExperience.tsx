@@ -4,7 +4,6 @@ import Link from "next/link";
 import { GitCommit, Clock, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { formatRelativeDate } from "@/lib/utils";
 import type { ProductionVerdictV1 } from "@/brain/production-verdict/schema";
 import {
   projectSummaryCopy,
@@ -18,6 +17,8 @@ import { CoverageBreakdown } from "./CoverageBreakdown";
 import { ProductionEngineerSummary } from "./ProductionEngineerSummary";
 import { trackEvent } from "@/lib/analytics/track";
 import { useEffect } from "react";
+import { useI18n } from "@/lib/i18n/client";
+import { formatRelativeLocalized } from "@/lib/i18n/format";
 
 export function ProductionVerdictExperience({
   verdict,
@@ -97,8 +98,19 @@ export function ProjectVerdictSummary({
   webhookEnabled?: boolean;
   latestScanHref?: string;
 }) {
+  const { locale } = useI18n();
+  const { t } = useI18n("projects");
+  const { t: tc } = useI18n("common");
   const view = verdictExperienceFromVerdict(verdict);
   const summary = projectSummaryCopy(verdict);
+
+  const dateLabels = {
+    never: tc("never"),
+    justNow: tc("justNow"),
+    minutesAgo: tc("minutesAgo"),
+    hoursAgo: tc("hoursAgo"),
+    daysAgo: tc("daysAgo"),
+  };
 
   return (
     <div className="space-y-6">
@@ -115,28 +127,28 @@ export function ProjectVerdictSummary({
           {verdict.commitSha && (
             <span className="flex items-center gap-2">
               <GitCommit className="h-3.5 w-3.5" aria-hidden />
-              Last reviewed: <code>{verdict.commitSha.slice(0, 12)}</code>
+              {t("lastReviewed")}: <code>{verdict.commitSha.slice(0, 12)}</code>
             </span>
           )}
           {lastScanAt && (
             <span className="flex items-center gap-2">
               <Clock className="h-3.5 w-3.5" aria-hidden />
-              {formatRelativeDate(lastScanAt)}
+              {formatRelativeLocalized(locale, lastScanAt, dateLabels)}
             </span>
           )}
           <Badge variant={webhookEnabled === false ? "outline" : "secondary"} className="text-xs">
-            GitHub automation: {webhookEnabled === false ? "Paused" : "Active"}
+            {webhookEnabled === false ? t("automationPaused") : t("automationActive")}
           </Badge>
         </div>
         {verdict.topPriorities[0] && (
           <p className="flex items-center gap-2 text-sm">
             <Zap className="h-4 w-4 text-primary shrink-0" aria-hidden />
-            Fastest next action: <strong>{verdict.topPriorities[0].title}</strong>
+            {t("fastestNextAction")}: <strong>{verdict.topPriorities[0].title}</strong>
           </p>
         )}
         {latestScanHref && (
           <Button variant="outline" size="sm" asChild>
-            <Link href={latestScanHref}>Open latest production analysis</Link>
+            <Link href={latestScanHref}>{t("openLatestAnalysis")}</Link>
           </Button>
         )}
       </div>

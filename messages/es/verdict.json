@@ -1,0 +1,74 @@
+{
+  "productionVerdict": "Production Verdict",
+  "productionReadyScore": "Production Ready Score",
+  "productionBlocker_one": "{count} bloqueador de producción",
+  "productionBlocker_other": "{count} bloqueadores de producción",
+  "blockersRequireAttention_one": "Hay {count} bloqueador de producción que requiere tu atención.",
+  "blockersRequireAttention_other": "Hay {count} bloqueadores de producción que requieren tu atención.",
+  "estimatedPathForward": "Camino estimado hacia producción",
+  "projectedScore": "Score proyectado",
+  "scoreDelta": "Cambio de score",
+  "afterPriorities": "Tras las prioridades recomendadas",
+  "sincePreviousReview": "Desde la revisión anterior",
+  "fastestPathTitle": "Camino más rápido hacia producción",
+  "fastestPathSubtitle": "Resuelve estas prioridades en orden para llegar antes a producción.",
+  "whyItMatters": "Por qué importa",
+  "technicalSeverity": "Severidad técnica",
+  "estimatedTime": "Tiempo estimado",
+  "estimatedImprovement": "Mejora estimada",
+  "reviewFix": "Revisar solución",
+  "action": "Acción",
+  "affected": "Afectado",
+  "aiEngineerTitle": "AI Production Engineer",
+  "aiEngineerSubtitle": "Resumen ejecutivo de la revisión",
+  "reviewSummary": "Resumen de la revisión",
+  "recommendedNextAction": "Siguiente acción recomendada",
+  "enhanceSummary": "Mejorar resumen",
+  "generating": "Generando…",
+  "viewTechnicalReport": "Ver informe técnico",
+  "retryProductionCheck": "Reintentar revisión de producción",
+  "commitReviewed": "Revisé el commit {sha}.",
+  "latestChanges": "Revisé tus últimos cambios.",
+  "estimatedImplementation": "Tiempo estimado de implementación: {minutes} minutos.",
+  "aiUnavailableDeterministic": "Resumen de IA no disponible. El Production Verdict determinista sigue siendo la referencia.",
+  "moreAffected": "+{count} más",
+  "points": "+{count} puntos",
+  "status": {
+    "ready_to_ship": {
+      "label": "Lista para producción",
+      "headline": "LISTA PARA PRODUCCIÓN",
+      "description": "Sin bloqueadores de producción. Cumple el umbral actual de preparación.",
+      "message": "Tu aplicación está lista para producción."
+    },
+    "almost_ready": {
+      "label": "Casi lista",
+      "headline": "CASI LISTA",
+      "description": "Cerca de producción. Resuelve los bloqueadores restantes en tu camino más rápido.",
+      "message": "Estás cerca de producción."
+    },
+    "needs_improvement": {
+      "label": "Necesita mejoras",
+      "headline": "NECESITA MEJORAS",
+      "description": "Se requieren mejoras antes del despliegue a producción.",
+      "message": "Tu aplicación necesita una pasada enfocada hacia producción."
+    },
+    "not_ready": {
+      "label": "No está lista para producción",
+      "headline": "NO ESTÁ LISTA PARA PRODUCCIÓN",
+      "description": "Los bloqueadores de producción impiden un despliegue seguro.",
+      "message": "Tu aplicación todavía no está lista para producción."
+    },
+    "insufficient_data": {
+      "label": "Se necesita más análisis",
+      "headline": "SE NECESITA MÁS ANÁLISIS",
+      "description": "Cobertura insuficiente del repositorio para una decisión responsable.",
+      "message": "SequrAI necesita más información antes de emitir un veredicto responsable."
+    },
+    "analysis_failed": {
+      "label": "El análisis ha fallado",
+      "headline": "EL ANÁLISIS HA FALLADO",
+      "description": "El último análisis no se completó correctamente.",
+      "message": "No hemos podido completar esta revisión de producción."
+    }
+  }
+}

@@ -1,8 +1,22 @@
-import { type NextRequest } from "next/server";
+import type { NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
+import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE } from "@/lib/i18n/config";
+import { detectLocaleFromAcceptLanguage } from "@/lib/i18n/detect";
+
+function ensureLocaleCookie(request: NextRequest, response: NextResponse) {
+  if (request.cookies.get(LOCALE_COOKIE)?.value) return;
+  const locale = detectLocaleFromAcceptLanguage(request.headers.get("accept-language"));
+  response.cookies.set(LOCALE_COOKIE, locale, {
+    path: "/",
+    maxAge: LOCALE_COOKIE_MAX_AGE,
+    sameSite: "lax",
+  });
+}
 
 export async function proxy(request: NextRequest) {
-  return await updateSession(request);
+  const response = await updateSession(request);
+  ensureLocaleCookie(request, response);
+  return response;
 }
 
 export const config = {

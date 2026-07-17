@@ -3,6 +3,7 @@
 import { Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ProductionPriority } from "@/brain/production-verdict/schema";
+import { useI18n } from "@/lib/i18n/client";
 
 export function OnboardingFastestPath({
   priorities,
@@ -11,16 +12,18 @@ export function OnboardingFastestPath({
   priorities: ProductionPriority[];
   onContinue: () => void;
 }) {
+  const { t } = useI18n("onboarding");
+  const { t: tc } = useI18n("common");
   const topThree = priorities.slice(0, 3);
 
   if (topThree.length === 0) {
     return (
       <div className="space-y-6">
         <div className="rounded-xl border border-border/60 bg-secondary/20 p-5 text-sm text-muted-foreground">
-          No production blockers detected. Your application looks close to production readiness.
+          {t("fastestPathEmpty")}
         </div>
         <Button className="w-full" size="lg" onClick={onContinue}>
-          Continue
+          {tc("continue")}
         </Button>
       </div>
     );
@@ -29,10 +32,8 @@ export function OnboardingFastestPath({
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div>
-        <h2 className="text-xl font-semibold">Fastest Path Forward</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Resolve these three priorities for the fastest route to production.
-        </p>
+        <h2 className="text-xl font-semibold">{t("fastestPathTitle")}</h2>
+        <p className="text-sm text-muted-foreground mt-1">{t("fastestPathSubtitle")}</p>
       </div>
 
       <ol className="space-y-3 list-none">
@@ -56,7 +57,7 @@ export function OnboardingFastestPath({
       </ol>
 
       <Button className="w-full" size="lg" onClick={onContinue}>
-        Continue
+        {tc("continue")}
       </Button>
     </div>
   );

@@ -29,7 +29,8 @@ function summarizeFinding(row: Record<string, unknown>): FindingContext {
 
 export async function buildProjectSecurityContext(
   supabase: SupabaseClient,
-  scanId: string
+  scanId: string,
+  locale: "en" | "es" = "en"
 ): Promise<ProjectSecurityContext | null> {
   const { data: scan, error: scanError } = await supabase
     .from("scans")
@@ -110,5 +111,6 @@ export async function buildProjectSecurityContext(
       .map((item) => item.security_score)
       .filter((score): score is number => typeof score === "number"),
     recurringPatterns: (patterns ?? []).map((item) => String(item.pattern_label)),
+    locale,
   };
 }

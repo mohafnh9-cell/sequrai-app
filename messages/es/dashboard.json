@@ -1,0 +1,23 @@
+{
+  "title": "Dashboard de producción",
+  "overviewTitle": "Resumen de producción",
+  "overviewSubtitle": "{org} · plan {plan} · AI Production Engineer activo",
+  "needsAttention": "Proyectos que necesitan atención",
+  "reviewFastestPath": "Revisa el camino más rápido hacia producción",
+  "firstVerdictCta": "Obtén tu primer Production Verdict",
+  "welcomeTitle": "Bienvenido a SequrAI",
+  "welcomeBody": "SequrAI te dice cuándo tu aplicación construida con IA está lista para producción y el camino más rápido para llegar.",
+  "metrics": {
+    "ready": "Lista para producción",
+    "almostReady": "Casi lista",
+    "blocked": "Bloqueada",
+    "needsAnalysis": "Se necesita más análisis",
+    "scoreChanges": "Cambios de score"
+  },
+  "projectsTitle": "Tus proyectos",
+  "projectsSubtitle": "Production Ready Score, veredicto y bloqueadores de un vistazo.",
+  "noProjectsTitle": "Aún no hay proyectos",
+  "noProjectsBody": "Conecta tus repositorios de GitHub para obtener tu primer Production Verdict.",
+  "firstVerdictModalTitle": "Tu primer Production Verdict está listo.",
+  "firstVerdictModalBody": "SequrAI seguirá revisando tu aplicación a medida que evolucione."
+}

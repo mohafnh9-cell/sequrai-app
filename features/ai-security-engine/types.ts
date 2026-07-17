@@ -35,6 +35,7 @@ export interface ProjectSecurityContext {
   findings: FindingContext[];
   previousScores: number[];
   recurringPatterns: string[];
+  locale?: "en" | "es";
 }
 
 export interface ScanAnalysisResult {

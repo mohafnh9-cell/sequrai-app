@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { FolderGit2, ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { formatRelativeDate } from "@/lib/utils";
-import { VERDICT_STATUS_LABELS } from "@/brain/production-verdict/schema";
 import { verdictBadgeVariant } from "@/brain/production-verdict/status-ui";
 import type { ProjectBrainSummary } from "@/brain";
 import type { VerdictStatus } from "@/brain/production-verdict/schema";
+import { useI18n } from "@/lib/i18n/client";
+import { formatRelativeLocalized } from "@/lib/i18n/format";
+import { verdictStatusLabel } from "@/lib/i18n/verdict-copy";
 
 export function PortfolioVerdictCard({
   projectId,
@@ -20,9 +21,21 @@ export function PortfolioVerdictCard({
   summary: ProjectBrainSummary | undefined;
   lastActivityAt: string;
 }) {
+  const { locale, t } = useI18n();
+  const { t: tc } = useI18n("common");
   const status: VerdictStatus = summary?.status ?? "insufficient_data";
   const score = summary?.productionReady;
   const showScore = score !== null;
+  const translate = (key: string, params?: Record<string, string | number | null | undefined>) =>
+    t(key, params);
+
+  const dateLabels = {
+    never: tc("never"),
+    justNow: tc("justNow"),
+    minutesAgo: tc("minutesAgo"),
+    hoursAgo: tc("hoursAgo"),
+    daysAgo: tc("daysAgo"),
+  };
 
   return (
     <Link
@@ -51,24 +64,24 @@ export function PortfolioVerdictCard({
                   </span>
                 )}
                 {" · "}
-                {summary?.blockersCount ?? 0} blocker
-                {(summary?.blockersCount ?? 0) === 1 ? "" : "s"}
+                {t("verdict.productionBlocker", { count: summary?.blockersCount ?? 0 })}
               </>
             ) : (
-              "More Analysis Required"
+              verdictStatusLabel("insufficient_data", translate)
             )}{" "}
-            · {formatRelativeDate(lastActivityAt)}
+            · {formatRelativeLocalized(locale, lastActivityAt, dateLabels)}
           </p>
           {summary?.projectedScore != null && showScore && (
             <p className="text-xs text-muted-foreground mt-0.5">
-              Projected {summary.projectedScore}/100 after priorities
+              {t("verdict.projectedScore")} {summary.projectedScore}/100{" "}
+              {t("verdict.afterPriorities")}
             </p>
           )}
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0 ml-2">
         <Badge variant={verdictBadgeVariant(status)} className="text-xs">
-          {VERDICT_STATUS_LABELS[status]}
+          {verdictStatusLabel(status, translate)}
         </Badge>
         <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
       </div>

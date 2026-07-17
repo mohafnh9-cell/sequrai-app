@@ -61,7 +61,7 @@ export async function POST(
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid scan id" }, { status: 400 });
     }
-    await getScanAccessContext(parsed.data.scanId);
+    const access = await getScanAccessContext(parsed.data.scanId);
     const url = new URL(request.url);
     const force = url.searchParams.get("force") === "1";
     const admin = createAdminClient();
@@ -75,7 +75,7 @@ export async function POST(
       await admin.from("ai_reports").delete().eq("scan_id", parsed.data.scanId);
     }
 
-    const { reportId } = await runAISecurityAnalysis(admin, parsed.data.scanId);
+    const { reportId } = await runAISecurityAnalysis(admin, parsed.data.scanId, access.locale);
     const intelligence = await loadScanIntelligence(admin, parsed.data.scanId);
     return NextResponse.json({ reportId, intelligence, cached: false }, { status: 201 });
   } catch (error) {

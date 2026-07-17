@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { ProductionPriority } from "@/brain/production-verdict/schema";
 import { trackEvent } from "@/lib/analytics/track";
+import { useI18n } from "@/lib/i18n/client";
 
 function severityLabel(severity: ProductionPriority["severity"]) {
   return severity.charAt(0).toUpperCase() + severity.slice(1);
@@ -16,6 +17,8 @@ export function ProductionPriorityItem({
   priority: ProductionPriority;
   onReview?: () => void;
 }) {
+  const { t } = useI18n("verdict");
+
   return (
     <li className="group relative rounded-xl border border-border/70 bg-[#101014]/60 p-4 md:p-5">
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -29,7 +32,7 @@ export function ProductionPriorityItem({
 
           <div>
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Why it matters
+              {t("whyItMatters")}
             </p>
             <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{priority.reason}</p>
           </div>
@@ -39,17 +42,17 @@ export function ProductionPriorityItem({
               {priority.category}
             </Badge>
             <Badge variant="secondary" className="text-xs">
-              Technical severity: {severityLabel(priority.severity)}
+              {t("technicalSeverity")}: {severityLabel(priority.severity)}
             </Badge>
           </div>
 
           {priority.affectedFiles.length > 0 && (
             <p className="text-xs text-muted-foreground">
-              Affected:{" "}
+              {t("affected")}:{" "}
               <code className="text-foreground/90">
                 {priority.affectedFiles.slice(0, 3).join(", ")}
                 {priority.affectedFiles.length > 3
-                  ? ` +${priority.affectedFiles.length - 3} more`
+                  ? ` ${t("moreAffected", { count: priority.affectedFiles.length - 3 })}`
                   : ""}
               </code>
             </p>
@@ -58,12 +61,14 @@ export function ProductionPriorityItem({
 
         <div className="shrink-0 space-y-2 text-sm md:text-right md:min-w-[140px]">
           <div>
-            <p className="text-xs text-muted-foreground">Estimated time</p>
+            <p className="text-xs text-muted-foreground">{t("estimatedTime")}</p>
             <p className="font-medium">{priority.estimatedTimeLabel}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">Estimated improvement</p>
-            <p className="font-medium text-[#64D98B]">+{priority.projectedScoreImpact} points</p>
+            <p className="text-xs text-muted-foreground">{t("estimatedImprovement")}</p>
+            <p className="font-medium text-[#64D98B]">
+              {t("points", { count: priority.projectedScoreImpact })}
+            </p>
           </div>
           {onReview && (
             <button
@@ -74,7 +79,7 @@ export function ProductionPriorityItem({
               }}
               className="inline-flex items-center gap-1 text-sm text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
             >
-              Review fix
+              {t("reviewFix")}
               <ChevronRight className="h-3.5 w-3.5" aria-hidden />
             </button>
           )}
@@ -83,7 +88,7 @@ export function ProductionPriorityItem({
 
       <p className="mt-4 text-sm border-t border-border/50 pt-3 text-foreground/90">
         <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground mr-2">
-          Action
+          {t("action")}
         </span>
         {priority.recommendedAction}
       </p>
@@ -98,17 +103,17 @@ export function FastestPathForward({
   priorities: ProductionPriority[];
   onReviewPriority?: (priority: ProductionPriority) => void;
 }) {
+  const { t } = useI18n("verdict");
+
   if (priorities.length === 0) return null;
 
   return (
     <section aria-labelledby="fastest-path-heading" className="space-y-4">
       <div>
         <h2 id="fastest-path-heading" className="text-lg font-semibold tracking-tight">
-          Fastest Path Forward
+          {t("fastestPathTitle")}
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Resolve these priorities in order for the fastest route to production.
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">{t("fastestPathSubtitle")}</p>
       </div>
       <ol className="space-y-3 list-none">
         {priorities.slice(0, 3).map((priority) => (

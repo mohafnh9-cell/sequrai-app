@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Brain, Loader2 } from "lucide-react";
 import type { ProductionVerdictV1 } from "@/brain/production-verdict/schema";
+import { useI18n } from "@/lib/i18n/client";
 
 type Intelligence = {
   report?: {
@@ -22,6 +23,7 @@ export function ProductionEngineerSummary({
   verdict: ProductionVerdictV1;
   scanCompleted: boolean;
 }) {
+  const { t } = useI18n("verdict");
   const [loading, setLoading] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [coachTip, setCoachTip] = useState<string | null>(null);
@@ -68,8 +70,8 @@ export function ProductionEngineerSummary({
   const summary = aiSummary ?? verdict.executiveSummary;
   const nextAction = coachTip ?? verdict.recommendedAction;
   const commitLine = verdict.commitSha
-    ? `I reviewed commit ${verdict.commitSha.slice(0, 12)}.`
-    : "I reviewed your latest changes.";
+    ? t("commitReviewed", { sha: verdict.commitSha.slice(0, 12) })
+    : t("latestChanges");
 
   return (
     <section
@@ -83,9 +85,9 @@ export function ProductionEngineerSummary({
             className="flex items-center gap-2 text-base font-semibold"
           >
             <Brain className="h-4 w-4 text-primary" aria-hidden />
-            AI Production Engineer
+            {t("aiEngineerTitle")}
           </h2>
-          <p className="text-xs text-muted-foreground mt-1">Executive review summary</p>
+          <p className="text-xs text-muted-foreground mt-1">{t("aiEngineerSubtitle")}</p>
         </div>
         {!aiSummary && (
           <button
@@ -96,10 +98,10 @@ export function ProductionEngineerSummary({
           >
             {loading ? (
               <span className="flex items-center gap-1">
-                <Loader2 className="h-3 w-3 animate-spin" /> Generating…
+                <Loader2 className="h-3 w-3 animate-spin" /> {t("generating")}
               </span>
             ) : (
-              "Enhance summary"
+              t("enhanceSummary")
             )}
           </button>
         )}
@@ -108,7 +110,7 @@ export function ProductionEngineerSummary({
       <div className="mt-4 space-y-4 text-sm leading-relaxed">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
-            Review summary
+            {t("reviewSummary")}
           </p>
           <p>{commitLine}</p>
           <p className="mt-2">{summary}</p>
@@ -116,22 +118,19 @@ export function ProductionEngineerSummary({
 
         {verdict.estimatedFixMinutes > 0 && verdict.status !== "ready_to_ship" && (
           <p className="text-muted-foreground">
-            Estimated implementation time:{" "}
-            <strong className="text-foreground">{verdict.estimatedFixMinutes} minutes</strong>.
+            {t("estimatedImplementation", { minutes: verdict.estimatedFixMinutes })}
           </p>
         )}
 
         <div className="border-t border-border/50 pt-4">
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">
-            Recommended next action
+            {t("recommendedNextAction")}
           </p>
           <p>{nextAction}</p>
         </div>
 
         {aiFailed && (
-          <p className="text-xs text-muted-foreground">
-            AI summary unavailable. The deterministic Production Verdict remains authoritative.
-          </p>
+          <p className="text-xs text-muted-foreground">{t("aiUnavailableDeterministic")}</p>
         )}
       </div>
     </section>

@@ -3,19 +3,21 @@
 import { useState } from "react";
 import type { ProductionVerdictV1 } from "@/brain/production-verdict/schema";
 import { trackEvent } from "@/lib/analytics/track";
+import { useI18n } from "@/lib/i18n/client";
 
 export function CoverageBreakdown({ verdict }: { verdict: ProductionVerdictV1 }) {
+  const { t } = useI18n("technicalDetails");
   const [methodologyOpen, setMethodologyOpen] = useState(false);
 
   const groups = [
-    { title: "Evaluated", areas: verdict.evaluatedAreas, tone: "text-[#64D98B]" },
+    { title: t("evaluated"), areas: verdict.evaluatedAreas, tone: "text-[#64D98B]" },
     {
-      title: "Partially evaluated",
+      title: t("partiallyEvaluated"),
       areas: verdict.partiallyEvaluatedAreas,
       tone: "text-[#F7C65F]",
     },
     {
-      title: "Not evaluated",
+      title: t("notEvaluated"),
       areas: verdict.unevaluatedAreas,
       tone: "text-muted-foreground",
     },
@@ -27,12 +29,12 @@ export function CoverageBreakdown({ verdict }: { verdict: ProductionVerdictV1 })
       aria-labelledby="coverage-heading"
     >
       <h2 id="coverage-heading" className="text-sm font-medium">
-        What SequrAI evaluated
+        {t("whatEvaluated")}
       </h2>
       <p className="mt-1 text-xs text-muted-foreground">
-        {verdict.filesAnalyzed} files analyzed
+        {t("filesAnalyzed", { count: verdict.filesAnalyzed })}
         {verdict.coverageRatio != null
-          ? ` · ${Math.round(verdict.coverageRatio * 100)}% repository coverage`
+          ? ` · ${t("repoCoverage", { percent: Math.round(verdict.coverageRatio * 100) })}`
           : ""}
       </p>
 
@@ -64,15 +66,12 @@ export function CoverageBreakdown({ verdict }: { verdict: ProductionVerdictV1 })
         }}
       >
         <summary className="cursor-pointer text-sm font-medium text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded">
-          How the Production Ready Score works
+          {t("scoreMethodology")}
         </summary>
         <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
           {verdict.methodologyNote}
         </p>
-        <p className="mt-2 text-xs text-muted-foreground">
-          The Production Ready Score is a readiness assessment, not a formal security certification.
-          Unevaluated areas may contain risks that static analysis cannot detect.
-        </p>
+        <p className="mt-2 text-xs text-muted-foreground">{t("scoreDisclaimer")}</p>
       </details>
     </section>
   );

@@ -2,6 +2,7 @@
 
 import { Check } from "lucide-react";
 import { PROGRESS_STEPS, resolveProgressIndex, type OnboardingContext, type WizardStep } from "../onboarding-flow";
+import { useI18n } from "@/lib/i18n/client";
 
 export function OnboardingProgressTracker({
   wizardStep,
@@ -13,6 +14,7 @@ export function OnboardingProgressTracker({
     "githubConnected" | "projects" | "activeScan" | "latestCompletedScan" | "latestVerdict"
   >;
 }) {
+  const { t } = useI18n("onboarding");
   const activeIndex = resolveProgressIndex(wizardStep, context);
 
   return (
@@ -40,9 +42,7 @@ export function OnboardingProgressTracker({
                 </span>
                 {index < PROGRESS_STEPS.length - 1 && (
                   <span
-                    className={`my-1 h-6 w-px sm:h-4 ${
-                      done ? "bg-primary" : "bg-border"
-                    }`}
+                    className={`my-1 h-6 w-px sm:h-4 ${done ? "bg-primary" : "bg-border"}`}
                     aria-hidden
                   />
                 )}
@@ -56,7 +56,7 @@ export function OnboardingProgressTracker({
                     current ? "font-medium text-foreground" : "text-muted-foreground"
                   }`}
                 >
-                  {step.label}
+                  {t(step.labelKey)}
                 </p>
               </div>
             </li>

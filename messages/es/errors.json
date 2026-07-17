@@ -1,0 +1,8 @@
+{
+  "repoAccess": "No hemos podido acceder a este repositorio. Vuelve a conectar GitHub e inténtalo de nuevo.",
+  "reviewSlow": "La revisión está tardando más de lo previsto.",
+  "scanStart": "No se pudo iniciar la revisión de producción.",
+  "scanLoad": "No se pudo cargar este análisis.",
+  "generic": "Algo salió mal. Inténtalo de nuevo.",
+  "githubReconnect": "Vuelve a conectar GitHub antes de seleccionar repositorios."
+}

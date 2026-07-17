@@ -18,9 +18,10 @@ export class AISecurityEngineError extends Error {
 
 export async function runAISecurityAnalysis(
   admin: SupabaseClient,
-  scanId: string
+  scanId: string,
+  locale: "en" | "es" = "en"
 ): Promise<{ reportId: string; result: ScanAnalysisResult }> {
-  const context = await buildProjectSecurityContext(admin, scanId);
+  const context = await buildProjectSecurityContext(admin, scanId, locale);
   if (!context) {
     throw new AISecurityEngineError("SCAN_NOT_FOUND", "Scan context could not be built");
   }

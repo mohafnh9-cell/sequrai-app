@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ProductionEngineerSummary } from "@/features/production-verdict/components/ProductionEngineerSummary";
 import type { ProductionVerdictV1 } from "@/brain/production-verdict/schema";
+import { useI18n } from "@/lib/i18n/client";
 
 export function OnboardingEngineerStep({
   scanId,
@@ -16,13 +17,14 @@ export function OnboardingEngineerStep({
   projectId: string;
   onContinue: () => void;
 }) {
+  const { t } = useI18n("onboarding");
+  const { t: tc } = useI18n("common");
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div>
-        <h2 className="text-xl font-semibold">AI Production Engineer Review</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          A senior production engineer perspective on your repository.
-        </p>
+        <h2 className="text-xl font-semibold">{t("engineerTitle")}</h2>
+        <p className="text-sm text-muted-foreground mt-1">{t("engineerSubtitle")}</p>
       </div>
 
       <ProductionEngineerSummary
@@ -34,11 +36,11 @@ export function OnboardingEngineerStep({
       <div className="flex flex-col gap-3 sm:flex-row">
         <Button variant="outline" className="flex-1" asChild>
           <Link href={`/projects/${projectId}/scans/${scanId}/report`}>
-            View Technical Details
+            {t("viewTechnicalDetails")}
           </Link>
         </Button>
         <Button className="flex-1" onClick={onContinue}>
-          Continue
+          {tc("continue")}
         </Button>
       </div>
     </div>

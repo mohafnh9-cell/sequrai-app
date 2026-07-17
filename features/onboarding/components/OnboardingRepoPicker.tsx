@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { formatDistanceToNow } from "date-fns";
 import { GitBranch, Lock, RefreshCw, Search, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { startGitHubOAuth } from "@/lib/github/oauth-client";
+import { useI18n } from "@/lib/i18n/client";
+import { formatRelativeLocalized } from "@/lib/i18n/format";
 import type { GitHubRepo } from "@/lib/github";
 
 type Step = "idle" | "loading" | "selecting" | "saving" | "error";
@@ -15,11 +16,21 @@ export function OnboardingRepoPicker({
 }: {
   onRepositoryConnected: (projectId: string) => void;
 }) {
+  const { t, locale } = useI18n("onboarding");
+  const { t: tc } = useI18n("common");
   const [step, setStep] = useState<Step>("idle");
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+
+  const dateLabels = {
+    never: tc("never"),
+    justNow: tc("justNow"),
+    minutesAgo: tc("minutesAgo"),
+    hoursAgo: tc("hoursAgo"),
+    daysAgo: tc("daysAgo"),
+  };
 
   const fetchRepos = useCallback(async () => {
     setStep("loading");
@@ -35,14 +46,14 @@ export function OnboardingRepoPicker({
     }
 
     if (!res.ok) {
-      setErrorMsg(data.error || "Failed to load repositories");
+      setErrorMsg(data.error || t("repoLoadFailed"));
       setStep("error");
       return;
     }
 
     setRepos(data.repos);
     setStep("selecting");
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     queueMicrotask(() => void fetchRepos());
@@ -72,16 +83,16 @@ export function OnboardingRepoPicker({
       }
 
       if (!res.ok) {
-        throw new Error(data?.error || "Could not connect repository");
+        throw new Error(data?.error || t("repoConnectFailed"));
       }
 
       const projectId = data?.projectIds?.[0];
       if (!projectId) {
-        throw new Error("Repository connected but project could not be resolved.");
+        throw new Error(t("projectResolveFailed"));
       }
       onRepositoryConnected(projectId);
     } catch (error) {
-      setErrorMsg(error instanceof Error ? error.message : "Failed to save repository");
+      setErrorMsg(error instanceof Error ? error.message : t("repoSaveFailed"));
       setStep("error");
     }
   };
@@ -95,10 +106,10 @@ export function OnboardingRepoPicker({
   if (step === "loading" || step === "idle") {
     return (
       <div className="space-y-4 animate-in fade-in duration-300">
-        <h2 className="text-xl font-semibold">Choose your first project</h2>
+        <h2 className="text-xl font-semibold">{t("chooseProjectTitle")}</h2>
         <div className="flex items-center gap-2 text-sm text-muted-foreground py-8 justify-center">
           <RefreshCw className="h-4 w-4 animate-spin" aria-hidden />
-          Loading your repositories…
+          {t("loadingRepos")}
         </div>
       </div>
     );
@@ -107,20 +118,18 @@ export function OnboardingRepoPicker({
   if (step === "error") {
     return (
       <div className="space-y-4">
-        <h2 className="text-xl font-semibold">Choose your first project</h2>
+        <h2 className="text-xl font-semibold">{t("chooseProjectTitle")}</h2>
         {repos.length === 0 ? (
           <div className="rounded-xl border border-dashed border-border/70 p-6 text-center space-y-3">
-            <p className="text-sm font-medium">No repositories found.</p>
-            <p className="text-sm text-muted-foreground">
-              Create or connect a GitHub repository to receive your first Production Verdict.
-            </p>
+            <p className="text-sm font-medium">{t("noReposTitle")}</p>
+            <p className="text-sm text-muted-foreground">{t("noReposBody")}</p>
           </div>
         ) : (
           <p className="text-sm text-destructive">{errorMsg}</p>
         )}
         <Button variant="outline" onClick={() => void fetchRepos()} className="gap-2">
           <RefreshCw className="h-4 w-4" />
-          Try again
+          {tc("retry")}
         </Button>
       </div>
     );
@@ -129,16 +138,14 @@ export function OnboardingRepoPicker({
   if (repos.length === 0) {
     return (
       <div className="space-y-4 animate-in fade-in duration-300">
-        <h2 className="text-xl font-semibold">Choose your first project</h2>
+        <h2 className="text-xl font-semibold">{t("chooseProjectTitle")}</h2>
         <div className="rounded-xl border border-dashed border-border/70 p-6 text-center space-y-3">
-          <p className="text-sm font-medium">No repositories found.</p>
-          <p className="text-sm text-muted-foreground">
-            Create or connect a GitHub repository to receive your first Production Verdict.
-          </p>
+          <p className="text-sm font-medium">{t("noReposTitle")}</p>
+          <p className="text-sm text-muted-foreground">{t("noReposBody")}</p>
         </div>
         <Button variant="outline" onClick={() => void fetchRepos()} className="gap-2">
           <RefreshCw className="h-4 w-4" />
-          Refresh repositories
+          {t("refreshRepos")}
         </Button>
       </div>
     );
@@ -147,10 +154,8 @@ export function OnboardingRepoPicker({
   return (
     <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div>
-        <h2 className="text-xl font-semibold">Choose your first project</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Select one repository for your first Production Verdict.
-        </p>
+        <h2 className="text-xl font-semibold">{t("chooseProjectTitle")}</h2>
+        <p className="text-sm text-muted-foreground mt-1">{t("chooseProjectSubtitle")}</p>
       </div>
 
       <div className="relative">
@@ -158,13 +163,13 @@ export function OnboardingRepoPicker({
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search repositories…"
+          placeholder={t("searchRepos")}
           className="pl-9"
-          aria-label="Search repositories"
+          aria-label={t("searchRepos")}
         />
       </div>
 
-      <ul className="space-y-2 max-h-[320px] overflow-y-auto pr-1" role="listbox" aria-label="Repositories">
+      <ul className="space-y-2 max-h-[320px] overflow-y-auto pr-1" role="listbox" aria-label={t("searchRepos")}>
         {filtered.map((repo) => {
           const selected = selectedId === repo.id;
           return (
@@ -185,8 +190,8 @@ export function OnboardingRepoPicker({
                     <p className="font-medium truncate">{repo.full_name}</p>
                     <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                       <span>
-                        Updated{" "}
-                        {formatDistanceToNow(new Date(repo.updated_at), { addSuffix: true })}
+                        {t("updated")}{" "}
+                        {formatRelativeLocalized(locale, repo.updated_at, dateLabels)}
                       </span>
                       <span className="flex items-center gap-1">
                         <GitBranch className="h-3 w-3" aria-hidden />
@@ -198,7 +203,7 @@ export function OnboardingRepoPicker({
                         ) : (
                           <Unlock className="h-3 w-3" aria-hidden />
                         )}
-                        {repo.private ? "Private" : "Public"}
+                        {repo.private ? t("private") : t("public")}
                       </span>
                     </div>
                   </div>
@@ -215,7 +220,7 @@ export function OnboardingRepoPicker({
         disabled={selectedId == null || step === "saving"}
         onClick={() => void saveRepo()}
       >
-        {step === "saving" ? "Connecting repository…" : "Analyze Repository"}
+        {step === "saving" ? t("connectingRepository") : t("analyzeRepository")}
       </Button>
     </div>
   );

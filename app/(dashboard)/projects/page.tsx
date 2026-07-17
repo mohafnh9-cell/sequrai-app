@@ -8,11 +8,15 @@ import { PageHeader } from "@/components/shared/PageHeader";
 import { ProjectCard } from "@/features/projects/components/ProjectCard";
 import { buildOrgBrain } from "@/server/brain/build-org-brain";
 import { organizationHasProductionVerdict } from "@/server/onboarding/has-production-verdict";
+import { getTranslator } from "@/lib/i18n/server";
 import type { ProjectRow } from "@/types/database";
 import type { VerdictStatus } from "@/brain/production-verdict/schema";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Projects" };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getTranslator("projects");
+  return { title: t("title") };
+}
 
 export default async function ProjectsPage() {
   const auth = await getServerAuthContext();
@@ -21,6 +25,8 @@ export default async function ProjectsPage() {
 
   const hasVerdict = await organizationHasProductionVerdict(auth.supabase, auth.organizationId);
   if (!hasVerdict) redirect("/onboarding");
+
+  const { t } = await getTranslator("projects");
 
   const { data: projects } = await auth.supabase
     .from("projects")
@@ -38,13 +44,13 @@ export default async function ProjectsPage() {
   return (
     <div className="p-6 space-y-6 max-w-6xl">
       <PageHeader
-        title="Projects"
-        description={`${projectList.length} project${projectList.length !== 1 ? "s" : ""} · production status at a glance`}
+        title={t("title")}
+        description={t("subtitle", { count: projectList.length })}
         action={
           <Button size="sm" asChild>
             <Link href="/projects/new">
               <Plus className="mr-2 h-4 w-4" />
-              New project
+              {t("newProject")}
             </Link>
           </Button>
         }
@@ -53,9 +59,9 @@ export default async function ProjectsPage() {
       {projectList.length === 0 ? (
         <EmptyState
           icon={FolderGit2}
-          title="No projects yet"
-          description="Connect your first project to analyze production readiness and know when you can deploy."
-          action={{ label: "Get your first Production Verdict", href: "/onboarding" }}
+          title={t("noProjectsTitle")}
+          description={t("noProjectsBody")}
+          action={{ label: t("firstVerdictCta"), href: "/onboarding" }}
           className="py-20"
         />
       ) : (

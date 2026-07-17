@@ -1,0 +1,9 @@
+{
+  "title": "Integraciones",
+  "subtitle": "Conecta SequrAI con tus herramientas y repositorios.",
+  "githubTitle": "GitHub",
+  "githubSubtitle": "Conecta repos para análisis de producción automático en cada push",
+  "connectRepos": "Conectar repositorios de GitHub",
+  "loadingRepos": "Cargando tus repositorios…",
+  "saveRepos": "Guardar repositorios seleccionados"
+}

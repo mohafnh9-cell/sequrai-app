@@ -8,10 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { startGitHubOAuth } from "@/lib/github/oauth-client";
 import type { GitHubRepo } from "@/lib/github";
+import { useI18n } from "@/lib/i18n/client";
 
 type Step = "idle" | "loading" | "selecting" | "saving" | "done" | "error";
 
 export default function IntegrationsPage() {
+  const { t } = useI18n("integrations");
+  const { t: tc } = useI18n("common");
   const [step, setStep] = useState<Step>("idle");
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -150,10 +153,8 @@ export default function IntegrationsPage() {
   return (
     <div className="p-6 space-y-6 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Integrations</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Connect SequrAI with your tools and repositories.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">{t("title")}</h1>
+        <p className="text-muted-foreground text-sm mt-1">{t("subtitle")}</p>
       </div>
 
       {/* GitHub Card */}
@@ -165,10 +166,8 @@ export default function IntegrationsPage() {
                 <GitBranch className="h-5 w-5 text-foreground" />
               </div>
               <div>
-                <CardTitle className="text-base">GitHub</CardTitle>
-                <CardDescription className="text-xs">
-                  Connect repos for automated production analysis on every push
-                </CardDescription>
+                <CardTitle className="text-base">{t("githubTitle")}</CardTitle>
+                <CardDescription className="text-xs">{t("githubSubtitle")}</CardDescription>
               </div>
             </div>
             <Badge variant="outline" className="text-xs text-emerald-400 border-emerald-400/30 bg-emerald-400/10">
@@ -181,14 +180,14 @@ export default function IntegrationsPage() {
           {step === "idle" && (
             <Button onClick={fetchRepos} className="gap-2">
               <GitBranch className="h-4 w-4" />
-              Connect GitHub Repositories
+              {t("connectRepos")}
             </Button>
           )}
 
           {step === "loading" && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <RefreshCw className="h-4 w-4 animate-spin" />
-              Loading your repositories...
+              {t("loadingRepos")}
             </div>
           )}
 
@@ -197,7 +196,7 @@ export default function IntegrationsPage() {
               <p className="text-sm text-destructive">{errorMsg}</p>
               <Button variant="outline" onClick={fetchRepos} className="gap-2">
                 <RefreshCw className="h-4 w-4" />
-                Try again
+                {tc("retry")}
               </Button>
             </div>
           )}

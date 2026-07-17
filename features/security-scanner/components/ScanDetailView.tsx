@@ -16,6 +16,7 @@ import { Progress } from "@/components/ui/progress";
 import { ProductionVerdictExperience } from "@/features/production-verdict/components/ProductionVerdictExperience";
 import { TechnicalFindingsSection } from "@/features/production-verdict/components/TechnicalFindingsSection";
 import type { ProductionVerdict } from "@/brain";
+import { useI18n } from "@/lib/i18n/client";
 import {
   formatScanDate,
   scanCommit,
@@ -42,6 +43,9 @@ export function ScanDetailView({
   projectId: string;
   scanId: string;
 }) {
+  const { t } = useI18n("projects");
+  const { t: tc } = useI18n("common");
+  const { t: te } = useI18n("errors");
   const [scan, setScan] = useState<ScanRecord | null>(null);
   const [findings, setFindings] = useState<ScanFinding[]>([]);
   const [verdict, setVerdict] = useState<ProductionVerdict | null>(null);
@@ -66,17 +70,17 @@ export function ScanDetailView({
           }
         | null;
       if (!response.ok || !body?.scan) {
-        throw new Error(body?.error || "Could not load this scan.");
+        throw new Error(body?.error || te("scanLoad"));
       }
       setScan(body.scan);
       setFindings(Array.isArray(body.findings) ? body.findings : []);
       setVerdict(body.verdict ?? null);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not load this scan.");
+      setError(cause instanceof Error ? cause.message : te("scanLoad"));
     } finally {
       setLoading(false);
     }
-  }, [projectId, scanId]);
+  }, [projectId, scanId, te]);
 
   useEffect(() => {
     queueMicrotask(() => void load());
@@ -96,7 +100,7 @@ export function ScanDetailView({
     return (
       <div className="flex min-h-[50vh] items-center justify-center gap-2 text-sm text-muted-foreground">
         <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
-        SequrAI is reviewing your latest changes…
+        {tc("states.loadingReview")}
       </div>
     );
   }
@@ -105,7 +109,7 @@ export function ScanDetailView({
     return (
       <div className="mx-auto flex min-h-[50vh] max-w-md flex-col items-center justify-center text-center">
         <AlertCircle className="mb-3 h-9 w-9 text-destructive" aria-hidden />
-        <h1 className="font-semibold">Unable to load production analysis</h1>
+        <h1 className="font-semibold">{t("unableToLoadScan")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{error}</p>
         <Button
           className="mt-4"
@@ -115,7 +119,7 @@ export function ScanDetailView({
             void load();
           }}
         >
-          <RefreshCw className="mr-2 h-4 w-4" aria-hidden /> Retry
+          <RefreshCw className="mr-2 h-4 w-4" aria-hidden /> {tc("retry")}
         </Button>
       </div>
     );
@@ -130,14 +134,14 @@ export function ScanDetailView({
     <div className="mx-auto max-w-6xl space-y-6 p-6">
       <Button variant="ghost" size="sm" asChild className="-ml-2">
         <Link href={`/projects/${projectId}`}>
-          <ArrowLeft className="mr-2 h-4 w-4" aria-hidden /> Back to project
+          <ArrowLeft className="mr-2 h-4 w-4" aria-hidden /> {t("backToProject")}
         </Link>
       </Button>
 
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight">Production analysis</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{t("scanTitle")}</h1>
             <Badge variant="outline">{scan.status || "Unknown"}</Badge>
           </div>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
@@ -158,13 +162,13 @@ export function ScanDetailView({
             <div className="flex items-center justify-between text-sm">
               <span className="flex items-center gap-2 font-medium">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                SequrAI is reviewing your latest changes
+                {tc("states.loadingReview")}
               </span>
               {scan.progress !== undefined && <span>{progress}%</span>}
             </div>
-            <Progress value={scan.progress === undefined ? 15 : progress} aria-label="Scan progress" />
+            <Progress value={scan.progress === undefined ? 15 : progress} aria-label={tc("states.buildingVerdict")} />
             <p className="text-xs text-muted-foreground">
-              {scan.progress_message || "Building your Production Verdict…"}
+              {scan.progress_message || tc("states.buildingVerdict")}
             </p>
           </CardContent>
         </Card>
@@ -192,8 +196,7 @@ export function ScanDetailView({
       {!verdictV1 && scanCompleted && (
         <Card className="border-dashed">
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            Building your Production Verdict… If this persists, retry the analysis or check that
-            migration 010 is applied.
+            {t("buildingVerdictPersist")}
           </CardContent>
         </Card>
       )}

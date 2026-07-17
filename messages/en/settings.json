@@ -1,0 +1,17 @@
+{
+  "title": "Settings",
+  "subtitle": "Manage your account and organization.",
+  "profileTitle": "Profile",
+  "profileSubtitle": "Your personal account information.",
+  "displayName": "Display name",
+  "email": "Email",
+  "saveSoon": "Save changes — coming soon",
+  "organizationTitle": "Organization",
+  "organizationSubtitle": "Settings for your organization.",
+  "organizationName": "Organization name",
+  "plan": "Plan",
+  "languageTitle": "Language",
+  "languageSubtitle": "Choose how SequrAI speaks to you. Product names stay in English.",
+  "dangerTitle": "Danger zone",
+  "dangerSubtitle": "Irreversible actions for your account."
+}

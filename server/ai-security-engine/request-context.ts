@@ -20,6 +20,12 @@ export async function getScanAccessContext(scanId: string) {
   } = await supabase.auth.getUser();
   if (!user) throw new AIRequestError(401, "UNAUTHORIZED", "Unauthorized");
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("locale")
+    .eq("id", user.id)
+    .maybeSingle();
+
   const { data: scan, error } = await supabase
     .from("scans")
     .select("id, organization_id, project_id, status, security_score")
@@ -38,5 +44,5 @@ export async function getScanAccessContext(scanId: string) {
     .maybeSingle();
   if (!membership) throw new AIRequestError(403, "FORBIDDEN", "Access denied");
 
-  return { supabase, user, scan };
+  return { supabase, user, scan, locale: (profile?.locale === "es" ? "es" : "en") as "en" | "es" };
 }

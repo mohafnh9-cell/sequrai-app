@@ -19,7 +19,8 @@ import { ProjectScanOverview } from "@/features/security-scanner/components/Proj
 import { ProjectVerdictSummary } from "@/features/production-verdict/components/ProductionVerdictExperience";
 import { buildProjectBrain } from "@/server/brain/build-project-brain";
 import { SecurityActivityFeed } from "@/features/github-automation/components/SecurityActivityFeed";
-import { formatDate } from "@/lib/utils";
+import { getTranslator } from "@/lib/i18n/server";
+import { formatLocalizedDate } from "@/lib/i18n/format";
 import type { ProjectRow } from "@/types/database";
 import type { Metadata } from "next";
 
@@ -61,6 +62,8 @@ export default async function ProjectDetailPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const { locale, t } = await getTranslator("projects");
+
   const { data: project, error } = await supabase
     .from("projects")
     .select("*")
@@ -88,15 +91,13 @@ export default async function ProjectDetailPage({
 
   return (
     <div className="p-6 space-y-8 max-w-6xl">
-      {/* Back */}
       <Button variant="ghost" size="sm" asChild className="gap-1.5 -ml-1">
         <Link href="/projects">
           <ArrowLeft className="h-4 w-4" />
-          Projects
+          {t("backToProjects")}
         </Link>
       </Button>
 
-      {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary">
@@ -111,7 +112,7 @@ export default async function ProjectDetailPage({
                 </Badge>
               )}
               <span className="text-xs text-muted-foreground">
-                Created {formatDate(p.created_at)}
+                {t("created")} {formatLocalizedDate(locale, p.created_at)}
               </span>
             </div>
           </div>
@@ -120,21 +121,19 @@ export default async function ProjectDetailPage({
           <Button variant="outline" size="sm" asChild>
             <Link href={`/projects/${p.id}/edit`}>
               <Pencil className="mr-1.5 h-3.5 w-3.5" />
-              Edit
+              {t("edit")}
             </Link>
           </Button>
           <ProjectDeleteButton project={p} />
         </div>
       </div>
 
-      {/* Details */}
       <div className="grid gap-6">
-        {/* Description + links */}
         <div className="space-y-4">
           <Card className="border-border/50">
             <CardHeader className="pb-3">
               <CardTitle className="text-sm font-medium text-muted-foreground">
-                Project Info
+                {t("projectInfo")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 pt-0">
@@ -142,13 +141,13 @@ export default async function ProjectDetailPage({
                 <p className="text-sm text-foreground">{p.description}</p>
               )}
               {!p.description && (
-                <p className="text-sm text-muted-foreground">No description.</p>
+                <p className="text-sm text-muted-foreground">{t("noDescription")}</p>
               )}
               <Separator />
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground flex items-center gap-2">
-                    <GitBranch className="h-3.5 w-3.5" /> GitHub repo
+                    <GitBranch className="h-3.5 w-3.5" /> {t("githubRepo")}
                   </span>
                   {p.github_repo ? (
                     <a
@@ -161,12 +160,12 @@ export default async function ProjectDetailPage({
                       <ExternalLink className="h-3 w-3 shrink-0" />
                     </a>
                   ) : (
-                    <span className="text-muted-foreground text-xs">Not connected</span>
+                    <span className="text-muted-foreground text-xs">{t("notConnected")}</span>
                   )}
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground flex items-center gap-2">
-                    <Globe className="h-3.5 w-3.5" /> Production URL
+                    <Globe className="h-3.5 w-3.5" /> {t("productionUrl")}
                   </span>
                   {p.production_url ? (
                     <a
@@ -179,20 +178,19 @@ export default async function ProjectDetailPage({
                       <ExternalLink className="h-3 w-3 shrink-0" />
                     </a>
                   ) : (
-                    <span className="text-muted-foreground text-xs">Not set</span>
+                    <span className="text-muted-foreground text-xs">{t("notSet")}</span>
                   )}
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground flex items-center gap-2">
-                    <Calendar className="h-3.5 w-3.5" /> Created
+                    <Calendar className="h-3.5 w-3.5" /> {t("created")}
                   </span>
-                  <span className="text-xs">{formatDate(p.created_at)}</span>
+                  <span className="text-xs">{formatLocalizedDate(locale, p.created_at)}</span>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
-
       </div>
 
       {brain?.currentVerdict ? (
@@ -205,7 +203,7 @@ export default async function ProjectDetailPage({
         />
       ) : (
         <div className="rounded-xl border border-dashed border-border/70 p-8 text-center text-sm text-muted-foreground">
-          Run your first production review to get your Production Verdict.
+          {t("runFirstReview")}
         </div>
       )}
 

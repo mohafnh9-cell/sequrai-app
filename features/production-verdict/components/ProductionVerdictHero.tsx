@@ -9,6 +9,11 @@ import { ReadyToShipMoment } from "./ReadyToShipMoment";
 import { verdictToneClass } from "@/brain/production-verdict/status-ui";
 import type { VerdictExperienceView } from "@/brain/production-verdict/experience-view";
 import type { ProductionVerdictV1 } from "@/brain/production-verdict/schema";
+import { useI18n } from "@/lib/i18n/client";
+import {
+  verdictStatusHeadline,
+  verdictStatusMessage,
+} from "@/lib/i18n/verdict-copy";
 
 function Metric({
   label,
@@ -39,6 +44,10 @@ export function ProductionVerdictHero({
   reportHref?: string;
   retryHref?: string;
 }) {
+  const { t } = useI18n();
+  const translate = (key: string, params?: Record<string, string | number | null | undefined>) =>
+    t(key, params);
+
   if (view.showReadyMoment) {
     return <ReadyToShipMoment view={view} verdict={verdict} reportHref={reportHref} />;
   }
@@ -53,18 +62,20 @@ export function ProductionVerdictHero({
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-4 max-w-2xl">
           <p className="text-[11px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
-            Production Verdict
+            {t("verdict.productionVerdict")}
           </p>
           <div className="space-y-2">
             <h2
               id="production-verdict-hero-heading"
               className="text-2xl md:text-3xl font-semibold tracking-tight uppercase"
             >
-              {view.headline}
+              {verdictStatusHeadline(view.status, translate)}
             </h2>
             <VerdictStatusBadge status={view.status} />
           </div>
-          <p className="text-base text-foreground/90 leading-relaxed">{view.statusMessage}</p>
+          <p className="text-base text-foreground/90 leading-relaxed">
+            {verdictStatusMessage(view.status, translate)}
+          </p>
           {view.status === "insufficient_data" && (
             <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-5">
               {verdict.filesAnalyzed < 10 && <li>Insufficient files analyzed for a full verdict.</li>}
@@ -98,25 +109,28 @@ export function ProductionVerdictHero({
       </div>
 
       <div className="mt-6 flex flex-wrap gap-6 border-t border-border/50 pt-6">
-        <Metric label="Production blockers" value={view.blockersCount} />
+        <Metric
+          label={t("verdict.productionBlocker", { count: view.blockersCount })}
+          value={view.blockersCount}
+        />
         {view.showScore && view.estimatedFixMinutes > 0 && (
           <Metric
-            label="Estimated path forward"
+            label={t("verdict.estimatedPathForward")}
             value={`${view.estimatedFixMinutes} min`}
           />
         )}
         {view.showScore && view.projectedScore != null && (
           <Metric
-            label="Projected score"
+            label={t("verdict.projectedScore")}
             value={`${view.projectedScore} / 100`}
-            sub="After recommended priorities"
+            sub={t("verdict.afterPriorities")}
           />
         )}
         {view.scoreDelta != null && view.scoreDelta !== 0 && (
           <Metric
-            label="Score delta"
+            label={t("verdict.scoreDelta")}
             value={`${view.scoreDelta > 0 ? "+" : ""}${view.scoreDelta}`}
-            sub="Since previous review"
+            sub={t("verdict.sincePreviousReview")}
           />
         )}
       </div>
@@ -124,7 +138,7 @@ export function ProductionVerdictHero({
       {reportHref && view.status !== "analysis_failed" && (
         <div className="mt-6">
           <Button variant="outline" size="sm" asChild>
-            <Link href={reportHref}>View technical report</Link>
+            <Link href={reportHref}>{t("verdict.viewTechnicalReport")}</Link>
           </Button>
         </div>
       )}

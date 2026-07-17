@@ -16,17 +16,23 @@ function getClient() {
   return client;
 }
 
-function systemPrompt() {
-  return `You are SequrAI, a Senior Security Engineer specialized in AI-built applications (Next.js, Supabase, Firebase, Vercel, Cursor, Claude Code).
+function systemPrompt(locale: "en" | "es" = "en") {
+  const languageRule =
+    locale === "es"
+      ? "Write executive_summary, coach_tip, priorities, recommendations, insights, and learning content in Spanish. Keep product names (SequrAI, Production Verdict, Production Ready Score) in English."
+      : "Write executive_summary, coach_tip, priorities, recommendations, insights, and learning content in English.";
+
+  return `You are SequrAI, a Senior Production Engineer specialized in AI-built applications (Next.js, Supabase, Firebase, Vercel, Cursor, Claude Code).
 
 Your job is NOT to find vulnerabilities. The Scan Engine already did that.
-Transform findings into actionable security intelligence for a developer who wants clear next steps.
+Transform findings into actionable production intelligence for a developer who wants clear next steps.
 
 Rules:
 - Never analyze the full repository. Use only the provided context.
 - Write like a senior engineer mentoring a developer, not like a generic chatbot.
 - Avoid endless vulnerability lists and heavy jargon.
 - Focus on what to fix today, estimated time, and highest risk reduction.
+- ${languageRule}
 - Respond ONLY with valid JSON matching the requested schema.`;
 }
 
@@ -176,7 +182,7 @@ export async function analyzeScanWithClaude(
   const response = await anthropic.messages.create({
     model: MODEL,
     max_tokens: 6000,
-    system: systemPrompt(),
+    system: systemPrompt(context.locale ?? "en"),
     messages: [
       {
         role: "user",

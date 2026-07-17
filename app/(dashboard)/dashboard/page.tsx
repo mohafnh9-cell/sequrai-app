@@ -12,6 +12,7 @@ import { PortfolioVerdictCard } from "@/features/production-verdict/components/P
 import { FirstVerdictDashboardModal } from "@/features/onboarding/components/FirstVerdictDashboardModal";
 import { buildOrgBrain } from "@/server/brain/build-org-brain";
 import { organizationHasProductionVerdict } from "@/server/onboarding/has-production-verdict";
+import { getTranslator } from "@/lib/i18n/server";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Production Dashboard" };
@@ -19,6 +20,7 @@ export const metadata: Metadata = { title: "Production Dashboard" };
 export default async function DashboardPage() {
   const auth = await getServerAuthContext();
   if (!auth) redirect("/login");
+  const { t } = await getTranslator("dashboard");
 
   const { supabase, user, organizationId } = auth;
 
@@ -44,15 +46,13 @@ export default async function DashboardPage() {
           <FolderGit2 className="h-8 w-8 text-primary" />
         </div>
         <div className="text-center max-w-sm">
-          <h1 className="text-2xl font-bold">Welcome to SequrAI</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            SequrAI tells you when your AI-built application is ready to ship and the fastest path to get there.
-          </p>
+          <h1 className="text-2xl font-bold">{t("welcomeTitle")}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{t("welcomeBody")}</p>
         </div>
         <Button asChild>
           <Link href="/onboarding">
             <Plus className="mr-2 h-4 w-4" />
-            Get your first Production Verdict
+            {t("firstVerdictCta")}
           </Link>
         </Button>
       </div>
@@ -104,15 +104,15 @@ export default async function DashboardPage() {
       </Suspense>
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Production Dashboard</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("overviewTitle")}</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {org.name} · {planLabel} plan · AI Production Engineer active
+            {t("overviewSubtitle", { org: org.name, plan: planLabel })}
           </p>
         </div>
         <Button size="sm" asChild>
-          <Link href="/projects/new">
+          <Link href="/integrations">
             <Plus className="mr-2 h-4 w-4" />
-            New project
+            {t("firstVerdictCta")}
           </Link>
         </Button>
       </div>
@@ -122,7 +122,7 @@ export default async function DashboardPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card className="border-border/50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Ready to Ship</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">{t("metrics.ready")}</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-[#64D98B]" aria-hidden />
@@ -131,13 +131,13 @@ export default async function DashboardPage() {
         </Card>
         <Card className="border-border/50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Almost Ready</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">{t("metrics.almostReady")}</CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-bold">{almostReadyCount}</CardContent>
         </Card>
         <Card className="border-border/50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Blocked</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">{t("metrics.blocked")}</CardTitle>
           </CardHeader>
           <CardContent className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-[#FF5C6C]" aria-hidden />
@@ -146,13 +146,13 @@ export default async function DashboardPage() {
         </Card>
         <Card className="border-border/50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">More Analysis Required</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">{t("metrics.needsAnalysis")}</CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-bold">{needsAnalysisCount}</CardContent>
         </Card>
         <Card className="border-border/50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">Score changes</CardTitle>
+            <CardTitle className="text-sm text-muted-foreground">{t("metrics.scoreChanges")}</CardTitle>
           </CardHeader>
           <CardContent className="text-2xl font-bold">{scoreChanges}</CardContent>
         </Card>
@@ -161,10 +161,8 @@ export default async function DashboardPage() {
       <Card className="border-border/50">
         <CardHeader className="flex-row items-center justify-between pb-4">
           <div>
-            <CardTitle className="text-base">Your Projects</CardTitle>
-            <CardDescription className="text-xs mt-0.5">
-              Production Ready Score, verdict, and blockers at a glance.
-            </CardDescription>
+            <CardTitle className="text-base">{t("projectsTitle")}</CardTitle>
+            <CardDescription className="text-xs mt-0.5">{t("projectsSubtitle")}</CardDescription>
           </div>
           <Button variant="ghost" size="sm" asChild>
             <Link href="/projects" className="text-xs gap-1.5">
@@ -176,9 +174,9 @@ export default async function DashboardPage() {
           {!recentProjects || recentProjects.length === 0 ? (
             <EmptyState
               icon={FolderGit2}
-              title="No projects yet"
-              description="Connect your GitHub repos to get your first Production Verdict."
-              action={{ label: "Get your first Production Verdict", href: "/onboarding" }}
+              title={t("noProjectsTitle")}
+              description={t("noProjectsBody")}
+              action={{ label: t("firstVerdictCta"), href: "/onboarding" }}
             />
           ) : (
             <div className="space-y-2">

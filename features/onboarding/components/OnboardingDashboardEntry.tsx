@@ -3,9 +3,11 @@
 import { useRouter } from "next/navigation";
 import { Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/lib/i18n/client";
 
 export function OnboardingDashboardEntry() {
   const router = useRouter();
+  const { t } = useI18n("onboarding");
 
   return (
     <div className="space-y-6 text-center animate-in fade-in zoom-in-95 duration-500">
@@ -13,10 +15,8 @@ export function OnboardingDashboardEntry() {
         <Shield className="h-7 w-7 text-primary" aria-hidden />
       </div>
       <div className="space-y-2">
-        <h2 className="text-xl font-semibold">Your first Production Verdict is ready.</h2>
-        <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-          SequrAI will continue reviewing your application as it evolves.
-        </p>
+        <h2 className="text-xl font-semibold">{t("dashboardReadyTitle")}</h2>
+        <p className="text-sm text-muted-foreground max-w-sm mx-auto">{t("dashboardReadyBody")}</p>
       </div>
       <Button
         size="lg"
@@ -26,7 +26,7 @@ export function OnboardingDashboardEntry() {
           router.push("/dashboard?firstVerdict=1");
         }}
       >
-        Go to Dashboard
+        {t("goToDashboard")}
       </Button>
     </div>
   );

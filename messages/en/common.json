@@ -1,0 +1,29 @@
+{
+  "brand": "SequrAI",
+  "loading": "Loading…",
+  "save": "Save",
+  "cancel": "Cancel",
+  "continue": "Continue",
+  "retry": "Retry",
+  "viewAll": "View all",
+  "never": "Never",
+  "justNow": "Just now",
+  "minutesAgo": "{count}m ago",
+  "hoursAgo": "{count}h ago",
+  "daysAgo": "{count}d ago",
+  "language": "Language",
+  "languageUpdated": "Language updated",
+  "account": "Account",
+  "soon": "Soon",
+  "newProject": "New project",
+  "signOut": "Sign out",
+  "billing": "Billing",
+  "states": {
+    "loadingReview": "SequrAI is reviewing your latest changes.",
+    "buildingVerdict": "Building your Production Verdict.",
+    "runFirstReview": "Run your first production review.",
+    "insufficientData": "SequrAI needs more information before issuing a responsible verdict.",
+    "analysisFailed": "We could not complete this production review.",
+    "aiUnavailable": "The deterministic verdict is still available."
+  }
+}

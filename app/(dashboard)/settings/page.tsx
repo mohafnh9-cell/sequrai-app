@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { LanguageSelector } from "@/components/shared/LanguageSelector";
+import { getTranslator } from "@/lib/i18n/server";
 import type { Metadata } from "next";
 import { McpApiKeysPanel } from "@/features/settings/McpApiKeysPanel";
 
@@ -18,6 +20,7 @@ export default async function SettingsPage() {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+  const { t } = await getTranslator("settings");
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -42,82 +45,70 @@ export default async function SettingsPage() {
 
   return (
     <div className="p-6 space-y-8 max-w-2xl">
-      <PageHeader title="Settings" description="Manage your account and organization." />
+      <PageHeader title={t("title")} description={t("subtitle")} />
 
-      {/* Profile */}
       <Card className="border-border/50">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base">Profile</CardTitle>
-          <CardDescription>Your personal account information.</CardDescription>
+          <CardTitle className="text-base">{t("languageTitle")}</CardTitle>
+          <CardDescription>{t("languageSubtitle")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <LanguageSelector variant="settings" />
+        </CardContent>
+      </Card>
+
+      <Card className="border-border/50">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base">{t("profileTitle")}</CardTitle>
+          <CardDescription>{t("profileSubtitle")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
-            <Label>Display name</Label>
+            <Label>{t("displayName")}</Label>
             <Input defaultValue={displayName} disabled />
           </div>
           <div className="space-y-1.5">
-            <Label>Email</Label>
+            <Label>{t("email")}</Label>
             <Input defaultValue={user.email ?? ""} disabled />
           </div>
           <Button size="sm" variant="outline" disabled>
-            Save changes — coming soon
+            {t("saveSoon")}
           </Button>
         </CardContent>
       </Card>
 
-      {/* Organization */}
       {org && (
         <Card className="border-border/50">
           <CardHeader className="pb-4">
-            <CardTitle className="text-base">Organization</CardTitle>
-            <CardDescription>Settings for your organization.</CardDescription>
+            <CardTitle className="text-base">{t("organizationTitle")}</CardTitle>
+            <CardDescription>{t("organizationSubtitle")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-1.5">
-              <Label>Organization name</Label>
+              <Label>{t("organizationName")}</Label>
               <Input defaultValue={org.name} disabled />
             </div>
             <div className="space-y-1.5">
-              <Label>Slug</Label>
-              <Input defaultValue={org.slug} disabled />
+              <Label>{t("plan")}</Label>
+              <div>
+                <Badge variant="secondary">{org.plan}</Badge>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Label>Plan</Label>
-              <Badge variant="secondary">{org.plan}</Badge>
-            </div>
-            <Button size="sm" variant="outline" disabled>
-              Save changes — coming soon
-            </Button>
           </CardContent>
         </Card>
       )}
 
       <Separator />
 
-      {/* MCP Integration */}
-      <Card className="border-border/50">
+      <McpApiKeysPanel />
+
+      <Card className="border-destructive/30">
         <CardHeader className="pb-4">
-          <CardTitle className="text-base">MCP Integration</CardTitle>
-          <CardDescription>
-            Connect Cursor or Claude Code to your Production Copilot — check readiness, list
-            blockers, and run production checks from your editor.
-          </CardDescription>
+          <CardTitle className="text-base text-destructive">{t("dangerTitle")}</CardTitle>
+          <CardDescription>{t("dangerSubtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
-          <McpApiKeysPanel />
-        </CardContent>
-      </Card>
-
-      <Separator />
-
-      {/* Danger zone */}
-      <Card className="border-destructive/20">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base text-destructive">Danger zone</CardTitle>
-          <CardDescription>Irreversible actions for your account.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button size="sm" variant="destructive" disabled>
+          <Button variant="destructive" size="sm" disabled>
             Delete account — coming soon
           </Button>
         </CardContent>

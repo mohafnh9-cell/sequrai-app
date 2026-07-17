@@ -6,13 +6,14 @@ import { Progress } from "@/components/ui/progress";
 import type { ProductionVerdictV1 } from "@/brain/production-verdict/schema";
 import { scanIsActive, scanIsCompleted } from "../onboarding-flow";
 import { startGitHubOAuth } from "@/lib/github/oauth-client";
+import { useI18n } from "@/lib/i18n/client";
 
-const REVIEW_AREAS = [
-  "Authentication",
-  "Authorization",
-  "Secrets",
-  "Dependencies",
-  "Deployment configuration",
+const REVIEW_AREA_KEYS = [
+  "authentication",
+  "authorization",
+  "secrets",
+  "dependencies",
+  "deployment",
 ] as const;
 
 type ScanPayload = {
@@ -31,6 +32,9 @@ export function OnboardingReviewStep({
   existingScanId?: string | null;
   onComplete: (scanId: string, verdict: ProductionVerdictV1) => void;
 }) {
+  const { t } = useI18n("onboarding");
+  const { t: te } = useI18n("errors");
+  const { t: tc } = useI18n("common");
   const [scanId, setScanId] = useState<string | null>(existingScanId ?? null);
   const [scan, setScan] = useState<ScanPayload | null>(null);
   const [error, setError] = useState("");
@@ -55,14 +59,14 @@ export function OnboardingReviewStep({
       }
 
       if (!response.ok || !body?.scan_id) {
-        throw new Error(body?.error || "The production review could not be started.");
+        throw new Error(body?.error || te("scanStart"));
       }
 
       setScanId(body.scan_id);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "The production review could not be started.");
+      setError(cause instanceof Error ? cause.message : te("scanStart"));
     }
-  }, [projectId]);
+  }, [projectId, te]);
 
   const pollScan = useCallback(async () => {
     if (!scanId) return;
@@ -78,7 +82,7 @@ export function OnboardingReviewStep({
       | null;
 
     if (!response.ok || !body?.scan) {
-      setError(body?.error || "Could not load scan status.");
+      setError(body?.error || te("scanLoad"));
       return;
     }
 
@@ -88,7 +92,7 @@ export function OnboardingReviewStep({
     if (scanIsCompleted(body.scan.status) && verdict) {
       onComplete(scanId, verdict);
     }
-  }, [onComplete, projectId, scanId]);
+  }, [onComplete, projectId, scanId, te]);
 
   useEffect(() => {
     const pending = localStorage.getItem(`sequrai_github_scan_${projectId}`);
@@ -109,7 +113,7 @@ export function OnboardingReviewStep({
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setActiveArea((prev) => (prev + 1) % REVIEW_AREAS.length);
+      setActiveArea((prev) => (prev + 1) % REVIEW_AREA_KEYS.length);
     }, 2200);
     return () => window.clearInterval(timer);
   }, []);
@@ -125,21 +129,21 @@ export function OnboardingReviewStep({
             <Shield className="h-5 w-5 text-primary animate-pulse" aria-hidden />
           </div>
           <div>
-            <h2 className="text-lg font-semibold">SequrAI is reviewing your application.</h2>
-            <p className="text-sm text-muted-foreground">Building your Production Verdict…</p>
+            <h2 className="text-lg font-semibold">{t("reviewTitle")}</h2>
+            <p className="text-sm text-muted-foreground">{t("reviewBuilding")}</p>
           </div>
         </div>
 
         <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground mb-3">
-          Reviewing
+          {t("reviewing")}
         </p>
         <ul className="space-y-2 mb-6">
-          {REVIEW_AREAS.map((area, index) => {
+          {REVIEW_AREA_KEYS.map((areaKey, index) => {
             const isActive = index === activeArea && active;
             const isDone = index < activeArea && active;
             return (
               <li
-                key={area}
+                key={areaKey}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-500 ${
                   isActive
                     ? "bg-primary/10 text-foreground translate-x-1"
@@ -158,7 +162,7 @@ export function OnboardingReviewStep({
                     aria-hidden
                   />
                 )}
-                {area}
+                {t(`reviewAreas.${areaKey}`)}
               </li>
             );
           })}
@@ -166,9 +170,9 @@ export function OnboardingReviewStep({
 
         {active && (
           <div className="space-y-2">
-            <Progress value={progress} aria-label="Production review progress" />
+            <Progress value={progress} aria-label={tc("states.buildingVerdict")} />
             <p className="text-xs text-muted-foreground">
-              {scan?.progress_message || "Analyzing repository for production readiness…"}
+              {scan?.progress_message || t("analyzingRepo")}
             </p>
           </div>
         )}

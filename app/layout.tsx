@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { getRequestLocale } from "@/lib/i18n/server";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -31,8 +32,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "SequrAI — Think Ahead.",
-    description:
-      "Build with AI. Ship with engineering excellence.",
+    description: "Build with AI. Ship with engineering excellence.",
     creator: "@sequrai",
   },
   robots: {
@@ -41,13 +41,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getRequestLocale();
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale} suppressHydrationWarning>
       <body className="min-h-screen bg-background font-sans antialiased">
         {children}
       </body>

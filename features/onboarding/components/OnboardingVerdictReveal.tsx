@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ProductionVerdictHero } from "@/features/production-verdict/components/ProductionVerdictHero";
 import { verdictExperienceFromVerdict } from "@/brain/production-verdict/experience-view";
 import type { ProductionVerdictV1 } from "@/brain/production-verdict/schema";
+import { useI18n } from "@/lib/i18n/client";
 
 export function OnboardingVerdictReveal({
   verdict,
@@ -13,6 +14,7 @@ export function OnboardingVerdictReveal({
   verdict: ProductionVerdictV1;
   onContinue: () => void;
 }) {
+  const { t } = useI18n("onboarding");
   const [revealed, setRevealed] = useState(false);
   const view = verdictExperienceFromVerdict(verdict);
 
@@ -23,7 +25,7 @@ export function OnboardingVerdictReveal({
 
   const blockerLine =
     view.blockersCount > 0
-      ? `Your latest review introduced ${view.blockersCount} Production Blocker${view.blockersCount === 1 ? "" : "s"}.`
+      ? t("blockersIntro", { count: view.blockersCount })
       : view.statusMessage;
 
   return (
@@ -38,15 +40,10 @@ export function OnboardingVerdictReveal({
         <div className="mt-4 rounded-xl border border-border/60 bg-secondary/20 p-4 text-sm space-y-2">
           <p>{blockerLine}</p>
           {view.estimatedFixMinutes > 0 && view.status !== "ready_to_ship" && (
-            <p>
-              Estimated time to production:{" "}
-              <strong>{view.estimatedFixMinutes} minutes</strong>.
-            </p>
+            <p>{t("estimatedProduction", { minutes: view.estimatedFixMinutes })}</p>
           )}
           {view.projectedScore != null && view.showScore && (
-            <p>
-              Projected Score: <strong>{view.projectedScore} / 100</strong>
-            </p>
+            <p>{t("projectedScore", { score: view.projectedScore })}</p>
           )}
         </div>
       </div>
@@ -57,7 +54,7 @@ export function OnboardingVerdictReveal({
         onClick={onContinue}
         disabled={!revealed}
       >
-        Review Fastest Path Forward
+        {t("reviewFastestPath")}
       </Button>
     </div>
   );

@@ -1,0 +1,74 @@
+{
+  "productionVerdict": "Production Verdict",
+  "productionReadyScore": "Production Ready Score",
+  "productionBlocker_one": "{count} production blocker",
+  "productionBlocker_other": "{count} production blockers",
+  "blockersRequireAttention_one": "{count} production blocker requires your attention.",
+  "blockersRequireAttention_other": "{count} production blockers require your attention.",
+  "estimatedPathForward": "Estimated path forward",
+  "projectedScore": "Projected score",
+  "scoreDelta": "Score delta",
+  "afterPriorities": "After recommended priorities",
+  "sincePreviousReview": "Since previous review",
+  "fastestPathTitle": "Fastest Path Forward",
+  "fastestPathSubtitle": "Resolve these priorities in order for the fastest route to production.",
+  "whyItMatters": "Why it matters",
+  "technicalSeverity": "Technical severity",
+  "estimatedTime": "Estimated time",
+  "estimatedImprovement": "Estimated improvement",
+  "reviewFix": "Review fix",
+  "action": "Action",
+  "affected": "Affected",
+  "aiEngineerTitle": "AI Production Engineer",
+  "aiEngineerSubtitle": "Executive review summary",
+  "reviewSummary": "Review summary",
+  "recommendedNextAction": "Recommended next action",
+  "enhanceSummary": "Enhance summary",
+  "generating": "Generating…",
+  "viewTechnicalReport": "View technical report",
+  "retryProductionCheck": "Retry production check",
+  "commitReviewed": "I reviewed commit {sha}.",
+  "latestChanges": "I reviewed your latest changes.",
+  "estimatedImplementation": "Estimated implementation time: {minutes} minutes.",
+  "aiUnavailableDeterministic": "AI summary unavailable. The deterministic Production Verdict remains authoritative.",
+  "moreAffected": "+{count} more",
+  "points": "+{count} points",
+  "status": {
+    "ready_to_ship": {
+      "label": "Ready to Ship",
+      "headline": "READY TO SHIP",
+      "description": "No production blockers. Meets the current readiness threshold.",
+      "message": "Your application is ready to ship."
+    },
+    "almost_ready": {
+      "label": "Almost Ready",
+      "headline": "ALMOST READY",
+      "description": "Close to shipping. Resolve remaining blockers on your fastest path forward.",
+      "message": "You are close to production."
+    },
+    "needs_improvement": {
+      "label": "Needs Improvement",
+      "headline": "NEEDS IMPROVEMENT",
+      "description": "Improvements required before production deployment.",
+      "message": "Your application needs a focused production pass."
+    },
+    "not_ready": {
+      "label": "Not Ready to Ship",
+      "headline": "NOT READY TO SHIP",
+      "description": "Production blockers prevent safe deployment.",
+      "message": "Do not ship this version yet."
+    },
+    "insufficient_data": {
+      "label": "More Analysis Required",
+      "headline": "MORE ANALYSIS REQUIRED",
+      "description": "Not enough repository coverage for a responsible production decision.",
+      "message": "SequrAI needs more information before issuing a responsible verdict."
+    },
+    "analysis_failed": {
+      "label": "Analysis Failed",
+      "headline": "ANALYSIS FAILED",
+      "description": "The latest analysis did not complete successfully.",
+      "message": "We could not complete this production review."
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "title": "Ajustes",
+  "subtitle": "Gestiona tu cuenta y organización.",
+  "profileTitle": "Perfil",
+  "profileSubtitle": "Información de tu cuenta personal.",
+  "displayName": "Nombre visible",
+  "email": "Email",
+  "saveSoon": "Guardar cambios — próximamente",
+  "organizationTitle": "Organización",
+  "organizationSubtitle": "Ajustes de tu organización.",
+  "organizationName": "Nombre de la organización",
+  "plan": "Plan",
+  "languageTitle": "Idioma",
+  "languageSubtitle": "Elige cómo te habla SequrAI. Los nombres de producto se mantienen en inglés.",
+  "dangerTitle": "Zona de peligro",
+  "dangerSubtitle": "Acciones irreversibles para tu cuenta."
+}

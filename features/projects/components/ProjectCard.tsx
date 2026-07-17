@@ -2,8 +2,9 @@ import Link from "next/link";
 import { FolderGit2, ExternalLink, Calendar } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatRelativeDate } from "@/lib/utils";
-import { VERDICT_STATUS_LABELS } from "@/brain/production-verdict/schema";
+import { getTranslator } from "@/lib/i18n/server";
+import { formatRelativeLocalized } from "@/lib/i18n/format";
+import { verdictStatusLabel } from "@/lib/i18n/verdict-copy";
 import { verdictBadgeVariant } from "@/brain/production-verdict/status-ui";
 import type { VerdictStatus } from "@/brain/production-verdict/schema";
 import type { ProjectRow } from "@/types/database";
@@ -24,10 +25,22 @@ const FRAMEWORK_LABELS: Record<string, string> = {
   OTHER: "Other",
 };
 
-export function ProjectCard({
+export async function ProjectCard({
   project,
   verdictStatus = "insufficient_data",
 }: ProjectCardProps) {
+  const { locale, t } = await getTranslator("projects");
+  const { t: tc } = await getTranslator("common");
+  const { t: tAll } = await getTranslator();
+
+  const dateLabels = {
+    never: tc("never"),
+    justNow: tc("justNow"),
+    minutesAgo: tc("minutesAgo"),
+    hoursAgo: tc("hoursAgo"),
+    daysAgo: tc("daysAgo"),
+  };
+
   return (
     <Link href={`/projects/${project.id}`} className="group">
       <Card className="border-border/50 group-hover:border-border transition-colors h-full cursor-pointer">
@@ -53,11 +66,11 @@ export function ProjectCard({
 
           <div className="flex flex-wrap gap-2">
             <Badge variant={verdictBadgeVariant(verdictStatus)} className="text-xs">
-              {VERDICT_STATUS_LABELS[verdictStatus]}
+              {verdictStatusLabel(verdictStatus, (key, params) => tAll(key, params))}
             </Badge>
             {!project.github_repo && !project.production_url && (
               <Badge variant="outline" className="text-xs text-muted-foreground">
-                No integrations yet
+                {t("noIntegrationsYet")}
               </Badge>
             )}
             {project.github_repo && (
@@ -69,14 +82,17 @@ export function ProjectCard({
             {project.production_url && (
               <Badge variant="outline" className="text-xs gap-1">
                 <ExternalLink className="h-2.5 w-2.5" />
-                Live URL
+                {t("liveUrl")}
               </Badge>
             )}
           </div>
 
           <div className="flex items-center gap-1 text-xs text-muted-foreground">
             <Calendar className="h-3 w-3" />
-            <span>Created {formatRelativeDate(project.created_at)}</span>
+            <span>
+              {t("created")}{" "}
+              {formatRelativeLocalized(locale, project.created_at, dateLabels)}
+            </span>
           </div>
         </CardContent>
       </Card>

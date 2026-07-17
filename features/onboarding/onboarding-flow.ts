@@ -14,11 +14,11 @@ export const WIZARD_STEPS = [
 export type WizardStep = (typeof WIZARD_STEPS)[number];
 
 export const PROGRESS_STEPS = [
-  { id: "github", label: "GitHub connected" },
-  { id: "repository", label: "Repository selected" },
-  { id: "review", label: "Production review completed" },
-  { id: "verdict", label: "Production Verdict received" },
-  { id: "ready", label: "Ready to start building" },
+  { id: "github", labelKey: "progress.github" },
+  { id: "repository", labelKey: "progress.repository" },
+  { id: "review", labelKey: "progress.review" },
+  { id: "verdict", labelKey: "progress.verdict" },
+  { id: "ready", labelKey: "progress.ready" },
 ] as const;
 
 export type ProgressStepId = (typeof PROGRESS_STEPS)[number]["id"];
