@@ -2,6 +2,8 @@ import "server-only";
 
 import { InlineScanJobRunner } from "@/server/security-scanner/scan-job-runner";
 import { resolveGitHubAccessToken } from "@/lib/github/resolve-token";
+import { buildScanProductionVerdict } from "@/server/brain/build-scan-verdict";
+import { formatMcpVerdictSummary } from "@/brain";
 import { assertProjectInOrg, McpError, type McpAuthContext } from "./auth";
 
 export async function runProductionCheck(
@@ -66,6 +68,25 @@ export async function runProductionCheck(
     .eq("id", scan.id)
     .single();
 
+  let verdictSummary: string | null = null;
+  if (completed?.status === "completed") {
+    const verdict = await buildScanProductionVerdict(ctx.admin, {
+      scanId: scan.id,
+      projectId,
+      organizationId: ctx.organizationId,
+      securityScore: completed.security_score,
+      severityCounts: {
+        critical: completed.critical_count ?? 0,
+        high: completed.high_count ?? 0,
+        medium: 0,
+        low: 0,
+        info: 0,
+      },
+      findings: [],
+    });
+    verdictSummary = formatMcpVerdictSummary(verdict);
+  }
+
   return {
     scanId: scan.id,
     status: completed?.status ?? "unknown",
@@ -73,9 +94,10 @@ export async function runProductionCheck(
     blockersCount: (completed?.critical_count ?? 0) + (completed?.high_count ?? 0),
     findingsCount: completed?.findings_count ?? 0,
     completedAt: completed?.completed_at ?? null,
+    summary: verdictSummary,
     message:
       completed?.status === "completed"
-        ? "Production check completed. Use get_production_readiness for your updated score."
+        ? verdictSummary ?? "Production check completed."
         : "Production check did not complete successfully.",
   };
 }

@@ -10,8 +10,6 @@ import {
   LogOut,
   ChevronDown,
   Plus,
-  Sparkles,
-  Clock,
   Puzzle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -32,8 +30,6 @@ const PRIMARY_NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/projects", label: "Projects", icon: FolderGit2 },
   { href: "/integrations", label: "Integrations", icon: Puzzle },
-  { href: "/ai-fixes", label: "Fixes", icon: Sparkles },
-  { href: "/timeline", label: "Timeline", icon: Clock },
 ] as const;
 
 const SETTINGS_NAV = [
@@ -158,7 +154,7 @@ export function DashboardSidebar({ user, orgName }: DashboardSidebarProps) {
               <Link href="/settings" className="text-sm">Settings</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/billing" className="text-sm">Billing</Link>
+              <Link href="/settings/billing" className="text-sm">Billing</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem

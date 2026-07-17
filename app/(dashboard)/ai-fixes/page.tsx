@@ -34,15 +34,15 @@ export default async function AIFixesPage() {
   return (
     <div className="p-6 space-y-6 max-w-6xl">
       <PageHeader
-        title="AI Fix Suggestions"
-        description="Ready-to-implement fixes prepared by your AI Security Engineer."
+        title="Production Fixes"
+        description="Ready-to-implement fixes prepared by your AI Production Engineer."
       />
 
       {!fixes?.length ? (
         <EmptyState
           icon={Sparkles}
           title="No AI fixes yet"
-          description="Run a scan, then click Generate security plan on the scan report to create fixes and Cursor/Claude prompts."
+          description="Run a production analysis, then run senior review on the scan report to create fixes and Cursor prompts."
           className="py-24"
         />
       ) : (

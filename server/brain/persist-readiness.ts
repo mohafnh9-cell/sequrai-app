@@ -1,10 +1,18 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { calculateProductionReadiness } from "@/brain";
+import type { ProductionReadyScore } from "@/brain";
 
+function log(event: string, fields: Record<string, unknown>) {
+  console.warn({ component: "persist-readiness", event, deprecated: true, ...fields });
+}
+
+/**
+ * @deprecated Block 6.2 — Production Verdict Engine is the sole writer.
+ * Use generateAndPersistProductionVerdict from server/production-verdict/service instead.
+ */
 export async function persistProductionReadiness(
-  admin: SupabaseClient,
+  _admin: SupabaseClient,
   input: {
     organizationId: string;
     projectId: string;
@@ -17,45 +25,11 @@ export async function persistProductionReadiness(
     infoCount: number;
     estimatedMinutesFromPriorities?: number;
   }
-) {
-  const { data: findings } = await admin
-    .from("scan_findings")
-    .select("category")
-    .eq("scan_id", input.scanId);
-
-  const categoryCounts: Record<string, number> = {};
-  for (const row of findings ?? []) {
-    const key = row.category.toLowerCase();
-    categoryCounts[key] = (categoryCounts[key] ?? 0) + 1;
-  }
-
-  const productionReady = calculateProductionReadiness({
-    securityScore: input.securityScore,
-    severityCounts: {
-      critical: input.criticalCount,
-      high: input.highCount,
-      medium: input.mediumCount,
-      low: input.lowCount,
-      info: input.infoCount,
-    },
-    categoryCounts,
-    estimatedMinutesFromPriorities: input.estimatedMinutesFromPriorities,
+): Promise<ProductionReadyScore | null> {
+  log("deprecated_writer_invoked", {
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    scanId: input.scanId,
   });
-
-  await admin.from("production_readiness_scores").upsert(
-    {
-      organization_id: input.organizationId,
-      project_id: input.projectId,
-      scan_id: input.scanId,
-      overall_score: productionReady.overall,
-      dimensions: productionReady.dimensions,
-      blockers_count: productionReady.blockersCount,
-      improvements_count: productionReady.improvementsCount,
-      estimated_minutes: productionReady.estimatedMinutesToReady,
-      calculated_at: new Date().toISOString(),
-    },
-    { onConflict: "scan_id" }
-  );
-
-  return productionReady;
+  return null;
 }

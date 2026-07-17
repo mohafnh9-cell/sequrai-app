@@ -1,4 +1,4 @@
-import type { ProjectProductionStatus } from "./production-experience/project-status";
+import type { ProductionVerdictV1, VerdictStatus } from "./production-verdict/schema";
 
 export const BRAIN_VERSION = "0.1.0";
 
@@ -44,6 +44,8 @@ export type ProjectBrainSnapshot = {
   organizationId: string;
   projectName: string;
   githubRepo: string | null;
+  /** Canonical persisted Production Verdict v1 — single source of truth. */
+  currentVerdict: ProductionVerdictV1 | null;
   productionReady: ProductionReadyScore;
   securityScore: number | null;
   riskScore: number | null;
@@ -63,9 +65,13 @@ export type ProjectBrainSummary = {
   projectId: string;
   projectName: string;
   productionReady: number | null;
+  scoreDelta: number | null;
+  projectedScore: number | null;
   blockersCount: number;
   healthStatus: string | null;
-  status: ProjectProductionStatus;
+  status: VerdictStatus;
+  lastReviewedCommit: string | null;
+  generatedAt: string | null;
 };
 
 export type ProductionRoadmapItem = {

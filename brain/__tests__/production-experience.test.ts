@@ -29,7 +29,7 @@ describe("project production status", () => {
     expect(getProjectProductionStatus({ score: 88, blockersCount: 0 })).toBe(
       "ready_for_production"
     );
-    expect(PROJECT_STATUS_LABELS.ready_for_production).toBe("Ready for Production");
+    expect(PROJECT_STATUS_LABELS.ready_for_production).toBe("Ready to Ship");
   });
 
   it("returns not ready for low scores", () => {

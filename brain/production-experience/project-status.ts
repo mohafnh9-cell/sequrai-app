@@ -6,11 +6,11 @@ export type ProjectProductionStatus =
   | "not_scanned";
 
 export const PROJECT_STATUS_LABELS: Record<ProjectProductionStatus, string> = {
-  ready_for_production: "Ready for Production",
+  ready_for_production: "Ready to Ship",
   almost_ready: "Almost Ready",
-  needs_improvements: "Needs Improvements",
-  not_ready: "Not Ready For Production",
-  not_scanned: "Not Scanned",
+  needs_improvements: "Needs Improvement",
+  not_ready: "Not Ready",
+  not_scanned: "Not Analyzed",
 };
 
 export function getProjectProductionStatus(input: {

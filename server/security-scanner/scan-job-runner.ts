@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { scanRepository as scanRepositoryFiles, scoreFindings } from "@/features/security-scanner";
 import type { Confidence, Finding as ScannerFinding, Severity } from "@/features/security-scanner";
-import { persistProductionReadiness } from "@/server/brain/persist-readiness";
+import { generateAndPersistProductionVerdict } from "@/server/production-verdict/service";
 import {
   GitHubRepositoryService,
   GitHubServiceError,
@@ -284,17 +284,17 @@ export class InlineScanJobRunner implements ScanJobRunner {
         last_security_score: score,
         open_findings_count: rows.length,
       });
-      await persistProductionReadiness(this.supabase, {
+      await generateAndPersistProductionVerdict(this.supabase, {
         organizationId: context.organizationId,
         projectId: context.repositoryId,
         scanId: context.scanId,
-        securityScore: score,
-        criticalCount: counts.critical,
-        highCount: counts.high,
-        mediumCount: counts.medium,
-        lowCount: counts.low,
-        infoCount: counts.info,
-      }).catch(() => undefined);
+      }).catch((error) => {
+        logScan("error", "verdict_persistence_failed", {
+          scanId: context.scanId,
+          repositoryId: context.repositoryId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
       logScan("info", "scan_completed", {
         scanId: context.scanId,
         repositoryId: context.repositoryId,

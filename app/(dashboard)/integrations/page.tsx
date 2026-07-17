@@ -167,7 +167,7 @@ export default function IntegrationsPage() {
               <div>
                 <CardTitle className="text-base">GitHub</CardTitle>
                 <CardDescription className="text-xs">
-                  Connect repos for automated security scanning
+                  Connect repos for automated production analysis on every push
                 </CardDescription>
               </div>
             </div>
@@ -332,7 +332,7 @@ export default function IntegrationsPage() {
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Webhook className="h-4 w-4 text-primary" />
-            <CardTitle className="text-sm">GitHub Security Automation</CardTitle>
+            <CardTitle className="text-sm">GitHub Production Automation</CardTitle>
           </div>
           <CardDescription className="text-xs">
             Webhooks are registered automatically when you connect repositories. Manual setup is

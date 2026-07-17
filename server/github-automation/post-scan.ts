@@ -9,6 +9,7 @@ import {
 } from "./activity";
 import { calculateRepositoryHealth, securityCheckStatus } from "./health";
 import { notifyOrganizationMembers } from "./notifications";
+import { generateAndPersistProductionVerdict } from "@/server/production-verdict/service";
 
 export async function finalizeScanAutomation(
   admin: SupabaseClient,
@@ -52,6 +53,19 @@ export async function finalizeScanAutomation(
     scoreTrend: scoreDelta,
     factors,
   });
+
+  try {
+    await generateAndPersistProductionVerdict(admin, {
+      organizationId,
+      projectId,
+      scanId: input.scanId,
+    });
+  } catch (error) {
+    console.info("verdict_generation_skipped", {
+      scanId: input.scanId,
+      reason: error instanceof Error ? error.message : "unknown",
+    });
+  }
 
   await recordRepositoryActivity(admin, {
     organizationId,

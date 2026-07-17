@@ -1,17 +1,17 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { getServerAuthContext } from "@/lib/auth/dev-bypass";
-import { FolderGit2, Plus, ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { Suspense } from "react";
+import { FolderGit2, Plus, ArrowRight, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { ProductionEngineExperience } from "@/features/brain/components/ProductionEngineExperience";
 import { ProductionHero } from "@/features/brain/components/ProductionHero";
 import { ProductionTimelineFeed } from "@/features/brain/components/ProductionTimelineFeed";
+import { PortfolioVerdictCard } from "@/features/production-verdict/components/PortfolioVerdictCard";
+import { FirstVerdictDashboardModal } from "@/features/onboarding/components/FirstVerdictDashboardModal";
 import { buildOrgBrain } from "@/server/brain/build-org-brain";
-import { PROJECT_STATUS_LABELS, getProjectStatusBadgeVariant } from "@/brain";
-import { formatRelativeDate } from "@/lib/utils";
+import { organizationHasProductionVerdict } from "@/server/onboarding/has-production-verdict";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Production Dashboard" };
@@ -46,13 +46,13 @@ export default async function DashboardPage() {
         <div className="text-center max-w-sm">
           <h1 className="text-2xl font-bold">Welcome to SequrAI</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Your Senior Production & Security Engineer — know if your app is ready to deploy.
+            SequrAI tells you when your AI-built application is ready to ship and the fastest path to get there.
           </p>
         </div>
         <Button asChild>
           <Link href="/onboarding">
             <Plus className="mr-2 h-4 w-4" />
-            Set up organization
+            Get your first Production Verdict
           </Link>
         </Button>
       </div>
@@ -60,6 +60,9 @@ export default async function DashboardPage() {
   }
 
   const org = membership.organization as { id: string; name: string; plan: string };
+  const hasVerdict = await organizationHasProductionVerdict(supabase, org.id);
+  if (!hasVerdict) redirect("/onboarding");
+
   const brain = await buildOrgBrain(supabase, org.id);
 
   const { data: recentProjects } = await supabase
@@ -70,6 +73,18 @@ export default async function DashboardPage() {
     .limit(5);
 
   const projectReadiness = new Map(brain.projects.map((item) => [item.projectId, item]));
+
+  const readyCount = brain.projects.filter((p) => p.status === "ready_to_ship").length;
+  const almostReadyCount = brain.projects.filter((p) => p.status === "almost_ready").length;
+  const blockedCount = brain.projects.filter(
+    (p) => p.status === "not_ready" || p.blockersCount > 0
+  ).length;
+  const needsAnalysisCount = brain.projects.filter(
+    (p) => p.status === "insufficient_data" || p.status === "analysis_failed"
+  ).length;
+  const scoreChanges = brain.projects.filter(
+    (p) => p.scoreDelta != null && p.scoreDelta !== 0
+  ).length;
 
   const planLabel =
     org.plan === "FREE"
@@ -84,11 +99,14 @@ export default async function DashboardPage() {
 
   return (
     <div className="p-6 space-y-8 max-w-6xl">
+      <Suspense fallback={null}>
+        <FirstVerdictDashboardModal />
+      </Suspense>
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Production Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {org.name} · {planLabel} plan · Senior Production Engineer active
+            {org.name} · {planLabel} plan · AI Production Engineer active
           </p>
         </div>
         <Button size="sm" asChild>
@@ -99,21 +117,53 @@ export default async function DashboardPage() {
         </Button>
       </div>
 
-      <ProductionHero
-        score={brain.averageProductionReady}
-        blockersCount={brain.totalBlockers}
-        estimatedMinutes={brain.totalEstimatedMinutes}
-        dimensions={brain.averageDimensions}
-      />
+      <ProductionHero orgBrain={brain} />
 
-      <ProductionEngineExperience />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <Card className="border-border/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Ready to Ship</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-[#64D98B]" aria-hidden />
+            <span className="text-2xl font-bold">{readyCount}</span>
+          </CardContent>
+        </Card>
+        <Card className="border-border/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Almost Ready</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-bold">{almostReadyCount}</CardContent>
+        </Card>
+        <Card className="border-border/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Blocked</CardTitle>
+          </CardHeader>
+          <CardContent className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-[#FF5C6C]" aria-hidden />
+            <span className="text-2xl font-bold">{blockedCount}</span>
+          </CardContent>
+        </Card>
+        <Card className="border-border/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">More Analysis Required</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-bold">{needsAnalysisCount}</CardContent>
+        </Card>
+        <Card className="border-border/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm text-muted-foreground">Score changes</CardTitle>
+          </CardHeader>
+          <CardContent className="text-2xl font-bold">{scoreChanges}</CardContent>
+        </Card>
+      </div>
 
       <Card className="border-border/50">
         <CardHeader className="flex-row items-center justify-between pb-4">
           <div>
             <CardTitle className="text-base">Your Projects</CardTitle>
             <CardDescription className="text-xs mt-0.5">
-              Can you deploy? Status at a glance.
+              Production Ready Score, verdict, and blockers at a glance.
             </CardDescription>
           </div>
           <Button variant="ghost" size="sm" asChild>
@@ -127,41 +177,20 @@ export default async function DashboardPage() {
             <EmptyState
               icon={FolderGit2}
               title="No projects yet"
-              description="Connect your GitHub repos to analyze production readiness."
-              action={{ label: "Connect GitHub", href: "/integrations" }}
+              description="Connect your GitHub repos to get your first Production Verdict."
+              action={{ label: "Get your first Production Verdict", href: "/onboarding" }}
             />
           ) : (
             <div className="space-y-2">
-              {recentProjects.map((project) => {
-                const readiness = projectReadiness.get(project.id);
-                const status = readiness?.status ?? "not_scanned";
-                return (
-                  <Link
-                    key={project.id}
-                    href={`/projects/${project.id}`}
-                    className="flex items-center justify-between rounded-md border border-border/50 bg-secondary/20 p-3 hover:bg-secondary/40 transition-colors"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-secondary">
-                        <FolderGit2 className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{project.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {project.framework ?? "No framework"} ·{" "}
-                          {formatRelativeDate(project.created_at)}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge
-                      variant={getProjectStatusBadgeVariant(status)}
-                      className="text-xs shrink-0 ml-2"
-                    >
-                      {PROJECT_STATUS_LABELS[status]}
-                    </Badge>
-                  </Link>
-                );
-              })}
+              {recentProjects.map((project) => (
+                <PortfolioVerdictCard
+                  key={project.id}
+                  projectId={project.id}
+                  projectName={project.name}
+                  summary={projectReadiness.get(project.id)}
+                  lastActivityAt={project.last_scan_at ?? project.created_at}
+                />
+              ))}
             </div>
           )}
         </CardContent>

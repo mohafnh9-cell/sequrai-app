@@ -33,7 +33,9 @@ export function McpApiKeysPanel() {
   }, []);
 
   useEffect(() => {
-    void loadKeys();
+    queueMicrotask(() => {
+      void loadKeys();
+    });
   }, [loadKeys]);
 
   async function createKey() {

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { ScanDetailView } from "@/features/security-scanner/components/ScanDetailView";
 
 export const metadata: Metadata = {
-  title: "Security scan",
+  title: "Production analysis",
 };
 
 export default async function ScanDetailPage({

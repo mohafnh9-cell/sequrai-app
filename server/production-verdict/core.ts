@@ -1,0 +1,278 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  parseProductionVerdict,
+  type ProductionVerdictV1,
+} from "@/brain/production-verdict/schema";
+import { generateProductionVerdict as runEngine } from "@/brain/production-verdict/engine";
+
+function log(event: string, fields: Record<string, unknown>) {
+  console.info({ component: "production-verdict-service", event, ...fields });
+}
+
+function isMissingTableError(message: string): boolean {
+  return message.includes("production_verdicts") && message.includes("does not exist");
+}
+
+export async function getLatestVerdictsByOrganization(
+  client: SupabaseClient,
+  organizationId: string
+): Promise<Map<string, ProductionVerdictV1>> {
+  const { data, error } = await client
+    .from("production_verdicts")
+    .select("project_id, verdict, generated_at")
+    .eq("organization_id", organizationId)
+    .order("generated_at", { ascending: false });
+
+  if (error) {
+    if (isMissingTableError(error.message)) {
+      log("migration_missing", { organizationId });
+    } else {
+      log("verdict_org_read_failed", { organizationId, error: error.message });
+    }
+    return new Map();
+  }
+
+  const map = new Map<string, ProductionVerdictV1>();
+  for (const row of data ?? []) {
+    if (!map.has(row.project_id) && row.verdict) {
+      map.set(row.project_id, parseProductionVerdict(row.verdict));
+    }
+  }
+  return map;
+}
+
+export async function generateAndPersistProductionVerdict(
+  admin: SupabaseClient,
+  input: {
+    organizationId: string;
+    projectId: string;
+    scanId: string;
+  }
+): Promise<ProductionVerdictV1 | null> {
+  log("verdict_generation_started", { scanId: input.scanId, projectId: input.projectId });
+
+  const { data: scan, error: scanError } = await admin
+    .from("scans")
+    .select("*")
+    .eq("id", input.scanId)
+    .eq("project_id", input.projectId)
+    .maybeSingle();
+
+  if (scanError || !scan) {
+    log("verdict_generation_failed", { scanId: input.scanId, reason: "scan_not_found" });
+    return null;
+  }
+
+  const [{ data: findings }, { data: previousScan }, { data: previousVerdict }] = await Promise.all([
+    admin
+      .from("scan_findings")
+      .select("id, title, severity, category, rule_id, file_path, recommendation, confidence")
+      .eq("scan_id", input.scanId),
+    admin
+      .from("scans")
+      .select("id, security_score, critical_count, high_count")
+      .eq("project_id", input.projectId)
+      .eq("status", "completed")
+      .neq("id", input.scanId)
+      .order("completed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    admin
+      .from("production_verdicts")
+      .select("verdict, blockers_count")
+      .eq("project_id", input.projectId)
+      .order("generated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  const { data: aiReport } = await admin
+    .from("ai_reports")
+    .select("executive_summary")
+    .eq("scan_id", input.scanId)
+    .eq("status", "completed")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const previousBlockers =
+    previousVerdict?.blockers_count ??
+    (previousScan ? (previousScan.critical_count ?? 0) + (previousScan.high_count ?? 0) : undefined);
+
+  const { verdict } = runEngine({
+    projectId: input.projectId,
+    repositoryId: scan.repository_id ?? input.projectId,
+    scanId: input.scanId,
+    commitSha: scan.commit_sha ?? scan.commit,
+    branch: scan.branch,
+    scanStatus: scan.status,
+    securityScore: scan.security_score,
+    filesAnalyzed: scan.files_analyzed ?? scan.files_scanned ?? 0,
+    filesDiscovered: scan.files_discovered ?? scan.total_files ?? 0,
+    findings: findings ?? [],
+    previousScore: previousScan?.security_score ?? null,
+    previousBlockersCount: previousBlockers,
+    partialScanFailure: scan.status !== "completed",
+    aiExecutiveSummary: aiReport?.executive_summary ?? null,
+  });
+
+  log("verdict_generated", {
+    scanId: input.scanId,
+    status: verdict.status,
+    score: verdict.score,
+    blockersCount: verdict.blockersCount,
+  });
+
+  const { data: persisted, error: persistError } = await admin
+    .from("production_verdicts")
+    .upsert(
+      {
+        organization_id: input.organizationId,
+        project_id: input.projectId,
+        repository_id: scan.repository_id ?? input.projectId,
+        scan_id: input.scanId,
+        version: verdict.version,
+        status: verdict.status,
+        score: verdict.score,
+        previous_score: verdict.previousScore,
+        score_delta: verdict.scoreDelta,
+        projected_score: verdict.projectedScore,
+        blockers_count: verdict.blockersCount,
+        critical_blockers_count: verdict.criticalBlockersCount,
+        high_blockers_count: verdict.highBlockersCount,
+        estimated_fix_minutes: verdict.estimatedFixMinutes,
+        confidence: verdict.confidence,
+        executive_summary: verdict.executiveSummary,
+        introduced_blockers: verdict.introducedBlockers,
+        resolved_blockers: verdict.resolvedBlockers,
+        verdict,
+        generated_at: verdict.generatedAt,
+      },
+      { onConflict: "scan_id" }
+    )
+    .select("id")
+    .single();
+
+  if (persistError) {
+    log("verdict_persistence_failed", { scanId: input.scanId, error: persistError.message });
+    throw new Error(persistError.message);
+  }
+
+  await admin
+    .from("repository_scan_state")
+    .upsert(
+      {
+        repository_id: input.projectId,
+        organization_id: input.organizationId,
+        current_verdict_id: persisted?.id ?? null,
+        last_scan_id: input.scanId,
+        last_security_score: verdict.score,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "repository_id" }
+    );
+
+  log("verdict_persistence_completed", { scanId: input.scanId, verdictId: persisted?.id });
+  return verdict;
+}
+
+export async function getProductionVerdictByScan(
+  admin: SupabaseClient,
+  scanId: string
+): Promise<ProductionVerdictV1 | null> {
+  const { data } = await admin
+    .from("production_verdicts")
+    .select("verdict")
+    .eq("scan_id", scanId)
+    .maybeSingle();
+
+  if (!data?.verdict) return null;
+  return parseProductionVerdict(data.verdict);
+}
+
+export async function getCurrentProductionVerdict(
+  admin: SupabaseClient,
+  repositoryId: string
+): Promise<ProductionVerdictV1 | null> {
+  log("verdict_read_started", { repositoryId });
+
+  const { data: state } = await admin
+    .from("repository_scan_state")
+    .select("current_verdict_id")
+    .eq("repository_id", repositoryId)
+    .maybeSingle();
+
+  if (state?.current_verdict_id) {
+    const { data, error } = await admin
+      .from("production_verdicts")
+      .select("verdict")
+      .eq("id", state.current_verdict_id)
+      .maybeSingle();
+
+    if (error && isMissingTableError(error.message)) {
+      log("migration_missing", { repositoryId });
+      return null;
+    }
+
+    if (data?.verdict) {
+      log("verdict_read_completed", { repositoryId, source: "current_verdict_id" });
+      return parseProductionVerdict(data.verdict);
+    }
+  }
+
+  const { data, error } = await admin
+    .from("production_verdicts")
+    .select("verdict")
+    .eq("repository_id", repositoryId)
+    .order("generated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingTableError(error.message)) {
+      log("migration_missing", { repositoryId });
+    } else {
+      log("verdict_read_failed", { repositoryId, error: error.message });
+    }
+    return null;
+  }
+
+  if (!data?.verdict) {
+    log("verdict_read_empty", { repositoryId });
+    return null;
+  }
+
+  log("verdict_read_completed", { repositoryId, source: "latest_by_repo" });
+  return parseProductionVerdict(data.verdict);
+}
+
+export async function compareProductionVerdicts(
+  admin: SupabaseClient,
+  previousScanId: string,
+  currentScanId: string
+): Promise<{
+  previous: ProductionVerdictV1 | null;
+  current: ProductionVerdictV1 | null;
+  scoreDelta: number | null;
+  blockersDelta: number | null;
+} | null> {
+  const [previous, current] = await Promise.all([
+    getProductionVerdictByScan(admin, previousScanId),
+    getProductionVerdictByScan(admin, currentScanId),
+  ]);
+
+  if (!previous && !current) return null;
+
+  return {
+    previous,
+    current,
+    scoreDelta:
+      previous?.score != null && current?.score != null
+        ? current.score - previous.score
+        : null,
+    blockersDelta:
+      previous != null && current != null
+        ? current.blockersCount - previous.blockersCount
+        : null,
+  };
+}

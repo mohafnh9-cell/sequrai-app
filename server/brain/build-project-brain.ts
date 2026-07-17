@@ -3,12 +3,23 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   BRAIN_VERSION,
-  calculateProductionReadiness,
   estimateRiskFromScan,
   type BrainActivityEvent,
   type BrainPriority,
   type ProjectBrainSnapshot,
 } from "@/brain";
+import {
+  getCurrentProductionVerdict,
+} from "@/server/production-verdict/service";
+import {
+  EMPTY_PRODUCTION_READY,
+  prioritiesFromVerdict,
+  productionReadyFromVerdict,
+} from "./verdict-view-model";
+
+function log(event: string, fields: Record<string, unknown>) {
+  console.info({ component: "build-project-brain", event, ...fields });
+}
 
 export async function mergeProjectActivity(
   supabase: SupabaseClient,
@@ -71,7 +82,7 @@ export async function buildProjectBrain(
     .maybeSingle();
   if (!project) return null;
 
-  const [scanState, health, latestScan, storedReadiness, priorities, latestReport, activity] =
+  const [scanState, health, latestScan, currentVerdict, priorities, latestReport, activity] =
     await Promise.all([
       supabase
         .from("repository_scan_state")
@@ -89,13 +100,10 @@ export async function buildProjectBrain(
         .order("completed_at", { ascending: false })
         .limit(1)
         .maybeSingle(),
-      supabase
-        .from("production_readiness_scores")
-        .select("*")
-        .eq("project_id", projectId)
-        .order("calculated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle(),
+      getCurrentProductionVerdict(supabase, projectId).catch((error) => {
+        log("verdict_read_failed", { projectId, error: String(error) });
+        return null;
+      }),
       supabase
         .from("ai_priorities")
         .select("rank, title, description, estimated_minutes")
@@ -132,42 +140,19 @@ export async function buildProjectBrain(
     scanState.data?.last_security_score ??
     null;
 
-  const priorityMinutes = (priorities.data ?? []).reduce(
-    (sum, item) => sum + (item.estimated_minutes ?? 10),
-    0
-  );
+  const productionReady = currentVerdict
+    ? productionReadyFromVerdict(currentVerdict)
+    : EMPTY_PRODUCTION_READY;
 
-  const productionReady =
-    storedReadiness.data && storedReadiness.data.overall_score !== null
-      ? {
-          overall: storedReadiness.data.overall_score,
-          dimensions: storedReadiness.data.dimensions as ProjectBrainSnapshot["productionReady"]["dimensions"],
-          blockersCount: storedReadiness.data.blockers_count,
-          improvementsCount: storedReadiness.data.improvements_count,
-          estimatedMinutesToReady: storedReadiness.data.estimated_minutes ?? 0,
-          readyForProduction:
-            storedReadiness.data.overall_score >= 85 && storedReadiness.data.blockers_count === 0,
-        }
-      : calculateProductionReadiness({
-          securityScore,
-          severityCounts: {
-            critical: latestScan.data?.critical_count ?? 0,
-            high: latestScan.data?.high_count ?? 0,
-            medium: latestScan.data?.medium_count ?? 0,
-            low: latestScan.data?.low_count ?? 0,
-            info: latestScan.data?.info_count ?? 0,
-          },
-          categoryCounts,
-          estimatedMinutesFromPriorities: priorityMinutes,
-        });
-
-  const todayPriorities: BrainPriority[] = (priorities.data ?? []).map((item, index) => ({
-    rank: item.rank ?? index + 1,
-    title: item.title,
-    description: item.description,
-    estimatedMinutes: item.estimated_minutes ?? undefined,
-    source: "ai" as const,
-  }));
+  const todayPriorities: BrainPriority[] = currentVerdict
+    ? prioritiesFromVerdict(currentVerdict)
+    : (priorities.data ?? []).map((item, index) => ({
+        rank: item.rank ?? index + 1,
+        title: item.title,
+        description: item.description,
+        estimatedMinutes: item.estimated_minutes ?? undefined,
+        source: "ai" as const,
+      }));
 
   const stack = latestScan.data?.detected_stack as
     | { frameworks?: string[]; services?: string[] }
@@ -190,21 +175,27 @@ export async function buildProjectBrain(
     });
   }
 
+  if (!currentVerdict && latestScan.data) {
+    log("verdict_missing_for_analyzed_repo", { projectId, scanId: latestScan.data.id });
+  }
+
   return {
     projectId: project.id,
     organizationId: project.organization_id,
     projectName: project.name,
     githubRepo: project.github_repo,
+    currentVerdict,
     productionReady,
     securityScore,
     riskScore,
     healthStatus: health.data?.health_status ?? project.repository_health ?? null,
     lastScanAt: project.last_scan_at ?? latestScan.data?.completed_at ?? null,
-    lastCommitSha: scanState.data?.last_commit_sha ?? null,
+    lastCommitSha: currentVerdict?.commitSha ?? scanState.data?.last_commit_sha ?? null,
     webhookEnabled: project.webhook_enabled !== false,
     todayPriorities,
     coachTip: latestReport.data?.coach_tip ?? null,
-    executiveSummary: latestReport.data?.executive_summary ?? null,
+    executiveSummary:
+      currentVerdict?.executiveSummary ?? latestReport.data?.executive_summary ?? null,
     recentActivity: activity,
     snapshotAt: new Date().toISOString(),
     brainVersion: BRAIN_VERSION,

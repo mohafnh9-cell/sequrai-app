@@ -13,7 +13,7 @@ function redirectOrigin(request: NextRequest) {
 
 function safeNextPath(value: string | null | undefined) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/dashboard";
+    return "/onboarding";
   }
   return value;
 }

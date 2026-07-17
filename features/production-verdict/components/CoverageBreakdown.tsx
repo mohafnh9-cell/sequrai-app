@@ -1,0 +1,79 @@
+"use client";
+
+import { useState } from "react";
+import type { ProductionVerdictV1 } from "@/brain/production-verdict/schema";
+import { trackEvent } from "@/lib/analytics/track";
+
+export function CoverageBreakdown({ verdict }: { verdict: ProductionVerdictV1 }) {
+  const [methodologyOpen, setMethodologyOpen] = useState(false);
+
+  const groups = [
+    { title: "Evaluated", areas: verdict.evaluatedAreas, tone: "text-[#64D98B]" },
+    {
+      title: "Partially evaluated",
+      areas: verdict.partiallyEvaluatedAreas,
+      tone: "text-[#F7C65F]",
+    },
+    {
+      title: "Not evaluated",
+      areas: verdict.unevaluatedAreas,
+      tone: "text-muted-foreground",
+    },
+  ].filter((group) => group.areas.length > 0);
+
+  return (
+    <section
+      className="rounded-xl border border-border/60 bg-[#101014]/50 p-5"
+      aria-labelledby="coverage-heading"
+    >
+      <h2 id="coverage-heading" className="text-sm font-medium">
+        What SequrAI evaluated
+      </h2>
+      <p className="mt-1 text-xs text-muted-foreground">
+        {verdict.filesAnalyzed} files analyzed
+        {verdict.coverageRatio != null
+          ? ` · ${Math.round(verdict.coverageRatio * 100)}% repository coverage`
+          : ""}
+      </p>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-3">
+        {groups.map((group) => (
+          <div key={group.title}>
+            <p className={`text-xs font-medium uppercase tracking-wide ${group.tone}`}>
+              {group.title}
+            </p>
+            <ul className="mt-2 space-y-1">
+              {group.areas.map((area) => (
+                <li key={area.key} className="text-sm text-muted-foreground">
+                  <span className="text-foreground">{area.label}</span>
+                  {area.score != null ? ` · ${area.score}` : ""}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      <details
+        className="mt-4"
+        open={methodologyOpen}
+        onToggle={(event) => {
+          const open = (event.target as HTMLDetailsElement).open;
+          setMethodologyOpen(open);
+          if (open) trackEvent("coverage_methodology_opened");
+        }}
+      >
+        <summary className="cursor-pointer text-sm font-medium text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded">
+          How the Production Ready Score works
+        </summary>
+        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+          {verdict.methodologyNote}
+        </p>
+        <p className="mt-2 text-xs text-muted-foreground">
+          The Production Ready Score is a readiness assessment, not a formal security certification.
+          Unevaluated areas may contain risks that static analysis cannot detect.
+        </p>
+      </details>
+    </section>
+  );
+}

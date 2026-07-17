@@ -13,14 +13,13 @@ export type CopilotReadableContext = Pick<
 >;
 
 export const COPILOT_BRAIN_TOOLS = [
-  "list_projects",
   "get_production_readiness",
-  "get_today_priorities",
-  "get_coach_tip",
-  "get_timeline",
-  "explain_issue",
+  "review_current_changes",
+  "explain_production_blocker",
+  "generate_blocker_fix",
+  "review_before_commit",
+  "list_projects",
   "get_production_blockers",
-  "run_production_check",
 ] as const;
 
 export type CopilotBrainTool = (typeof COPILOT_BRAIN_TOOLS)[number];

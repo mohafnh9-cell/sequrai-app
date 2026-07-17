@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ProjectDeleteButton } from "@/features/projects/components/ProjectDeleteButton";
 import { ProjectScanOverview } from "@/features/security-scanner/components/ProjectScanOverview";
-import { ProductionReadinessSummary } from "@/features/brain/components/ProductionReadinessSummary";
+import { ProjectVerdictSummary } from "@/features/production-verdict/components/ProductionVerdictExperience";
 import { buildProjectBrain } from "@/server/brain/build-project-brain";
 import { SecurityActivityFeed } from "@/features/github-automation/components/SecurityActivityFeed";
 import { formatDate } from "@/lib/utils";
@@ -72,6 +72,19 @@ export default async function ProjectDetailPage({
   const p = project as ProjectRow;
 
   const brain = await buildProjectBrain(supabase, p.id);
+
+  const { data: latestScan } = await supabase
+    .from("scans")
+    .select("id")
+    .eq("project_id", p.id)
+    .eq("status", "completed")
+    .order("completed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const latestScanHref = latestScan?.id
+    ? `/projects/${p.id}/scans/${latestScan.id}`
+    : undefined;
 
   return (
     <div className="p-6 space-y-8 max-w-6xl">
@@ -182,13 +195,18 @@ export default async function ProjectDetailPage({
 
       </div>
 
-      {brain && (
-        <ProductionReadinessSummary
-          productionReady={brain.productionReady}
+      {brain?.currentVerdict ? (
+        <ProjectVerdictSummary
+          verdict={brain.currentVerdict}
+          projectId={p.id}
           lastScanAt={brain.lastScanAt}
-          lastCommitSha={brain.lastCommitSha}
           webhookEnabled={brain.webhookEnabled}
+          latestScanHref={latestScanHref}
         />
+      ) : (
+        <div className="rounded-xl border border-dashed border-border/70 p-8 text-center text-sm text-muted-foreground">
+          Run your first production review to get your Production Verdict.
+        </div>
       )}
 
       <SecurityActivityFeed projectId={p.id} />

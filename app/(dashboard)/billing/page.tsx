@@ -62,7 +62,7 @@ export default async function BillingPage() {
         <div>
           <p className="text-sm font-medium">You are on the Free plan</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Stripe billing integration will be available soon. Upgrade to unlock more projects, scans, and AI features.
+            Paid plans unlock more projects and every-push reviews. Billing integration is in progress.
           </p>
         </div>
         <Badge variant="secondary" className="ml-auto shrink-0">

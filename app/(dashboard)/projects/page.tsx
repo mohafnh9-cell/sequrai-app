@@ -7,8 +7,9 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { ProjectCard } from "@/features/projects/components/ProjectCard";
 import { buildOrgBrain } from "@/server/brain/build-org-brain";
+import { organizationHasProductionVerdict } from "@/server/onboarding/has-production-verdict";
 import type { ProjectRow } from "@/types/database";
-import type { ProjectProductionStatus } from "@/brain";
+import type { VerdictStatus } from "@/brain/production-verdict/schema";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Projects" };
@@ -17,6 +18,9 @@ export default async function ProjectsPage() {
   const auth = await getServerAuthContext();
   if (!auth) redirect("/login");
   if (!auth.organizationId) redirect("/onboarding");
+
+  const hasVerdict = await organizationHasProductionVerdict(auth.supabase, auth.organizationId);
+  if (!hasVerdict) redirect("/onboarding");
 
   const { data: projects } = await auth.supabase
     .from("projects")
@@ -51,7 +55,7 @@ export default async function ProjectsPage() {
           icon={FolderGit2}
           title="No projects yet"
           description="Connect your first project to analyze production readiness and know when you can deploy."
-          action={{ label: "Add your first project", href: "/projects/new" }}
+          action={{ label: "Get your first Production Verdict", href: "/onboarding" }}
           className="py-20"
         />
       ) : (
@@ -60,9 +64,7 @@ export default async function ProjectsPage() {
             <ProjectCard
               key={project.id}
               project={project}
-              productionStatus={
-                (statusByProject.get(project.id) ?? "not_scanned") as ProjectProductionStatus
-              }
+              verdictStatus={(statusByProject.get(project.id) ?? "insufficient_data") as VerdictStatus}
             />
           ))}
         </div>

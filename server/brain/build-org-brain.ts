@@ -9,8 +9,9 @@ import {
   type ReadinessDimensions,
 } from "@/brain";
 import { buildProductionRoadmap } from "@/brain/production-experience/roadmap";
-import { getProjectProductionStatus } from "@/brain/production-experience/project-status";
-import { buildProjectBrain, mergeProjectActivity } from "./build-project-brain";
+import { getLatestVerdictsByOrganization } from "@/server/production-verdict/service";
+import { productionReadyFromVerdict } from "./verdict-view-model";
+import { mergeProjectActivity } from "./build-project-brain";
 
 const DIMENSION_KEYS: ReadinessDimensionKey[] = [
   "security",
@@ -38,37 +39,64 @@ function averageDimensions(
   return result;
 }
 
+function summaryFromVerdict(
+  project: { id: string; name: string; repository_health?: string | null },
+  verdict: import("@/brain/production-verdict/schema").ProductionVerdictV1 | null
+): ProjectBrainSummary {
+  if (!verdict) {
+    return {
+      projectId: project.id,
+      projectName: project.name,
+      productionReady: null,
+      scoreDelta: null,
+      projectedScore: null,
+      blockersCount: 0,
+      healthStatus: project.repository_health ?? null,
+      status: "insufficient_data",
+      lastReviewedCommit: null,
+      generatedAt: null,
+    };
+  }
+
+  return {
+    projectId: project.id,
+    projectName: project.name,
+    productionReady: verdict.score,
+    scoreDelta: verdict.scoreDelta,
+    projectedScore: verdict.projectedScore,
+    blockersCount: verdict.blockersCount,
+    healthStatus: project.repository_health ?? null,
+    status: verdict.status,
+    lastReviewedCommit: verdict.commitSha,
+    generatedAt: verdict.generatedAt,
+  };
+}
+
 export async function buildOrgBrain(
   supabase: SupabaseClient,
   organizationId: string
 ): Promise<OrgBrainSnapshot> {
-  const { data: projects } = await supabase
-    .from("projects")
-    .select("id, name")
-    .eq("organization_id", organizationId)
-    .order("updated_at", { ascending: false });
+  const [{ data: projects }, verdictsByProject] = await Promise.all([
+    supabase
+      .from("projects")
+      .select("id, name, repository_health")
+      .eq("organization_id", organizationId)
+      .order("updated_at", { ascending: false }),
+    getLatestVerdictsByOrganization(supabase, organizationId),
+  ]);
 
   const summaries: ProjectBrainSummary[] = [];
   const dimensionSets: ReadinessDimensions[] = [];
   let totalEstimatedMinutes = 0;
 
   for (const project of projects ?? []) {
-    const brain = await buildProjectBrain(supabase, project.id);
-    if (!brain) continue;
-    summaries.push({
-      projectId: brain.projectId,
-      projectName: brain.projectName,
-      productionReady: brain.productionReady.overall,
-      blockersCount: brain.productionReady.blockersCount,
-      healthStatus: brain.healthStatus,
-      status: getProjectProductionStatus({
-        score: brain.productionReady.overall,
-        blockersCount: brain.productionReady.blockersCount,
-      }),
-    });
-    if (brain.productionReady.overall !== null) {
-      dimensionSets.push(brain.productionReady.dimensions);
-      totalEstimatedMinutes += brain.productionReady.estimatedMinutesToReady;
+    const verdict = verdictsByProject.get(project.id) ?? null;
+    const summary = summaryFromVerdict(project, verdict);
+    summaries.push(summary);
+
+    if (verdict && verdict.score !== null) {
+      dimensionSets.push(productionReadyFromVerdict(verdict).dimensions);
+      totalEstimatedMinutes += verdict.estimatedFixMinutes;
     }
   }
 

@@ -85,20 +85,15 @@ export function ProductionEngineExperience() {
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base">
               <Sparkles className="h-4 w-4" />
-              AI Production Mentor
+              Recommended next action
             </CardTitle>
           </CardHeader>
           <CardContent className="text-sm text-muted-foreground space-y-2">
             <p>
               {data?.coachTip ??
                 data?.latestReport?.coach_tip ??
-                "Your mentor provides stack-specific guidance on authentication, deployment, architecture, and performance."}
+                "Start with priority 1 on your fastest path forward before shipping to production."}
             </p>
-            <ul className="text-xs space-y-1 pt-1">
-              <li>· Best practices for AI-built apps</li>
-              <li>· Deployment and Supabase configuration</li>
-              <li>· Architecture and performance improvements</li>
-            </ul>
           </CardContent>
         </Card>
       </div>

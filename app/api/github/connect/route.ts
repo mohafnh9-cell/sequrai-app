@@ -165,6 +165,7 @@ async function connectRepositories(request: Request) {
   }
 
   let saved = 0;
+  const projectIds: string[] = [];
   let webhooksCreated = 0;
   let webhooksExisting = 0;
   let webhooksSkipped = 0;
@@ -173,6 +174,7 @@ async function connectRepositories(request: Request) {
   for (const repo of verifiedRepos) {
     if (!repo) continue;
     const projectId = await upsertConnectedProject(supabase, organizationId, repo);
+    projectIds.push(projectId);
     saved++;
 
     if (!admin) {
@@ -206,6 +208,7 @@ async function connectRepositories(request: Request) {
 
   return NextResponse.json({
     saved,
+    projectIds,
     total: selectedIds.length,
     webhooksCreated,
     webhooksExisting,

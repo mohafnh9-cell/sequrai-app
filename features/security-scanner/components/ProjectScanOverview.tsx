@@ -111,7 +111,7 @@ export function ProjectScanOverview({
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div>
           <h2 id="security-scans-heading" className="text-lg font-semibold">
-            Security scans
+            Production analyses
           </h2>
           <p className="text-sm text-muted-foreground">
             Static analysis results from the connected repository.

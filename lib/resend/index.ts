@@ -18,7 +18,7 @@ export async function sendScanCompletedEmail(params: {
   await resend.emails.send({
     from: process.env.RESEND_FROM_EMAIL ?? "noreply@sequrai.com",
     to: params.to,
-    subject: `Security scan completed for ${params.projectName}`,
+    subject: `Production analysis completed for ${params.projectName}`,
     html: `
       <h2>Security Scan Completed</h2>
       <p>Your security scan for <strong>${params.projectName}</strong> has completed.</p>

@@ -4,6 +4,8 @@ import {
   getScanRequestContext,
   ScanRequestError,
 } from "@/server/security-scanner/request-context";
+import { createAdminClient } from "@/server/security-scanner/admin-client";
+import { buildScanProductionVerdict } from "@/server/brain/build-scan-verdict";
 
 const paramsSchema = z.object({
   repositoryId: z.string().uuid(),
@@ -38,7 +40,38 @@ export async function GET(
       .order("severity", { ascending: true })
       .order("file_path", { ascending: true });
     if (findingsError) throw new Error(findingsError.message);
-    return NextResponse.json({ scan, findings });
+
+    let verdict = null;
+    if (scan.status === "completed") {
+      const categoryCounts: Record<string, number> = {};
+      for (const row of findings ?? []) {
+        const key = String(row.category ?? "unknown").toLowerCase();
+        categoryCounts[key] = (categoryCounts[key] ?? 0) + 1;
+      }
+
+      const admin = createAdminClient();
+      verdict = await buildScanProductionVerdict(admin, {
+        scanId: scan.id,
+        projectId: scan.project_id,
+        organizationId: scan.organization_id,
+        securityScore: scan.security_score,
+        severityCounts: {
+          critical: scan.critical_count ?? 0,
+          high: scan.high_count ?? 0,
+          medium: scan.medium_count ?? 0,
+          low: scan.low_count ?? 0,
+          info: scan.info_count ?? 0,
+        },
+        categoryCounts,
+        findings: (findings ?? []).map((row) => ({
+          title: row.title,
+          severity: row.severity,
+          recommendation: row.recommendation,
+        })),
+      });
+    }
+
+    return NextResponse.json({ scan, findings, verdict });
   } catch (error) {
     if (error instanceof ScanRequestError) {
       return NextResponse.json(

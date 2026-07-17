@@ -1,54 +1,51 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { Shield } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { OrgSetupForm } from "@/features/organizations/components/OrgSetupForm";
+import { OnboardingFlow } from "@/features/onboarding/components/OnboardingFlow";
+import { getOnboardingContext } from "@/server/onboarding/get-onboarding-context";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Set up your organization | SequrAI" };
+export const metadata: Metadata = { title: "Get your first Production Verdict | SequrAI" };
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ step?: string }>;
+}) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login");
+  if (!user) redirect("/login?redirectTo=/onboarding");
 
-  // If the user already has an org, skip onboarding
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("id")
-    .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
+  const params = await searchParams;
+  const forcedStep = params.step != null;
+  const context = await getOnboardingContext(supabase, user.id);
 
-  if (membership) redirect("/dashboard");
+  if (context.isComplete && !forcedStep) {
+    redirect("/dashboard");
+  }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4 bg-background">
-      <div className="w-full max-w-md space-y-6">
-        <div className="flex flex-col items-center text-center gap-3">
+    <div className="min-h-screen bg-background">
+      <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-8 px-4 py-8 md:flex-row md:items-start md:justify-center md:py-12">
+        <div className="flex w-full max-w-md flex-col items-center gap-4 text-center md:sticky md:top-12 md:items-start md:text-left">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
-            <Shield className="h-6 w-6 text-primary" />
+            <Shield className="h-6 w-6 text-primary" aria-hidden />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Set up your organization</h1>
-            <p className="text-sm text-muted-foreground mt-1.5">
-              Create a workspace to manage projects, team members, and security scans.
+            <h1 className="text-2xl font-bold tracking-tight">First Production Verdict</h1>
+            <p className="mt-1.5 text-sm text-muted-foreground">
+              Under five minutes to your first answer: ready to ship, or not.
             </p>
           </div>
         </div>
 
-        <Card className="border-border/50">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-base">Organization details</CardTitle>
-            <CardDescription>This will be your team workspace in SequrAI.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <OrgSetupForm />
-          </CardContent>
-        </Card>
+        <Suspense fallback={null}>
+          <OnboardingFlow initialContext={context} />
+        </Suspense>
       </div>
     </div>
   );

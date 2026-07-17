@@ -3,15 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { formatRelativeDate } from "@/lib/utils";
-import {
-  DIMENSION_LABELS,
-  getProductionLevel,
-  getProjectProductionStatus,
-  getProjectStatusBadgeVariant,
-  isSeniorEngineerApproved,
-  PROJECT_STATUS_LABELS,
-} from "@/brain";
+import { DIMENSION_LABELS, getProductionLevel, isSeniorEngineerApproved } from "@/brain";
 import type { ProductionReadyScore, ReadinessDimensionKey } from "@/brain";
+import type { ProductionVerdictV1 } from "@/brain/production-verdict/schema";
+import { VERDICT_STATUS_LABELS } from "@/brain/production-verdict/schema";
+import { verdictBadgeVariant, shouldShowScore } from "@/brain/production-verdict/status-ui";
 
 function scoreTone(score: number | null) {
   if (score === null) return "text-muted-foreground";
@@ -39,22 +35,26 @@ const DIMENSION_ORDER: ReadinessDimensionKey[] = [
 
 export function ProductionReadinessSummary({
   productionReady,
+  currentVerdict,
   lastScanAt,
   lastCommitSha,
   webhookEnabled,
 }: {
   productionReady: ProductionReadyScore;
+  currentVerdict?: ProductionVerdictV1 | null;
   lastScanAt: string | null;
   lastCommitSha: string | null;
   webhookEnabled?: boolean | null;
 }) {
   const score = productionReady.overall;
   const blockers = productionReady.blockersCount;
-  const status = getProjectProductionStatus({ score, blockersCount: blockers });
+  const status = currentVerdict?.status ?? "insufficient_data";
+  const showScore = shouldShowScore(score, status);
   const deploy = deployLabel(score, blockers);
   const DeployIcon = deploy.icon;
-  const level = getProductionLevel(score);
-  const seniorApproved = isSeniorEngineerApproved(score, blockers);
+  const level = getProductionLevel(showScore ? score : null);
+  const seniorApproved =
+    status === "ready_to_ship" && showScore && isSeniorEngineerApproved(score, blockers);
 
   if (seniorApproved && score !== null) {
     return (
@@ -105,8 +105,8 @@ export function ProductionReadinessSummary({
             <Rocket className="h-4 w-4 text-primary" />
             Production Readiness
           </CardTitle>
-          <Badge variant={getProjectStatusBadgeVariant(status)}>
-            {PROJECT_STATUS_LABELS[status]}
+          <Badge variant={verdictBadgeVariant(status)}>
+            {VERDICT_STATUS_LABELS[status]}
           </Badge>
         </div>
         {level && (
@@ -119,8 +119,10 @@ export function ProductionReadinessSummary({
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-lg border border-border/50 bg-secondary/20 p-3">
             <p className="text-xs text-muted-foreground">Production Ready Score</p>
-            <p className={`text-2xl font-bold mt-1 ${scoreTone(score)}`}>{score ?? "—"}</p>
-            {score !== null && <Progress value={score} className="mt-2 h-1.5" />}
+            <p className={`text-2xl font-bold mt-1 ${scoreTone(score)}`}>
+              {showScore ? score : "—"}
+            </p>
+            {showScore && score !== null && <Progress value={score} className="mt-2 h-1.5" />}
           </div>
           <div className="rounded-lg border border-border/50 bg-secondary/20 p-3">
             <p className="text-xs text-muted-foreground">Production blockers</p>

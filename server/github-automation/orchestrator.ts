@@ -17,6 +17,8 @@ import {
 } from "./webhook-utils";
 import { recordRepositoryActivity } from "./activity";
 import { estimateRiskFromScan } from "@/brain";
+import { formatGithubCheckDescription } from "@/brain/production-verdict/build-verdict";
+import { buildScanProductionVerdict } from "@/server/brain/build-scan-verdict";
 import { extractCriticalPaths } from "./health";
 
 type ProjectRow = {
@@ -186,7 +188,7 @@ async function runScanAndFinalize(
 
   const { data: findings } = await admin
     .from("scan_findings")
-    .select("category")
+    .select("category, title, severity, recommendation")
     .eq("scan_id", input.scanId);
 
   const categoryCounts: Record<string, number> = {};
@@ -194,6 +196,43 @@ async function runScanAndFinalize(
     const key = row.category.toLowerCase();
     categoryCounts[key] = (categoryCounts[key] ?? 0) + 1;
   }
+
+  const { data: previousScan } = await admin
+    .from("scans")
+    .select("id, critical_count, high_count")
+    .eq("project_id", input.project.id)
+    .eq("status", "completed")
+    .neq("id", input.scanId)
+    .order("completed_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const previousBlockers =
+    (previousScan?.critical_count ?? 0) + (previousScan?.high_count ?? 0);
+  const currentBlockers =
+    (completed.critical_count ?? 0) + (completed.high_count ?? 0);
+  const blockersResolved = Math.max(0, previousBlockers - currentBlockers);
+  const blockersIntroduced = Math.max(0, currentBlockers - previousBlockers);
+
+  const verdict = await buildScanProductionVerdict(admin, {
+    scanId: input.scanId,
+    projectId: input.project.id,
+    organizationId: input.project.organization_id,
+    securityScore: completed.security_score,
+    severityCounts: {
+      critical: completed.critical_count ?? 0,
+      high: completed.high_count ?? 0,
+      medium: completed.medium_count ?? 0,
+      low: completed.low_count ?? 0,
+      info: completed.info_count ?? 0,
+    },
+    categoryCounts,
+    findings: (findings ?? []).map((row) => ({
+      title: row.title,
+      severity: row.severity,
+      recommendation: row.recommendation,
+    })),
+  });
 
   const stack = completed.detected_stack as
     | { frameworks?: string[]; services?: string[] }
@@ -226,16 +265,21 @@ async function runScanAndFinalize(
   });
 
   if (input.statusSha) {
+    const reportUrl = input.appUrl
+      ? `${input.appUrl}/projects/${input.project.id}/scans/${input.scanId}`
+      : undefined;
     await postGitHubCommitStatus({
       githubRepo: input.project.github_repo!,
       sha: input.statusSha,
       token: input.token,
       state: statusFromSecurityCheck(checkStatus),
-      context: "sequrai/security",
-      description: `Production ready ${completed.security_score} · ${checkStatus.toUpperCase()}`,
-      targetUrl: input.appUrl
-        ? `${input.appUrl}/projects/${input.project.id}/scans/${input.scanId}`
-        : undefined,
+      context: "sequrai/production",
+      description: formatGithubCheckDescription({
+        verdict,
+        blockersIntroduced,
+        blockersResolved,
+      }),
+      targetUrl: reportUrl,
     });
   }
 
@@ -440,8 +484,8 @@ async function handlePushEvent(
       sha: headSha,
       token: input.token,
       state: "pending",
-      context: "sequrai/security",
-      description: "Incremental security scan in progress",
+      context: "sequrai/production",
+      description: "Production analysis in progress",
     });
   }
 
@@ -562,8 +606,8 @@ async function handlePullRequestEvent(
     sha: headSha,
     token: input.token,
     state: "pending",
-    context: "sequrai/security",
-    description: "Pull Request security analysis in progress",
+    context: "sequrai/production",
+    description: "Pull Request production analysis in progress",
   });
 
   const { completed, checkStatus } = await runScanAndFinalize(admin, {
