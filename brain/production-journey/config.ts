@@ -1,0 +1,15 @@
+export const JOURNEY_CONFIG = {
+  version: "1.0.0",
+  minValidVerdictsForTrend: 2,
+  stableScoreDeltaThreshold: 4,
+  improvingScoreDeltaThreshold: 6,
+  decliningScoreDeltaThreshold: -6,
+  approachingScoreThreshold: 70,
+  earlyBuildScoreThreshold: 50,
+  scoreMilestone50: 50,
+  scoreMilestone70: 70,
+  tenReviewsCount: 10,
+  maintainedReviewCount: 2,
+  defaultTimelineLimit: 50,
+  maxTimelineLimit: 200,
+} as const;

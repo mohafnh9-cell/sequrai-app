@@ -11,6 +11,7 @@ import { ProductionTimelineFeed } from "@/features/brain/components/ProductionTi
 import { PortfolioVerdictCard } from "@/features/production-verdict/components/PortfolioVerdictCard";
 import { FirstVerdictDashboardModal } from "@/features/onboarding/components/FirstVerdictDashboardModal";
 import { buildOrgBrain } from "@/server/brain/build-org-brain";
+import { getProductionJourneyPreviewByProject } from "@/server/production-journey/service";
 import { organizationHasProductionVerdict } from "@/server/onboarding/has-production-verdict";
 import { getTranslator } from "@/lib/i18n/server";
 import type { Metadata } from "next";
@@ -73,6 +74,15 @@ export default async function DashboardPage() {
     .limit(5);
 
   const projectReadiness = new Map(brain.projects.map((item) => [item.projectId, item]));
+
+  const journeyPreviews = await Promise.all(
+    (recentProjects ?? []).map((project) =>
+      getProductionJourneyPreviewByProject(supabase, project.id, user.id)
+    )
+  );
+  const journeyPreviewByProject = new Map(
+    (recentProjects ?? []).map((project, index) => [project.id, journeyPreviews[index]])
+  );
 
   const readyCount = brain.projects.filter((p) => p.status === "ready_to_ship").length;
   const almostReadyCount = brain.projects.filter((p) => p.status === "almost_ready").length;
@@ -187,6 +197,7 @@ export default async function DashboardPage() {
                   projectName={project.name}
                   summary={projectReadiness.get(project.id)}
                   lastActivityAt={project.last_scan_at ?? project.created_at}
+                  journeyPreview={journeyPreviewByProject.get(project.id) ?? null}
                 />
               ))}
             </div>

@@ -58,4 +58,15 @@ describe("Block 6.4.1 i18n foundation", () => {
     const t = createTranslator({}, "en");
     expect(t("missing.key")).toBe("missing.key");
   });
+
+  it("loads productionJourney namespace in English and Spanish", () => {
+    const en = loadNamespace("en", "productionJourney");
+    const es = loadNamespace("es", "productionJourney");
+
+    expect(en.title).toBe("Production Journey");
+    expect(es.title).toBe("Production Journey");
+    expect((en.trendValues as Record<string, string>).improving).toBe("Improving");
+    expect((es.trendValues as Record<string, string>).improving).toBe("Mejorando");
+    expect((es.maturityValues as Record<string, string>).production_ready).toBe("Lista para producción");
+  });
 });

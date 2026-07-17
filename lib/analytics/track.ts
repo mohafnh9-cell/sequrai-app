@@ -6,7 +6,13 @@ export type AnalyticsEvent =
   | "technical_findings_opened"
   | "retry_scan_clicked"
   | "ready_to_ship_reached"
-  | "coverage_methodology_opened";
+  | "coverage_methodology_opened"
+  | "production_journey_viewed"
+  | "journey_range_changed"
+  | "milestone_viewed"
+  | "review_history_opened"
+  | "latest_change_opened"
+  | "production_journey_cta_clicked";
 
 export type AnalyticsPayload = Record<string, string | number | boolean | null | undefined>;
 

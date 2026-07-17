@@ -23,6 +23,10 @@ import { getTranslator } from "@/lib/i18n/server";
 import { formatLocalizedDate } from "@/lib/i18n/format";
 import type { ProjectRow } from "@/types/database";
 import type { Metadata } from "next";
+import { ProjectSubNav } from "@/features/production-journey/components/ProjectSubNav";
+import { ProductionJourneyPreviewCard } from "@/features/production-journey/components/ProductionJourneyPreviewCard";
+import { getProductionJourneyByProject } from "@/server/production-journey/service";
+import { toJourneyPreview } from "@/brain/production-journey";
 
 interface ProjectDetailPageProps {
   params: Promise<{ id: string }>;
@@ -89,6 +93,13 @@ export default async function ProjectDetailPage({
     ? `/projects/${p.id}/scans/${latestScan.id}`
     : undefined;
 
+  const latestReportHref = latestScan?.id
+    ? `/projects/${p.id}/scans/${latestScan.id}/report`
+    : undefined;
+
+  const journey = await getProductionJourneyByProject(supabase, p.id, user.id, { limit: 30 });
+  const journeyPreview = journey ? toJourneyPreview(journey) : null;
+
   return (
     <div className="p-6 space-y-8 max-w-6xl">
       <Button variant="ghost" size="sm" asChild className="gap-1.5 -ml-1">
@@ -127,6 +138,8 @@ export default async function ProjectDetailPage({
           <ProjectDeleteButton project={p} />
         </div>
       </div>
+
+      <ProjectSubNav projectId={p.id} latestReportHref={latestReportHref} />
 
       <div className="grid gap-6">
         <div className="space-y-4">
@@ -205,6 +218,14 @@ export default async function ProjectDetailPage({
         <div className="rounded-xl border border-dashed border-border/70 p-8 text-center text-sm text-muted-foreground">
           {t("runFirstReview")}
         </div>
+      )}
+
+      {journeyPreview && journey && (
+        <ProductionJourneyPreviewCard
+          projectId={p.id}
+          preview={journeyPreview}
+          timeline={journey.timeline}
+        />
       )}
 
       <SecurityActivityFeed projectId={p.id} />

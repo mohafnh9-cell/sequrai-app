@@ -11,6 +11,7 @@ import enVerdict from "@/messages/en/verdict.json";
 import enSettings from "@/messages/en/settings.json";
 import enErrors from "@/messages/en/errors.json";
 import enIntegrations from "@/messages/en/integrations.json";
+import enProductionJourney from "@/messages/en/productionJourney.json";
 import enTechnicalDetails from "@/messages/en/technicalDetails.json";
 
 import esCommon from "@/messages/es/common.json";
@@ -23,6 +24,7 @@ import esVerdict from "@/messages/es/verdict.json";
 import esSettings from "@/messages/es/settings.json";
 import esErrors from "@/messages/es/errors.json";
 import esIntegrations from "@/messages/es/integrations.json";
+import esProductionJourney from "@/messages/es/productionJourney.json";
 import esTechnicalDetails from "@/messages/es/technicalDetails.json";
 
 const PACKAGES: Record<AppLocale, Record<MessageNamespace, Messages>> = {
@@ -34,7 +36,7 @@ const PACKAGES: Record<AppLocale, Record<MessageNamespace, Messages>> = {
     dashboard: enDashboard,
     projects: enProjects,
     verdict: enVerdict,
-    productionJourney: enProjects,
+    productionJourney: enProductionJourney,
     integrations: enIntegrations,
     settings: enSettings,
     errors: enErrors,
@@ -49,7 +51,7 @@ const PACKAGES: Record<AppLocale, Record<MessageNamespace, Messages>> = {
     dashboard: esDashboard,
     projects: esProjects,
     verdict: esVerdict,
-    productionJourney: esProjects,
+    productionJourney: esProductionJourney,
     integrations: esIntegrations,
     settings: esSettings,
     errors: esErrors,
@@ -74,6 +76,7 @@ export function loadAllMessages(locale: AppLocale): Messages {
     { settings: PACKAGES[locale].settings },
     { errors: PACKAGES[locale].errors },
     { integrations: PACKAGES[locale].integrations },
+    { productionJourney: PACKAGES[locale].productionJourney },
     { technicalDetails: PACKAGES[locale].technicalDetails }
   );
 }
