@@ -28,9 +28,12 @@ type FlowState = {
 function normalizeStep(
   step: WizardStep,
   context: OnboardingContext,
-  projectId: string | null
+  projectId: string | null,
+  explicitStep: WizardStep | null
 ): WizardStep {
-  if (step === "github" && shouldSkipGitHubStep(context)) return "repository";
+  if (step === "github" && shouldSkipGitHubStep(context) && explicitStep !== "github") {
+    return "repository";
+  }
   if (step === "review" && !projectId) return "repository";
   return step;
 }
@@ -39,9 +42,11 @@ export function OnboardingFlow({ initialContext }: { initialContext: OnboardingC
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const forcedStep =
+  const explicitStep =
     parseWizardStep(searchParams.get("step")) ??
     parseLegacyStepParam(searchParams.get("step"));
+
+  const forcedStep = explicitStep;
 
   const paramProjectId = searchParams.get("projectId");
 
@@ -61,8 +66,8 @@ export function OnboardingFlow({ initialContext }: { initialContext: OnboardingC
   }));
 
   const step = useMemo(
-    () => normalizeStep(rawStep, context, flow.projectId),
-    [rawStep, context, flow.projectId]
+    () => normalizeStep(rawStep, context, flow.projectId, explicitStep),
+    [rawStep, context, flow.projectId, explicitStep]
   );
 
   const progressContext = useMemo(
@@ -155,10 +160,15 @@ export function OnboardingFlow({ initialContext }: { initialContext: OnboardingC
         />
       )}
 
-      {step === "github" && <OnboardingGitHubStep onConnected={handleGitHubConnected} />}
+      {step === "github" && (
+        <OnboardingGitHubStep onConnected={handleGitHubConnected} onBack={() => goTo("welcome")} />
+      )}
 
       {step === "repository" && (
-        <OnboardingRepoPicker onRepositoryConnected={handleRepositoryConnected} />
+        <OnboardingRepoPicker
+          onRepositoryConnected={handleRepositoryConnected}
+          onBack={() => goTo(context.githubConnected ? "welcome" : "github")}
+        />
       )}
 
       {step === "review" && flow.projectId && (

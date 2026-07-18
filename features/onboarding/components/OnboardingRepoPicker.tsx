@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { OnboardingBackButton } from "./OnboardingBackButton";
 import { GitBranch, Lock, RefreshCw, Search, Unlock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,8 +14,10 @@ type Step = "idle" | "loading" | "selecting" | "saving" | "error";
 
 export function OnboardingRepoPicker({
   onRepositoryConnected,
+  onBack,
 }: {
   onRepositoryConnected: (projectId: string) => void;
+  onBack?: () => void;
 }) {
   const { t, locale } = useI18n("onboarding");
   const { t: tc } = useI18n("common");
@@ -153,6 +156,7 @@ export function OnboardingRepoPicker({
 
   return (
     <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
+      {onBack && <OnboardingBackButton onClick={onBack} label={t("backToStart")} />}
       <div>
         <h2 className="text-xl font-semibold">{t("chooseProjectTitle")}</h2>
         <p className="text-sm text-muted-foreground mt-1">{t("chooseProjectSubtitle")}</p>

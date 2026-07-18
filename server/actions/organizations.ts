@@ -40,8 +40,9 @@ export async function createOrganizationAction(formData: FormData) {
 
   if (error) return { error: { _root: [error.message] } };
 
+  revalidatePath("/onboarding");
   revalidatePath("/dashboard");
-  redirect("/onboarding");
+  redirect("/onboarding?step=welcome");
 }
 
 export async function updateOrganizationAction(orgId: string, formData: FormData) {

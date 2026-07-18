@@ -9,6 +9,8 @@
   "githubRequired": "Se requiere acceso a GitHub para revisar tu repositorio.",
   "createWorkspace": "Crea tu espacio de trabajo",
   "createWorkspaceHint": "Un paso rápido antes de tu primer Production Verdict.",
+  "back": "Atrás",
+  "backToStart": "Empezar desde el inicio",
   "connectGitHubTitle": "Conecta GitHub",
   "connectGitHubBody": "SequrAI revisa tus repositorios y genera un Production Verdict.",
   "connectGitHubCta": "Conectar GitHub",

@@ -1,12 +1,19 @@
 "use client";
 
 import { useEffect } from "react";
+import { OnboardingBackButton } from "./OnboardingBackButton";
 import { GitBranch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { startGitHubOAuth } from "@/lib/github/oauth-client";
 import { useI18n } from "@/lib/i18n/client";
 
-export function OnboardingGitHubStep({ onConnected }: { onConnected: () => void }) {
+export function OnboardingGitHubStep({
+  onConnected,
+  onBack,
+}: {
+  onConnected: () => void;
+  onBack?: () => void;
+}) {
   const { t } = useI18n("onboarding");
 
   useEffect(() => {
@@ -24,6 +31,7 @@ export function OnboardingGitHubStep({ onConnected }: { onConnected: () => void 
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+      {onBack && <OnboardingBackButton onClick={onBack} label={t("backToStart")} />}
       <div className="space-y-2">
         <h2 className="text-xl font-semibold tracking-tight">{t("connectGitHubTitle")}</h2>
         <p className="text-sm text-muted-foreground leading-relaxed">{t("connectGitHubBody")}</p>
