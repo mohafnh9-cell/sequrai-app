@@ -10,6 +10,7 @@ import type { VerdictStatus } from "@/brain/production-verdict/schema";
 import { useI18n } from "@/lib/i18n/client";
 import { formatRelativeLocalized } from "@/lib/i18n/format";
 import { verdictStatusLabel } from "@/lib/i18n/verdict-copy";
+import { useDemoNavigation } from "@/features/demo/use-demo-navigation";
 
 export function PortfolioVerdictCard({
   projectId,
@@ -28,6 +29,8 @@ export function PortfolioVerdictCard({
   const { t: tc } = useI18n("common");
   const { t: ti } = useI18n("productionIntelligence");
   const { t: tj } = useI18n("productionJourney");
+  const { href } = useDemoNavigation();
+  const projectHref = href(`/projects/${projectId}`);
   const status: VerdictStatus = summary?.status ?? "insufficient_data";
   const score = summary?.productionReady;
   const showScore = score !== null;
@@ -47,7 +50,7 @@ export function PortfolioVerdictCard({
   return (
     <div className="flex items-center justify-between rounded-xl border border-border/50 bg-[#101014]/60 p-4 hover:border-border transition-colors">
       <Link
-        href={`/projects/${projectId}`}
+        href={projectHref}
         className="flex items-center gap-3 min-w-0 flex-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg"
       >
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-secondary">
@@ -112,7 +115,7 @@ export function PortfolioVerdictCard({
           {verdictStatusLabel(status, translate)}
         </Badge>
         <Link
-          href={`/projects/${projectId}`}
+          href={href(`/projects/${projectId}/journey`)}
           className="text-xs text-primary hover:underline hidden sm:inline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
         >
           {ti("viewJourney")}

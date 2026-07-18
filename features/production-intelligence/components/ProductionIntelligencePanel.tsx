@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { VerdictStatusBadge } from "@/features/production-verdict/components/VerdictStatusBadge";
 import { useI18n } from "@/lib/i18n/client";
+import { useDemoNavigation } from "@/features/demo/use-demo-navigation";
 import { trackEvent } from "@/lib/analytics/track";
 
 function MomentumIcon({ momentum }: { momentum: ProductionIntelligence["momentum"] }) {
@@ -42,18 +43,20 @@ export function ProductionIntelligencePanel({
 }) {
   const { t } = useI18n("productionIntelligence");
   const { t: tj } = useI18n("productionJourney");
+  const { href } = useDemoNavigation();
 
   useEffect(() => {
+    if (typeof window !== "undefined" && window.location.pathname.startsWith("/demo")) return;
     trackEvent("production_intelligence_viewed", { projectId });
   }, [projectId]);
 
   const action = intelligence.recommendedAction;
   const ctaHref =
     action.ctaKey === "recommendedAction.viewReportCta" && latestReportHref
-      ? latestReportHref
+      ? href(latestReportHref)
       : action.ctaKey === "recommendedAction.viewJourneyCta"
-        ? `/projects/${projectId}/journey`
-        : `/projects/${projectId}`;
+        ? href(`/projects/${projectId}/journey`)
+        : href(`/projects/${projectId}`);
 
   const emptyMessage = intelligence.emptyState
     ? t(`emptyStates.${intelligence.emptyState}`)

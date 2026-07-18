@@ -23,6 +23,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n/client";
 import { LanguageSelector } from "@/components/shared/LanguageSelector";
+import { useDemoNavigation } from "@/features/demo/use-demo-navigation";
 
 const PRIMARY_NAV = [
   { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
@@ -57,8 +58,13 @@ export function DashboardSidebar({
   const router = useRouter();
   const { t } = useI18n("navigation");
   const { t: tc } = useI18n("common");
+  const { isDemo, href } = useDemoNavigation();
 
   const handleLogout = async () => {
+    if (isDemo) {
+      router.push("/");
+      return;
+    }
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/");
@@ -74,8 +80,13 @@ export function DashboardSidebar({
     .toUpperCase()
     .slice(0, 2);
 
-  const isActive = (href: string) =>
-    href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
+  const isActive = (path: string) => {
+    const target = isDemo ? href(path) : path;
+    const targetPath = target.split("?")[0];
+    return path === "/dashboard"
+      ? pathname === targetPath
+      : pathname.startsWith(targetPath);
+  };
 
   return (
     <aside className={cn("flex h-full w-60 shrink-0 flex-col border-r border-border bg-card", className)}>
@@ -95,7 +106,7 @@ export function DashboardSidebar({
         {PRIMARY_NAV.map((item) => (
           <NavLink
             key={item.href}
-            href={item.href}
+            href={isDemo ? href(item.href) : item.href}
             label={t(item.labelKey)}
             icon={item.icon}
             active={isActive(item.href)}
@@ -123,7 +134,7 @@ export function DashboardSidebar({
             <DropdownMenuLabel className="text-xs">{user?.email}</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/settings" className="text-sm">
+              <Link href={isDemo ? href("/settings") : "/settings"} className="text-sm">
                 {t("settings")}
               </Link>
             </DropdownMenuItem>

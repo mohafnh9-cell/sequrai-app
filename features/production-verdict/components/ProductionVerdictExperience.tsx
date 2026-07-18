@@ -10,6 +10,7 @@ import { CoverageBreakdown } from "./CoverageBreakdown";
 import { ProductionEngineerSummary } from "./ProductionEngineerSummary";
 import { trackEvent } from "@/lib/analytics/track";
 import { useEffect } from "react";
+import { useDemoNavigation } from "@/features/demo/use-demo-navigation";
 
 export function ProductionVerdictExperience({
   verdict,
@@ -26,13 +27,15 @@ export function ProductionVerdictExperience({
   showEngineer?: boolean;
   onReviewPriority?: () => void;
 }) {
+  const { href } = useDemoNavigation();
   const view = verdictExperienceFromVerdict(verdict);
   const reportHref = scanId
-    ? `/projects/${projectId}/scans/${scanId}/report`
+    ? href(`/projects/${projectId}/scans/${scanId}/report`)
     : undefined;
-  const retryHref = `/projects/${projectId}`;
+  const retryHref = href(`/projects/${projectId}`);
 
   useEffect(() => {
+    if (typeof window !== "undefined" && window.location.pathname.startsWith("/demo")) return;
     trackEvent("verdict_viewed", {
       projectId,
       scanId: scanId ?? verdict.scanId,
@@ -87,14 +90,21 @@ export function ProjectVerdictSummary({
   webhookEnabled?: boolean;
   latestScanHref?: string;
 }) {
+  const { href } = useDemoNavigation();
   const view = verdictExperienceFromVerdict(verdict);
 
   return (
     <ProductionVerdictHero
       verdict={verdict}
       view={view}
-      reportHref={latestScanHref ? `${latestScanHref}/report` : undefined}
-      retryHref={`/projects/${projectId}`}
+      reportHref={
+        latestScanHref
+          ? latestScanHref.includes("/report")
+            ? href(latestScanHref)
+            : href(`${latestScanHref}/report`)
+          : undefined
+      }
+      retryHref={href(`/projects/${projectId}`)}
     />
   );
 }

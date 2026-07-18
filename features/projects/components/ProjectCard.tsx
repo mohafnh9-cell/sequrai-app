@@ -14,6 +14,7 @@ interface ProjectCardProps {
   project: ProjectRow;
   verdictStatus?: VerdictStatus;
   intelligencePreview?: ProductionIntelligencePreview | null;
+  detailHref?: string;
 }
 
 const FRAMEWORK_LABELS: Record<string, string> = {
@@ -31,6 +32,7 @@ export async function ProjectCard({
   project,
   verdictStatus = "insufficient_data",
   intelligencePreview,
+  detailHref,
 }: ProjectCardProps) {
   const { locale, t } = await getTranslator("projects");
   const { t: tc } = await getTranslator("common");
@@ -47,7 +49,7 @@ export async function ProjectCard({
   };
 
   return (
-    <Link href={`/projects/${project.id}`} className="group">
+    <Link href={detailHref ?? `/projects/${project.id}`} className="group">
       <Card className="border-border/50 group-hover:border-border transition-colors h-full cursor-pointer">
         <CardHeader className="pb-3">
           <div className="flex items-start gap-3">

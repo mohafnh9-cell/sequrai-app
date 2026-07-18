@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/client";
+import { useDemoNavigation } from "@/features/demo/use-demo-navigation";
 
 export function ProjectSubNav({
   projectId,
@@ -14,18 +15,22 @@ export function ProjectSubNav({
 }) {
   const pathname = usePathname();
   const { t: tp } = useI18n("projects");
+  const { href } = useDemoNavigation();
+  const overviewHref = href(`/projects/${projectId}`);
+  const journeyHref = href(`/projects/${projectId}/journey`);
+  const reportHref = latestReportHref ? href(latestReportHref) : undefined;
 
   const tabs = [
-    { href: `/projects/${projectId}`, label: tp("overview"), match: (p: string) => p === `/projects/${projectId}` },
+    { href: overviewHref, label: tp("overview"), match: (p: string) => p.split("?")[0] === overviewHref.split("?")[0] },
     {
-      href: `/projects/${projectId}/journey`,
+      href: journeyHref,
       label: tp("productionJourney"),
-      match: (p: string) => p.startsWith(`/projects/${projectId}/journey`),
+      match: (p: string) => p.split("?")[0].startsWith(journeyHref.split("?")[0]),
     },
-    ...(latestReportHref
+    ...(reportHref
       ? [
           {
-            href: latestReportHref,
+            href: reportHref,
             label: tp("technicalDetails"),
             match: (p: string) => p.includes("/report"),
           },

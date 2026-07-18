@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import Link from "next/link";
 import { useI18n } from "@/lib/i18n/client";
 import { formatRelativeLocalized } from "@/lib/i18n/format";
+import { useDemoNavigation } from "@/features/demo/use-demo-navigation";
 import { Button } from "@/components/ui/button";
 
 export function AutopilotDashboardSection({
@@ -13,6 +14,7 @@ export function AutopilotDashboardSection({
   view: AutopilotDashboardView;
 }) {
   const { t, locale } = useI18n("autopilotExperience");
+  const { href } = useDemoNavigation();
   const relativeLabels = {
     never: t("relative.never"),
     justNow: t("relative.justNow"),
@@ -55,7 +57,7 @@ export function AutopilotDashboardSection({
         </div>
         {view.monitoredCount === 0 && (
           <Button size="sm" variant="outline" asChild>
-            <Link href="/integrations">{t("dashboard.connect")}</Link>
+            <Link href={href("/integrations")}>{t("dashboard.connect")}</Link>
           </Button>
         )}
       </CardContent>

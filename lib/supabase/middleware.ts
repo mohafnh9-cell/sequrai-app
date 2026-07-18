@@ -48,6 +48,10 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
 
+  if (pathname.startsWith("/demo")) {
+    supabaseResponse.headers.set("X-Robots-Tag", "noindex, nofollow");
+  }
+
   const isProtected = PROTECTED_PATHS.some((p) => pathname.startsWith(p));
   const isAuthPath = AUTH_PATHS.some((p) => pathname.startsWith(p));
 

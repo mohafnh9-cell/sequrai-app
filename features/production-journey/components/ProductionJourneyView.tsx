@@ -11,6 +11,7 @@ import { VerdictStatusBadge } from "@/features/production-verdict/components/Ver
 import { JourneyScoreChart } from "./JourneyScoreChart";
 import { useI18n } from "@/lib/i18n/client";
 import { trackEvent } from "@/lib/analytics/track";
+import { useDemoNavigation } from "@/features/demo/use-demo-navigation";
 
 function TrendIcon({ trend }: { trend: ProductionJourney["trend"] }) {
   if (trend === "improving") return <TrendingUp className="h-4 w-4 text-[#64D98B]" aria-hidden />;
@@ -26,8 +27,10 @@ export function ProductionJourneyView({
   projectId: string;
 }) {
   const { t } = useI18n("productionJourney");
+  const { href } = useDemoNavigation();
 
   useEffect(() => {
+    if (typeof window !== "undefined" && window.location.pathname.startsWith("/demo")) return;
     trackEvent("production_journey_viewed", { projectId, validReviews: journey.validReviews });
   }, [journey.validReviews, projectId]);
 
@@ -37,7 +40,7 @@ export function ProductionJourneyView({
         <CardContent className="py-12 text-center space-y-4">
           <p className="text-sm text-muted-foreground">{t("emptyTitle")}</p>
           <Button asChild>
-            <Link href={`/projects/${projectId}`}>{t("emptyCta")}</Link>
+            <Link href={href(`/projects/${projectId}`)}>{t("emptyCta")}</Link>
           </Button>
         </CardContent>
       </Card>
@@ -259,7 +262,7 @@ export function ProductionJourneyView({
                 <VerdictStatusBadge status={point.status} />
                 <Button variant="ghost" size="sm" asChild>
                   <Link
-                    href={`/projects/${projectId}/scans/${point.scanId}/report`}
+                    href={href(`/projects/${projectId}/scans/${point.scanId}/report`)}
                     onClick={() => trackEvent("review_history_opened", { scanId: point.scanId })}
                   >
                     {t("openReport")}
