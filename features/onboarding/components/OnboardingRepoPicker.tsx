@@ -13,9 +13,11 @@ import type { GitHubRepo } from "@/lib/github";
 type Step = "idle" | "loading" | "selecting" | "saving" | "error";
 
 export function OnboardingRepoPicker({
+  organizationId,
   onRepositoryConnected,
   onBack,
 }: {
+  organizationId?: string | null;
   onRepositoryConnected: (projectId: string) => void;
   onBack?: () => void;
 }) {
@@ -73,7 +75,10 @@ export function OnboardingRepoPicker({
       const res = await fetch("/api/github/connect", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ repos: [repo] }),
+        body: JSON.stringify({
+          repos: [repo],
+          ...(organizationId ? { organizationId } : {}),
+        }),
       });
       const data = (await res.json().catch(() => null)) as
         | { projectIds?: string[]; saved?: number; error?: string; needsReauth?: boolean }

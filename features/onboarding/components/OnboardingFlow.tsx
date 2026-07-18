@@ -166,6 +166,7 @@ export function OnboardingFlow({ initialContext }: { initialContext: OnboardingC
 
       {step === "repository" && (
         <OnboardingRepoPicker
+          organizationId={context.orgId}
           onRepositoryConnected={handleRepositoryConnected}
           onBack={() => goTo(context.githubConnected ? "welcome" : "github")}
         />

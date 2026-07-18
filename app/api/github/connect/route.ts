@@ -8,8 +8,10 @@ import {
   registerProjectWebhook,
   webhookErrorMessage,
 } from "@/server/github-automation/register-webhook";
+import { resolveUserOrganizationId } from "@/server/organizations/resolve-user-organization";
 
 const requestSchema = z.object({
+  organizationId: z.string().uuid().optional(),
   repos: z
     .array(z.object({ id: z.number().int().positive() }).passthrough())
     .min(1)
@@ -133,21 +135,14 @@ async function connectRepositories(request: Request) {
     );
   }
 
-  const { data: memberships } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", user.id)
-    .limit(2);
-  if (!memberships?.length) {
+  const organizationId = await resolveUserOrganizationId(
+    supabase,
+    user.id,
+    parsed.data.organizationId
+  );
+  if (!organizationId) {
     return NextResponse.json({ error: "No organization found" }, { status: 404 });
   }
-  if (memberships.length > 1) {
-    return NextResponse.json(
-      { error: "Select an organization before connecting repositories" },
-      { status: 409 }
-    );
-  }
-  const organizationId = memberships[0].organization_id;
 
   const selectedIds = [...new Set(parsed.data.repos.map((repo) => repo.id))];
   const verifiedRepos = await Promise.all(

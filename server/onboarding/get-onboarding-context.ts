@@ -10,6 +10,7 @@ import {
   scanIsCompleted,
 } from "@/features/onboarding/onboarding-flow";
 import { getStoredGitHubToken } from "@/lib/github/token-store";
+import { resolveUserOrganizationId } from "@/server/organizations/resolve-user-organization";
 
 function mapScan(row: {
   id: string;
@@ -31,14 +32,7 @@ export async function getOnboardingContext(
   supabase: SupabaseClient,
   userId: string
 ): Promise<OnboardingContext> {
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", userId)
-    .limit(1)
-    .maybeSingle();
-
-  const orgId = membership?.organization_id ?? null;
+  const orgId = await resolveUserOrganizationId(supabase, userId);
   const hasOrg = Boolean(orgId);
 
   const githubToken = await getStoredGitHubToken(userId);
