@@ -13,6 +13,7 @@ export type MessageNamespace =
   | "projects"
   | "verdict"
   | "productionJourney"
+  | "productionIntelligence"
   | "integrations"
   | "settings"
   | "errors"

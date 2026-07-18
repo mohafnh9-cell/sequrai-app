@@ -25,7 +25,9 @@ import type { ProjectRow } from "@/types/database";
 import type { Metadata } from "next";
 import { ProjectSubNav } from "@/features/production-journey/components/ProjectSubNav";
 import { ProductionJourneyPreviewCard } from "@/features/production-journey/components/ProductionJourneyPreviewCard";
+import { ProductionIntelligencePanel } from "@/features/production-intelligence/components/ProductionIntelligencePanel";
 import { getProductionJourneyByProject } from "@/server/production-journey/service";
+import { getProductionIntelligence } from "@/server/production-intelligence/service";
 import { toJourneyPreview } from "@/brain/production-journey";
 
 interface ProjectDetailPageProps {
@@ -98,10 +100,15 @@ export default async function ProjectDetailPage({
     : undefined;
 
   let journey = null;
+  let intelligence = null;
   try {
-    journey = await getProductionJourneyByProject(supabase, p.id, user.id, { limit: 30 });
+    [journey, intelligence] = await Promise.all([
+      getProductionJourneyByProject(supabase, p.id, user.id, { limit: 30 }),
+      getProductionIntelligence(supabase, p.id, user.id),
+    ]);
   } catch {
     journey = null;
+    intelligence = null;
   }
   const journeyPreview = journey ? toJourneyPreview(journey) : null;
 
@@ -145,6 +152,14 @@ export default async function ProjectDetailPage({
       </div>
 
       <ProjectSubNav projectId={p.id} latestReportHref={latestReportHref} />
+
+      {intelligence && (
+        <ProductionIntelligencePanel
+          intelligence={intelligence}
+          projectId={p.id}
+          latestReportHref={latestReportHref}
+        />
+      )}
 
       <div className="grid gap-6">
         <div className="space-y-4">

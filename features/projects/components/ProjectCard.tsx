@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FolderGit2, ExternalLink, Calendar } from "lucide-react";
+import { FolderGit2, ExternalLink, Calendar, TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getTranslator } from "@/lib/i18n/server";
@@ -7,11 +7,13 @@ import { formatRelativeLocalized } from "@/lib/i18n/format";
 import { verdictStatusLabel } from "@/lib/i18n/verdict-copy";
 import { verdictBadgeVariant } from "@/brain/production-verdict/status-ui";
 import type { VerdictStatus } from "@/brain/production-verdict/schema";
+import type { ProductionIntelligencePreview } from "@/brain/production-intelligence/schema";
 import type { ProjectRow } from "@/types/database";
 
 interface ProjectCardProps {
   project: ProjectRow;
   verdictStatus?: VerdictStatus;
+  intelligencePreview?: ProductionIntelligencePreview | null;
 }
 
 const FRAMEWORK_LABELS: Record<string, string> = {
@@ -28,10 +30,13 @@ const FRAMEWORK_LABELS: Record<string, string> = {
 export async function ProjectCard({
   project,
   verdictStatus = "insufficient_data",
+  intelligencePreview,
 }: ProjectCardProps) {
   const { locale, t } = await getTranslator("projects");
   const { t: tc } = await getTranslator("common");
   const { t: tAll } = await getTranslator();
+  const { t: ti } = await getTranslator("productionIntelligence");
+  const { t: tj } = await getTranslator("productionJourney");
 
   const dateLabels = {
     never: tc("never"),
@@ -68,11 +73,50 @@ export async function ProjectCard({
             <Badge variant={verdictBadgeVariant(verdictStatus)} className="text-xs">
               {verdictStatusLabel(verdictStatus, (key, params) => tAll(key, params))}
             </Badge>
+            {intelligencePreview?.currentScore != null && (
+              <Badge variant="outline" className="text-xs">
+                {intelligencePreview.currentScore}/100
+              </Badge>
+            )}
             {!project.github_repo && !project.production_url && (
               <Badge variant="outline" className="text-xs text-muted-foreground">
                 {t("noIntegrationsYet")}
               </Badge>
             )}
+          </div>
+
+          {intelligencePreview && (
+            <div className="space-y-1 text-xs text-muted-foreground">
+              <p className="flex items-center gap-1">
+                {intelligencePreview.momentum === "improving" ? (
+                  <TrendingUp className="h-3 w-3 text-[#64D98B]" aria-hidden />
+                ) : intelligencePreview.momentum === "declining" ? (
+                  <TrendingDown className="h-3 w-3 text-[#FF5C6C]" aria-hidden />
+                ) : (
+                  <Minus className="h-3 w-3" aria-hidden />
+                )}
+                {ti(`momentum.${intelligencePreview.momentum}`)}
+                {intelligencePreview.scoreDelta != null &&
+                  intelligencePreview.scoreDelta !== 0 && (
+                    <>
+                      {" · "}
+                      {ti("projectCard.scoreChange")}:{" "}
+                      {intelligencePreview.scoreDelta > 0 ? "+" : ""}
+                      {intelligencePreview.scoreDelta}
+                    </>
+                  )}
+              </p>
+              {intelligencePreview.currentFocusKey && (
+                <p>{tj(intelligencePreview.currentFocusKey)}</p>
+              )}
+              <p className="line-clamp-2">
+                {ti("projectCard.nextAction")}:{" "}
+                {ti(intelligencePreview.recommendedAction.titleKey)}
+              </p>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2">
             {project.github_repo && (
               <Badge variant="outline" className="text-xs gap-1">
                 <ExternalLink className="h-2.5 w-2.5" />

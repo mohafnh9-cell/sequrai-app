@@ -11,7 +11,8 @@ import { ProductionTimelineFeed } from "@/features/brain/components/ProductionTi
 import { PortfolioVerdictCard } from "@/features/production-verdict/components/PortfolioVerdictCard";
 import { FirstVerdictDashboardModal } from "@/features/onboarding/components/FirstVerdictDashboardModal";
 import { buildOrgBrain } from "@/server/brain/build-org-brain";
-import { getProductionJourneyPreviewByProject } from "@/server/production-journey/service";
+import { DashboardProductionIntelligence } from "@/features/production-intelligence/components/DashboardProductionIntelligence";
+import { getProductionIntelligencePreview } from "@/server/production-intelligence/service";
 import { organizationHasProductionVerdict } from "@/server/onboarding/has-production-verdict";
 import { getTranslator } from "@/lib/i18n/server";
 import type { Metadata } from "next";
@@ -75,18 +76,24 @@ export default async function DashboardPage() {
 
   const projectReadiness = new Map(brain.projects.map((item) => [item.projectId, item]));
 
-  const journeyPreviews = await Promise.all(
+  const intelligencePreviews = await Promise.all(
     (recentProjects ?? []).map(async (project) => {
       try {
-        return await getProductionJourneyPreviewByProject(supabase, project.id, user.id);
+        return await getProductionIntelligencePreview(supabase, project.id, user.id);
       } catch {
         return null;
       }
     })
   );
-  const journeyPreviewByProject = new Map(
-    (recentProjects ?? []).map((project, index) => [project.id, journeyPreviews[index]])
+  const intelligenceByProject = new Map(
+    (recentProjects ?? []).map((project, index) => [project.id, intelligencePreviews[index]])
   );
+
+  const improvingCount = intelligencePreviews.filter((p) => p?.momentum === "improving").length;
+  const primaryProject = recentProjects?.[0] ?? null;
+  const primaryIntelligence = primaryProject
+    ? intelligenceByProject.get(primaryProject.id) ?? null
+    : null;
 
   const readyCount = brain.projects.filter((p) => p.status === "ready_to_ship").length;
   const almostReadyCount = brain.projects.filter((p) => p.status === "almost_ready").length;
@@ -132,6 +139,14 @@ export default async function DashboardPage() {
       </div>
 
       <ProductionHero orgBrain={brain} />
+
+      <DashboardProductionIntelligence
+        improvingCount={improvingCount}
+        blockedCount={blockedCount}
+        primaryPreview={primaryIntelligence}
+        primaryProjectId={primaryProject?.id ?? null}
+        primaryProjectName={primaryProject?.name ?? null}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card className="border-border/50">
@@ -201,7 +216,7 @@ export default async function DashboardPage() {
                   projectName={project.name}
                   summary={projectReadiness.get(project.id)}
                   lastActivityAt={project.last_scan_at ?? project.created_at}
-                  journeyPreview={journeyPreviewByProject.get(project.id) ?? null}
+                  intelligencePreview={intelligenceByProject.get(project.id) ?? null}
                 />
               ))}
             </div>

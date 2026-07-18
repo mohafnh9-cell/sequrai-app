@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { ProjectCard } from "@/features/projects/components/ProjectCard";
 import { buildOrgBrain } from "@/server/brain/build-org-brain";
+import { getProductionIntelligencePreview } from "@/server/production-intelligence/service";
 import { organizationHasProductionVerdict } from "@/server/onboarding/has-production-verdict";
 import { getTranslator } from "@/lib/i18n/server";
 import type { ProjectRow } from "@/types/database";
@@ -41,6 +42,23 @@ export default async function ProjectsPage() {
 
   const projectList = (projects ?? []) as ProjectRow[];
 
+  const intelligencePreviews = await Promise.all(
+    projectList.map(async (project) => {
+      try {
+        return await getProductionIntelligencePreview(
+          auth.supabase,
+          project.id,
+          auth.user.id
+        );
+      } catch {
+        return null;
+      }
+    })
+  );
+  const intelligenceByProject = new Map(
+    projectList.map((project, index) => [project.id, intelligencePreviews[index]])
+  );
+
   return (
     <div className="p-6 space-y-6 max-w-6xl">
       <PageHeader
@@ -71,6 +89,7 @@ export default async function ProjectsPage() {
               key={project.id}
               project={project}
               verdictStatus={(statusByProject.get(project.id) ?? "insufficient_data") as VerdictStatus}
+              intelligencePreview={intelligenceByProject.get(project.id) ?? null}
             />
           ))}
         </div>

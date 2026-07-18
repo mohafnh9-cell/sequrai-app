@@ -12,7 +12,9 @@ export type AnalyticsEvent =
   | "milestone_viewed"
   | "review_history_opened"
   | "latest_change_opened"
-  | "production_journey_cta_clicked";
+  | "production_journey_cta_clicked"
+  | "production_intelligence_viewed"
+  | "production_intelligence_cta_clicked";
 
 export type AnalyticsPayload = Record<string, string | number | boolean | null | undefined>;
 
