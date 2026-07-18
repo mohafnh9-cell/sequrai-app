@@ -115,7 +115,7 @@ Connect Cursor or Claude Code to your Production Copilot:
     "command": "node",
     "args": ["/absolute/path/to/sequrai-app/mcp/stdio-bridge.mjs"],
     "env": {
-      "SEQURAI_API_KEY": "seq_live_...",
+      "SEQURAI_API_KEY": "your-mcp-api-key-from-settings",
       "SEQURAI_API_URL": "https://sequrai-app.vercel.app"
     }
   }

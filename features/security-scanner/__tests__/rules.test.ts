@@ -58,6 +58,28 @@ describe("critical deterministic rules", () => {
     );
   });
 
+  it("does not flag example env files, docs, or identifier assignments as hard-coded secrets", async () => {
+    const result = await scanRepository([
+      {
+        path: ".env.example",
+        content:
+          "GITHUB_WEBHOOK_SECRET=generate-a-long-random-secret\nSUPABASE_SERVICE_ROLE_KEY=your-service-role-key",
+      },
+      { path: "README.md", content: '"SEQURAI_API_KEY": "seq_live_...",' },
+      { path: "brain/production-journey/focus.ts", content: 'secrets: "focus.secretManagement",' },
+      {
+        path: "brain/production-verdict/status-rules.ts",
+        content: "const exposedSecret = input.findings.some((f) => f.title.includes('secret'));",
+      },
+      { path: "app/api/webhooks/github/route.ts", content: "const secret = webhookSecret();" },
+      { path: "app/api/github/connect/route.ts", content: "accessToken: providerToken," },
+      { path: "config.ts", content: "const SERVICE_API_KEY = 'hardcoded-production-key';" },
+    ]);
+    const exposed = result.findings.filter((finding) => finding.ruleId === "secrets.exposed");
+    expect(exposed).toHaveLength(1);
+    expect(exposed[0]?.location.path).toBe("config.ts");
+  });
+
   it("reports capability catalog entries without CVE claims", async () => {
     const result = await scanRepository([
       { path: "package.json", content: '{"dependencies":{"vm2":"1.0.0","other":"git+https://example.invalid/repo.git"}}' },

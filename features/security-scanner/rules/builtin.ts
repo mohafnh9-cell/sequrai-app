@@ -11,6 +11,9 @@ function patternRule(id: string, title: string, specs: PatternSpec[]): ScanRule 
   return { id, title, run: ({ files }) => patternFindings(id, files, specs) };
 }
 
+const EXAMPLE_ENV_FILE = /(?:^|\/)\.env\.(?:example|sample)(?:\.|$)/i;
+const README_FILE = /(?:^|\/)README(?:\.md)?$/i;
+
 const exposedSecrets: ScanRule = {
   id: "secrets.exposed",
   title: "Exposed secrets",
@@ -23,28 +26,64 @@ const exposedSecrets: ScanRule = {
       /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,
       /\beyJ[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{12,}\.[A-Za-z0-9_-]{8,}\b/,
     ];
-    const placeholder = /(?:example|sample|placeholder|your[_-]|change[_-]?me|xxx|test[_-]?key|process\.env|\$\{)/i;
+    const placeholder =
+      /(?:example|sample|placeholder|your[_-]|change[_-]?me|xxx|test[_-]?key|process\.env|\$\{|generate-a|long-random|seq_live_\.\.\.|\.\.\.|not-a-real|replace-me|insert[-_]|fake[-_]|dummy)/i;
     for (const file of files) {
+      if (EXAMPLE_ENV_FILE.test(file.path) || README_FILE.test(file.path)) continue;
+
       for (let i = 0; i < file.lines.length; i += 1) {
         const line = file.lines[i];
-        const assignment = line.match(
-          /^\s*(?:(?:export\s+)?(?:const|let|var)\s+)?["']?([A-Z0-9_-]{3,})["']?\s*[:=]\s*["']?([^"'#\s,;]{8,})/i,
-        );
         const token = knownTokens.map((pattern) => line.match(pattern)).find(Boolean);
-        const value = token?.[0] ?? assignment?.[2];
+        if (token) {
+          if (placeholder.test(token[0])) continue;
+          findings.push({
+            ruleId: "secrets.exposed",
+            title: "Hard-coded secret",
+            description: "A credential-like value is committed in source.",
+            severity:
+              token[0].startsWith("sk_live_") || /PRIVATE KEY/.test(token[0]) ? "critical" : "high",
+            confidence: "high",
+            category: "secrets",
+            location: { path: file.path, line: i + 1 },
+            evidence: "credential=[REDACTED]",
+            remediation:
+              "Revoke the credential, remove it from history, and load it from a secret manager.",
+            fingerprintMaterial: token[0].slice(0, 8),
+          });
+          continue;
+        }
+
+        const quotedAssignment = line.match(
+          /^\s*(?:(?:export\s+)?(?:const|let|var)\s+)?["']?([A-Z0-9_-]{3,})["']?\s*[:=]\s*["']([^"']{8,})["']/i,
+        );
+        const envAssignment = line.match(/^\s*([A-Z0-9_]{3,})\s*=\s*(\S+)/);
+        const assignment = quotedAssignment ?? envAssignment;
+        if (!assignment || !SECRET_NAME_PATTERN.test(assignment[1])) continue;
+
+        if (
+          quotedAssignment &&
+          !/^\s*(?:export\s+)?(?:const|let|var)\s+/i.test(line) &&
+          /^\s*[A-Za-z_][\w]*\s*:\s/.test(line)
+        ) {
+          continue;
+        }
+
+        const value = assignment[2];
         if (!value || placeholder.test(value)) continue;
-        if (!token && (!assignment || !SECRET_NAME_PATTERN.test(assignment[1]))) continue;
+        if (/^[a-zA-Z_$][\w$]*(?:\(\))?$/.test(value)) continue;
+
         findings.push({
           ruleId: "secrets.exposed",
           title: "Hard-coded secret",
           description: "A credential-like value is committed in source.",
-          severity: token?.[0].startsWith("sk_live_") || /PRIVATE KEY/.test(token?.[0] ?? "") ? "critical" : "high",
-          confidence: token ? "high" : "medium",
+          severity: "high",
+          confidence: "medium",
           category: "secrets",
           location: { path: file.path, line: i + 1 },
-          evidence: `${assignment?.[1] ?? "credential"}=[REDACTED]`,
-          remediation: "Revoke the credential, remove it from history, and load it from a secret manager.",
-          fingerprintMaterial: assignment?.[1] ?? token?.[0].slice(0, 8),
+          evidence: `${assignment[1]}=[REDACTED]`,
+          remediation:
+            "Revoke the credential, remove it from history, and load it from a secret manager.",
+          fingerprintMaterial: assignment[1],
         });
       }
     }
