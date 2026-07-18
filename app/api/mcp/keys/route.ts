@@ -3,6 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateMcpApiKey } from "@/server/mcp/auth";
+import { resolveUserOrganizationId } from "@/server/organizations/resolve-user-organization";
 
 const createKeySchema = z.object({
   name: z.string().trim().min(1).max(80).default("Cursor MCP"),
@@ -15,20 +16,15 @@ export async function GET() {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
-  if (!membership) {
+  const organizationId = await resolveUserOrganizationId(supabase, user.id);
+  if (!organizationId) {
     return NextResponse.json({ error: "No organization" }, { status: 403 });
   }
 
   const { data: keys } = await supabase
     .from("mcp_api_keys")
     .select("id, name, key_prefix, last_used_at, revoked_at, created_at")
-    .eq("organization_id", membership.organization_id)
+    .eq("organization_id", organizationId)
     .is("revoked_at", null)
     .order("created_at", { ascending: false });
 
@@ -48,13 +44,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Validation failed" }, { status: 422 });
   }
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
-  if (!membership) {
+  const organizationId = await resolveUserOrganizationId(supabase, user.id);
+  if (!organizationId) {
     return NextResponse.json({ error: "No organization" }, { status: 403 });
   }
 
@@ -63,7 +54,7 @@ export async function POST(request: Request) {
   const { data: key, error } = await admin
     .from("mcp_api_keys")
     .insert({
-      organization_id: membership.organization_id,
+      organization_id: organizationId,
       created_by_user_id: user.id,
       name: parsed.data.name,
       key_prefix: prefix,
@@ -98,13 +89,8 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Missing key id" }, { status: 400 });
   }
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("organization_id")
-    .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
-  if (!membership) {
+  const organizationId = await resolveUserOrganizationId(supabase, user.id);
+  if (!organizationId) {
     return NextResponse.json({ error: "No organization" }, { status: 403 });
   }
 
@@ -112,7 +98,7 @@ export async function DELETE(request: Request) {
     .from("mcp_api_keys")
     .update({ revoked_at: new Date().toISOString() })
     .eq("id", keyId)
-    .eq("organization_id", membership.organization_id)
+    .eq("organization_id", organizationId)
     .is("revoked_at", null);
 
   if (error) {

@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { useI18n } from "@/lib/i18n/client";
 
 type McpKeyRow = {
   id: string;
@@ -15,6 +16,7 @@ type McpKeyRow = {
 };
 
 export function McpApiKeysPanel() {
+  const { t, locale } = useI18n("settings");
   const [keys, setKeys] = useState<McpKeyRow[]>([]);
   const [name, setName] = useState("Cursor MCP");
   const [newKey, setNewKey] = useState<string | null>(null);
@@ -22,15 +24,22 @@ export function McpApiKeysPanel() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
+  const apiUrl = useMemo(() => {
+    if (typeof window !== "undefined") {
+      return window.location.origin;
+    }
+    return process.env.NEXT_PUBLIC_APP_URL ?? "https://sequrai-app.vercel.app";
+  }, []);
+
   const loadKeys = useCallback(async () => {
     const response = await fetch("/api/mcp/keys");
     if (!response.ok) {
-      setError("Could not load MCP keys");
+      setError(t("mcpLoadKeysFailed"));
       return;
     }
     const data = await response.json();
     setKeys(data.keys ?? []);
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -50,7 +59,7 @@ export function McpApiKeysPanel() {
       });
       const data = await response.json();
       if (!response.ok) {
-        setError(data.error ?? "Could not create key");
+        setError(data.error ?? t("mcpCreateKeyFailed"));
         return;
       }
       setNewKey(data.key.rawKey);
@@ -66,7 +75,7 @@ export function McpApiKeysPanel() {
     try {
       const response = await fetch(`/api/mcp/keys?id=${id}`, { method: "DELETE" });
       if (!response.ok) {
-        setError("Could not revoke key");
+        setError(t("mcpRevokeKeyFailed"));
         return;
       }
       await loadKeys();
@@ -84,37 +93,35 @@ export function McpApiKeysPanel() {
   return (
     <div className="space-y-4">
       <div className="space-y-1.5">
-        <Label htmlFor="mcp-key-name">Key name</Label>
+        <Label htmlFor="mcp-key-name">{t("mcpKeyNameLabel")}</Label>
         <Input
           id="mcp-key-name"
           value={name}
           onChange={(event) => setName(event.target.value)}
-          placeholder="Cursor MCP"
+          placeholder={t("mcpKeyNamePlaceholder")}
         />
       </div>
 
       <Button size="sm" onClick={createKey} disabled={loading || !name.trim()}>
-        Generate MCP API key
+        {t("mcpGenerateKey")}
       </Button>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
       {newKey && (
         <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
-          <p className="text-sm font-medium">Copy your API key now</p>
-          <p className="text-xs text-muted-foreground">
-            This key is shown once. Store it in your Cursor MCP config as SEQURAI_API_KEY.
-          </p>
+          <p className="text-sm font-medium">{t("mcpCopyKeyTitle")}</p>
+          <p className="text-xs text-muted-foreground">{t("mcpCopyKeyBody")}</p>
           <code className="block text-xs break-all bg-muted p-2 rounded">{newKey}</code>
           <Button size="sm" variant="outline" onClick={copyKey}>
-            {copied ? "Copied" : "Copy key"}
+            {copied ? t("mcpCopied") : t("mcpCopyKey")}
           </Button>
         </div>
       )}
 
       {keys.length > 0 && (
         <div className="space-y-2 pt-2">
-          <p className="text-sm font-medium">Active keys</p>
+          <p className="text-sm font-medium">{t("mcpActiveKeys")}</p>
           {keys.map((key) => (
             <div
               key={key.id}
@@ -125,12 +132,14 @@ export function McpApiKeysPanel() {
                 <p className="text-xs text-muted-foreground font-mono">{key.key_prefix}…</p>
                 {key.last_used_at && (
                   <p className="text-xs text-muted-foreground">
-                    Last used {new Date(key.last_used_at).toLocaleDateString()}
+                    {t("mcpLastUsed", {
+                      date: new Date(key.last_used_at).toLocaleDateString(locale),
+                    })}
                   </p>
                 )}
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <Badge variant="secondary">Active</Badge>
+                <Badge variant="secondary">{t("mcpActiveBadge")}</Badge>
                 <Button
                   size="sm"
                   variant="ghost"
@@ -138,7 +147,7 @@ export function McpApiKeysPanel() {
                   disabled={loading}
                   onClick={() => revokeKey(key.id)}
                 >
-                  Revoke
+                  {t("mcpRevoke")}
                 </Button>
               </div>
             </div>
@@ -147,15 +156,15 @@ export function McpApiKeysPanel() {
       )}
 
       <div className="rounded-md bg-muted/50 p-3 text-xs text-muted-foreground space-y-1">
-        <p className="font-medium text-foreground">Cursor setup</p>
-        <p>Add to ~/.cursor/mcp.json:</p>
+        <p className="font-medium text-foreground">{t("mcpCursorSetupTitle")}</p>
+        <p>{t("mcpCursorSetupBody")}</p>
         <pre className="overflow-x-auto whitespace-pre-wrap">{`{
   "sequrai": {
     "command": "node",
     "args": ["/path/to/sequrai-app/mcp/stdio-bridge.mjs"],
     "env": {
       "SEQURAI_API_KEY": "your-key-here",
-      "SEQURAI_API_URL": "https://sequrai-app.vercel.app"
+      "SEQURAI_API_URL": "${apiUrl}"
     }
   }
 }`}</pre>

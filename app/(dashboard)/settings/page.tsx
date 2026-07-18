@@ -1,36 +1,30 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LanguageSelector } from "@/components/shared/LanguageSelector";
 import { getTranslator } from "@/lib/i18n/server";
 import type { Metadata } from "next";
 import { VerdictAutopilotToggle } from "@/features/autopilot/components/VerdictAutopilotToggle";
+import { McpApiKeysPanel } from "@/features/settings/McpApiKeysPanel";
 import { isVerdictAutopilotEnabled } from "@/server/autopilot";
+import { getServerAuthContext } from "@/lib/auth/dev-bypass";
 
 export const metadata: Metadata = { title: "Settings" };
 
 export default async function SettingsPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const auth = await getServerAuthContext();
+  if (!auth) redirect("/login");
+  const { supabase, organizationId } = auth;
   const { t } = await getTranslator("settings");
   const { t: ta } = await getTranslator("autopilotExperience");
 
-  const { data: membership } = await supabase
-    .from("organization_members")
-    .select("*, organization:organizations(*)")
-    .eq("user_id", user.id)
-    .limit(1)
-    .maybeSingle();
-
-  const org = membership?.organization as {
-    id: string;
-    name: string;
-    verdict_autopilot_enabled?: boolean;
-  } | null;
+  const { data: org } = organizationId
+    ? await supabase
+        .from("organizations")
+        .select("id, name, verdict_autopilot_enabled")
+        .eq("id", organizationId)
+        .maybeSingle()
+    : { data: null };
 
   const autopilotEnabled = org
     ? await isVerdictAutopilotEnabled(supabase, org.id)
@@ -51,6 +45,18 @@ export default async function SettingsPage() {
             <p className="text-xs text-muted-foreground">
               {autopilotEnabled ? ta("settings.enabledHelp") : ta("settings.disabledHelp")}
             </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {org && (
+        <Card className="border-border/50">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base">{t("mcpTitle")}</CardTitle>
+            <CardDescription>{t("mcpSubtitle")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <McpApiKeysPanel />
           </CardContent>
         </Card>
       )}
