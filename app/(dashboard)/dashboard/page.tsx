@@ -27,22 +27,7 @@ export default async function DashboardPage() {
 
   const { supabase, user, organizationId } = auth;
 
-  const { data: membership } = organizationId
-    ? await supabase
-        .from("organization_members")
-        .select("*, organization:organizations(*)")
-        .eq("user_id", user.id)
-        .eq("organization_id", organizationId)
-        .limit(1)
-        .maybeSingle()
-    : await supabase
-        .from("organization_members")
-        .select("*, organization:organizations(*)")
-        .eq("user_id", user.id)
-        .limit(1)
-        .maybeSingle();
-
-  if (!membership) {
+  if (!organizationId) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-6 p-12">
         <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
@@ -62,9 +47,16 @@ export default async function DashboardPage() {
     );
   }
 
-  const org = membership.organization as { id: string; name: string; plan: string };
-  const hasVerdict = await organizationHasProductionVerdict(supabase, org.id);
+  const hasVerdict = await organizationHasProductionVerdict(supabase, organizationId);
   if (!hasVerdict) redirect("/onboarding");
+
+  const { data: org } = await supabase
+    .from("organizations")
+    .select("id, name, plan")
+    .eq("id", organizationId)
+    .maybeSingle();
+
+  if (!org) redirect("/onboarding");
 
   const brain = await buildOrgBrain(supabase, org.id);
   const autopilotDashboard = await getAutopilotDashboardView(supabase, org.id);

@@ -4,6 +4,7 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { isAuthBypassAllowed } from "@/lib/env/production-guard";
+import { resolveUserOrganizationId } from "@/server/organizations/resolve-user-organization";
 
 export function isAuthBypassEnabled(): boolean {
   return isAuthBypassAllowed();
@@ -65,18 +66,23 @@ export async function getServerAuthContext(): Promise<ServerAuthContext | null> 
   } = await supabase.auth.getUser();
 
   if (user) {
-    const { data: membership } = await supabase
-      .from("organization_members")
-      .select("organization_id, organization:organizations(name)")
-      .eq("user_id", user.id)
-      .limit(1)
-      .maybeSingle();
+    const organizationId = await resolveUserOrganizationId(supabase, user.id);
+    let orgName: string | null = null;
+
+    if (organizationId) {
+      const { data: organization } = await supabase
+        .from("organizations")
+        .select("name")
+        .eq("id", organizationId)
+        .maybeSingle();
+      orgName = organization?.name ?? null;
+    }
 
     return {
       user,
       supabase,
-      organizationId: membership?.organization_id ?? null,
-      orgName: (membership?.organization as { name?: string } | null)?.name ?? null,
+      organizationId,
+      orgName,
       bypass: false,
     };
   }
