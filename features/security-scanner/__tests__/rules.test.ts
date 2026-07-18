@@ -110,7 +110,12 @@ describe("critical deterministic rules", () => {
       {
         path: "app/api/ai/fix/route.ts",
         content:
-          'const deprecated = { error: "deprecated", migration: "x" };\nexport async function POST() {\n  return NextResponse.json(deprecated, { status: 410 });\n}',
+          'const deprecated = { error: "This endpoint is deprecated. Use AI analysis on scan reports via /api/scans/{scanId}/ai-analysis.", migration: "Block 5.5" };\nexport async function POST() {\n  return NextResponse.json(deprecated, { status: 410 });\n}',
+      },
+      {
+        path: "app/api/stripe/checkout/route.ts",
+        content:
+          '// Stripe checkout not yet implemented\nexport async function POST() {\n  return NextResponse.json({ error: "Stripe payments not yet implemented" }, { status: 501 });\n}',
       },
       {
         path: "app/auth/callback/route.ts",
@@ -124,6 +129,32 @@ describe("critical deterministic rules", () => {
     const authMissing = result.findings.filter((finding) => finding.ruleId === "auth.missing");
     expect(authMissing).toHaveLength(1);
     expect(authMissing[0]?.location.path).toBe("app/api/unprotected/route.ts");
+  });
+
+  it("does not flag webhook signature routes or GET-only handlers for authz/validation noise", async () => {
+    const result = await scanRepository([
+      {
+        path: "app/api/webhooks/github/route.ts",
+        content:
+          'import { verifyGitHubWebhookSignature } from "@/server/github-automation/webhook-utils";\nexport async function POST(request) {\n  if (!verifyGitHubWebhookSignature(rawBody, signature, secret)) return Response.json({ error: "Invalid signature" }, { status: 401 });\n}',
+      },
+      {
+        path: "app/api/brain/organization/route.ts",
+        content:
+          'import { getServerAuthContext } from "@/lib/auth/dev-bypass";\nexport async function GET() {\n  const auth = await getServerAuthContext();\n  if (!auth?.organizationId) return Response.json({ error: "No organization" }, { status: 404 });\n}',
+      },
+      {
+        path: "app/api/repositories/[repositoryId]/scans/route.ts",
+        content:
+          'import { getScanRequestContext } from "@/server/security-scanner/request-context";\nexport async function POST() {\n  await getScanRequestContext("id", true);\n}',
+      },
+    ]);
+    const authz = result.findings.filter((finding) => finding.ruleId === "authz.insufficient");
+    const validation = result.findings.filter((finding) => finding.ruleId === "validation.missing");
+    expect(authz).toHaveLength(0);
+    expect(validation.map((finding) => finding.location.path)).toEqual([
+      "app/api/repositories/[repositoryId]/scans/route.ts",
+    ]);
   });
 
   it("reports capability catalog entries without CVE claims", async () => {

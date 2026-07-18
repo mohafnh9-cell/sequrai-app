@@ -285,7 +285,11 @@ function contextualRouteRule(
   title: string,
   missing: RegExp,
   finding: Omit<FindingDraft, "ruleId" | "location" | "fingerprintMaterial">,
-  options?: { excludePath?: RegExp; excludeContent?: RegExp },
+  options?: {
+    excludePath?: RegExp;
+    excludeContent?: RegExp;
+    includeContent?: RegExp;
+  },
 ): ScanRule {
   return {
     id, title,
@@ -293,33 +297,45 @@ function contextualRouteRule(
       .filter((file) => ROUTE_PATH.test(file.path) && CODE_PATH.test(file.path) && /(?:export\s+(?:async\s+)?function\s+(?:GET|POST|PUT|PATCH|DELETE)|\b(?:router|app)\.(?:get|post|put|patch|delete)\s*\()/i.test(file.content))
       .filter((file) => !options?.excludePath?.test(file.path))
       .filter((file) => !options?.excludeContent?.test(file.content))
+      .filter((file) => !options?.includeContent || options.includeContent.test(file.content))
       .filter((file) => !missing.test(file.content))
       .map((file) => ({ ...finding, ruleId: id, location: { path: file.path, line: 1 }, fingerprintMaterial: file.path })),
   };
 }
 
 const RECOGNIZED_AUTH =
-  /(?:auth\(|getServerSession|getServerAuthContext|getScanRequestContext|getScanAccessContext|resolveMcpAuth|verifyGitHubWebhookSignature|webhookSecret|exchangeCodeForSession|currentUser|getUser|verifyToken|requireAuth|Authorization|supabase\.auth\.getUser)/i;
-const DEPRECATED_PUBLIC_ROUTE = /deprecated[\s\S]{0,240}status:\s*410/i;
+  /(?:auth\(|getServerSession|getServerAuthContext|getScanRequestContext|getScanAccessContext|resolveMcpAuth|verifyGitHubWebhookSignature|verifyStripeWebhookSignature|constructEvent|webhookSecret|exchangeCodeForSession|currentUser|getUser|verifyToken|requireAuth|Authorization|supabase\.auth\.getUser)/i;
+const RECOGNIZED_AUTHZ =
+  /(?:authorize|permission|role|ownerId|organizationId|userId\s*[=!]==?|can\w+\(|policy|getServerAuthContext|getScanRequestContext|getScanAccessContext|resolveMcpAuth|verifyGitHubWebhookSignature|verifyStripeWebhookSignature|constructEvent)/i;
+const DEPRECATED_PUBLIC_ROUTE = /const\s+deprecated\s*=[\s\S]*?status:\s*410/i;
+const UNIMPLEMENTED_STUB_ROUTE = /not\s+yet\s+implemented/i;
+const MUTATING_ROUTE_HANDLER = /export\s+async\s+function\s+(?:POST|PUT|PATCH|DELETE)\b/i;
+const ROUTE_RULE_EXCLUSIONS = {
+  excludePath: /(?:\/auth\/callback\/|\/webhooks\/)/,
+  excludeContent: new RegExp(
+    `${DEPRECATED_PUBLIC_ROUTE.source}|${UNIMPLEMENTED_STUB_ROUTE.source}`,
+    "i",
+  ),
+};
 
 const routeRules: ScanRule[] = [
   contextualRouteRule("auth.missing", "Missing authentication", RECOGNIZED_AUTH, {
     title: "Route has no visible authentication", description: "A request handler was found without a recognizable authentication check.",
     severity: "medium", confidence: "low", category: "authentication",
     remediation: "Enforce authentication in the handler or a guaranteed middleware layer.",
-  }, {
-    excludePath: /\/auth\/callback\//,
-    excludeContent: DEPRECATED_PUBLIC_ROUTE,
-  }),
-  contextualRouteRule("authz.insufficient", "Insufficient authorization", /(?:authorize|permission|role|ownerId|userId\s*[=!]==?|can\w+\(|policy)/i, {
+  }, ROUTE_RULE_EXCLUSIONS),
+  contextualRouteRule("authz.insufficient", "Insufficient authorization", RECOGNIZED_AUTHZ, {
     title: "Route has no visible authorization", description: "The handler has no recognizable ownership, role, or policy check.",
     severity: "medium", confidence: "low", category: "authorization",
     remediation: "Check object ownership or explicit permissions after authentication.",
-  }),
+  }, ROUTE_RULE_EXCLUSIONS),
   contextualRouteRule("validation.missing", "Missing validation", /(?:\.parse\(|safeParse|validate|schema|joi\.|yup\.|zod|validator)/i, {
     title: "Route has no visible input validation", description: "A mutating handler lacks a recognizable schema validation step.",
     severity: "low", confidence: "low", category: "validation",
     remediation: "Validate request inputs with an explicit schema before use.",
+  }, {
+    ...ROUTE_RULE_EXCLUSIONS,
+    includeContent: MUTATING_ROUTE_HANDLER,
   }),
   contextualRouteRule("rate-limit.missing", "Missing rate limiting", /(?:rateLimit|ratelimit|limiter|throttl|upstash)/i, {
     title: "Route has no visible rate limiting", description: "No local rate-limit control was recognized; infrastructure controls may exist.",
