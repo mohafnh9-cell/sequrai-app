@@ -1,23 +1,15 @@
 {
   "title": "Production Dashboard",
-  "overviewTitle": "Your production overview",
-  "overviewSubtitle": "{org} · {plan} plan · AI Production Engineer active",
-  "needsAttention": "Projects that need attention",
-  "reviewFastestPath": "Review your fastest path forward",
+  "overviewTitle": "Can you deploy?",
+  "overviewSubtitle": "Your Production Verdict across all projects.",
+  "connectRepository": "Connect repository",
   "firstVerdictCta": "Get your first Production Verdict",
   "welcomeTitle": "Welcome to SequrAI",
-  "welcomeBody": "SequrAI tells you when your AI-built application is ready to ship and the fastest path to get there.",
-  "metrics": {
-    "ready": "Ready to Ship",
-    "almostReady": "Almost Ready",
-    "blocked": "Blocked",
-    "needsAnalysis": "More Analysis Required",
-    "scoreChanges": "Score changes"
-  },
-  "projectsTitle": "Your Projects",
-  "projectsSubtitle": "Production Ready Score, verdict, and blockers at a glance.",
+  "welcomeBody": "Find out if your AI-built app is ready to ship.",
+  "projectsTitle": "Projects",
+  "projectsSubtitle": "Open a project for your full Production Verdict and next step.",
   "noProjectsTitle": "No projects yet",
-  "noProjectsBody": "Connect your GitHub repos to get your first Production Verdict.",
+  "noProjectsBody": "Connect a GitHub repository to get your Production Verdict.",
   "firstVerdictModalTitle": "Your first Production Verdict is ready.",
-  "firstVerdictModalBody": "SequrAI will continue reviewing your application as it evolves."
+  "firstVerdictModalBody": "SequrAI reviews your code automatically after every push."
 }

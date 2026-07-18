@@ -32,26 +32,6 @@ function StateIconGlyph({
   }
 }
 
-function subtitleKey(view: AutopilotProjectView): string {
-  if (!view.autopilotEnabled) return "subtitleDisabled";
-  switch (view.state) {
-    case "up_to_date":
-      return view.closerToProduction ? "subtitleCloser" : "subtitleReviewed";
-    case "reviewing_changes":
-      return "subtitleReviewing";
-    case "waiting_for_changes":
-      return "subtitleWaiting";
-    case "review_failed":
-      return "subtitleFailed";
-    case "repository_disconnected":
-      return "subtitleDisconnected";
-    case "enabled":
-      return "subtitleEnabled";
-    default:
-      return "subtitleEnabled";
-  }
-}
-
 export function AutopilotSection({ view }: { view: AutopilotProjectView }) {
   const { t, locale } = useI18n("autopilotExperience");
 
@@ -78,7 +58,6 @@ export function AutopilotSection({ view }: { view: AutopilotProjectView }) {
               {t("title")}
             </CardTitle>
             <p className="text-sm text-muted-foreground">{t("oneLiner")}</p>
-            <p className="text-sm text-foreground/80">{t(subtitleKey(view))}</p>
           </div>
           <Badge
             variant={view.state === "review_failed" ? "destructive" : "secondary"}

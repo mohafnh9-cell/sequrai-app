@@ -18,8 +18,8 @@ export function Footer() {
               <Link href="#product" className="hover:text-foreground transition-colors">
                 Product
               </Link>
-              <Link href="#workflow" className="hover:text-foreground transition-colors">
-                Workflow
+              <Link href="#how-it-works" className="hover:text-foreground transition-colors">
+                How it works
               </Link>
               <Link href="#pricing" className="hover:text-foreground transition-colors">
                 Pricing

@@ -60,11 +60,17 @@ export function ProductionIntelligencePanel({
     : null;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-bold tracking-tight">{t("panelTitle")}</h2>
-        <p className="text-sm text-muted-foreground mt-1">{t("panelSubtitle")}</p>
-      </div>
+    <div className="space-y-4">
+      {!compact && (
+        <div>
+          <h2 className="text-xl font-bold tracking-tight">{t("panelTitle")}</h2>
+          <p className="text-sm text-muted-foreground mt-1">{t("panelSubtitle")}</p>
+        </div>
+      )}
+
+      {compact && (
+        <h2 className="text-base font-semibold tracking-tight">{t("panelTitle")}</h2>
+      )}
 
       {emptyMessage && (
         <Card className="border-dashed border-border/70">

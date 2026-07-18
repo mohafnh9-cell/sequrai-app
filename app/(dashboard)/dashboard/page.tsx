@@ -2,16 +2,14 @@ import { redirect } from "next/navigation";
 import { getServerAuthContext } from "@/lib/auth/dev-bypass";
 import Link from "next/link";
 import { Suspense } from "react";
-import { FolderGit2, Plus, ArrowRight, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { FolderGit2, Plus, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { ProductionHero } from "@/features/brain/components/ProductionHero";
-import { ProductionTimelineFeed } from "@/features/brain/components/ProductionTimelineFeed";
 import { PortfolioVerdictCard } from "@/features/production-verdict/components/PortfolioVerdictCard";
 import { FirstVerdictDashboardModal } from "@/features/onboarding/components/FirstVerdictDashboardModal";
 import { buildOrgBrain } from "@/server/brain/build-org-brain";
-import { DashboardProductionIntelligence } from "@/features/production-intelligence/components/DashboardProductionIntelligence";
 import { AutopilotDashboardSection } from "@/features/autopilot/components/AutopilotDashboardSection";
 import { getProductionIntelligencePreview } from "@/server/production-intelligence/service";
 import { getAutopilotDashboardView } from "@/server/autopilot";
@@ -25,6 +23,7 @@ export default async function DashboardPage() {
   const auth = await getServerAuthContext();
   if (!auth) redirect("/login");
   const { t } = await getTranslator("dashboard");
+  const { t: tc } = await getTranslator("common");
 
   const { supabase, user, organizationId } = auth;
 
@@ -92,51 +91,21 @@ export default async function DashboardPage() {
     (recentProjects ?? []).map((project, index) => [project.id, intelligencePreviews[index]])
   );
 
-  const improvingCount = intelligencePreviews.filter((p) => p?.momentum === "improving").length;
-  const primaryProject = recentProjects?.[0] ?? null;
-  const primaryIntelligence = primaryProject
-    ? intelligenceByProject.get(primaryProject.id) ?? null
-    : null;
-
-  const readyCount = brain.projects.filter((p) => p.status === "ready_to_ship").length;
-  const almostReadyCount = brain.projects.filter((p) => p.status === "almost_ready").length;
-  const blockedCount = brain.projects.filter(
-    (p) => p.status === "not_ready" || p.blockersCount > 0
-  ).length;
-  const needsAnalysisCount = brain.projects.filter(
-    (p) => p.status === "insufficient_data" || p.status === "analysis_failed"
-  ).length;
-  const scoreChanges = brain.projects.filter(
-    (p) => p.scoreDelta != null && p.scoreDelta !== 0
-  ).length;
-
-  const planLabel =
-    org.plan === "FREE"
-      ? "Free"
-      : org.plan === "BUILDER"
-        ? "Builder"
-        : org.plan === "STUDIO"
-          ? "Studio"
-          : org.plan === "AGENCY"
-            ? "Agency"
-            : org.plan;
-
   return (
-    <div className="p-6 space-y-8 max-w-6xl">
+    <div className="p-4 sm:p-6 space-y-6 max-w-6xl">
       <Suspense fallback={null}>
         <FirstVerdictDashboardModal />
       </Suspense>
-      <div className="flex items-start justify-between gap-4">
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("overviewTitle")}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t("overviewSubtitle", { org: org.name, plan: planLabel })}
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">{t("overviewSubtitle")}</p>
         </div>
-        <Button size="sm" asChild>
+        <Button size="sm" variant="outline" asChild className="shrink-0">
           <Link href="/integrations">
             <Plus className="mr-2 h-4 w-4" />
-            {t("firstVerdictCta")}
+            {t("connectRepository")}
           </Link>
         </Button>
       </div>
@@ -144,53 +113,6 @@ export default async function DashboardPage() {
       <ProductionHero orgBrain={brain} />
 
       <AutopilotDashboardSection view={autopilotDashboard} />
-
-      <DashboardProductionIntelligence
-        improvingCount={improvingCount}
-        blockedCount={blockedCount}
-        primaryPreview={primaryIntelligence}
-        primaryProjectId={primaryProject?.id ?? null}
-        primaryProjectName={primaryProject?.name ?? null}
-      />
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <Card className="border-border/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">{t("metrics.ready")}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-[#64D98B]" aria-hidden />
-            <span className="text-2xl font-bold">{readyCount}</span>
-          </CardContent>
-        </Card>
-        <Card className="border-border/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">{t("metrics.almostReady")}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-bold">{almostReadyCount}</CardContent>
-        </Card>
-        <Card className="border-border/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">{t("metrics.blocked")}</CardTitle>
-          </CardHeader>
-          <CardContent className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-[#FF5C6C]" aria-hidden />
-            <span className="text-2xl font-bold">{blockedCount}</span>
-          </CardContent>
-        </Card>
-        <Card className="border-border/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">{t("metrics.needsAnalysis")}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-bold">{needsAnalysisCount}</CardContent>
-        </Card>
-        <Card className="border-border/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm text-muted-foreground">{t("metrics.scoreChanges")}</CardTitle>
-          </CardHeader>
-          <CardContent className="text-2xl font-bold">{scoreChanges}</CardContent>
-        </Card>
-      </div>
 
       <Card className="border-border/50">
         <CardHeader className="flex-row items-center justify-between pb-4">
@@ -200,7 +122,7 @@ export default async function DashboardPage() {
           </div>
           <Button variant="ghost" size="sm" asChild>
             <Link href="/projects" className="text-xs gap-1.5">
-              View all <ArrowRight className="h-3.5 w-3.5" />
+              {tc("viewAll")} <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </Button>
         </CardHeader>
@@ -210,7 +132,7 @@ export default async function DashboardPage() {
               icon={FolderGit2}
               title={t("noProjectsTitle")}
               description={t("noProjectsBody")}
-              action={{ label: t("firstVerdictCta"), href: "/onboarding" }}
+              action={{ label: t("connectRepository"), href: "/integrations" }}
             />
           ) : (
             <div className="space-y-2">
@@ -228,8 +150,6 @@ export default async function DashboardPage() {
           )}
         </CardContent>
       </Card>
-
-      <ProductionTimelineFeed />
     </div>
   );
 }

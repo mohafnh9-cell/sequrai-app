@@ -1,6 +1,4 @@
 import { Inter } from "next/font/google";
-import { AIEngineerSection } from "@/components/landing/ai-engineer-section";
-import { BrandStatement } from "@/components/landing/brand-statement";
 import { FinalCTA } from "@/components/landing/final-cta";
 import { Footer } from "@/components/landing/footer";
 import { Hero } from "@/components/landing/hero";
@@ -8,7 +6,6 @@ import { LandingNavbar } from "@/components/landing/nav";
 import { Pricing } from "@/components/landing/pricing";
 import { ProductFlow } from "@/components/landing/product-flow";
 import { ProductProof } from "@/components/landing/product-proof";
-import { WorkflowSection } from "@/components/landing/workflow-section";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -23,10 +20,7 @@ export default function LandingPage() {
       <main>
         <Hero />
         <ProductProof />
-        <BrandStatement />
         <ProductFlow />
-        <AIEngineerSection />
-        <WorkflowSection />
         <Pricing />
         <FinalCTA />
       </main>

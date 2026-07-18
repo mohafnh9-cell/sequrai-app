@@ -18,13 +18,10 @@ import { formatLocalizedDate } from "@/lib/i18n/format";
 import type { ProjectRow } from "@/types/database";
 import type { Metadata } from "next";
 import { ProjectSubNav } from "@/features/production-journey/components/ProjectSubNav";
-import { ProductionJourneyPreviewCard } from "@/features/production-journey/components/ProductionJourneyPreviewCard";
 import { ProductionIntelligencePanel } from "@/features/production-intelligence/components/ProductionIntelligencePanel";
 import { AutopilotSection } from "@/features/autopilot/components/AutopilotSection";
 import { getAutopilotProjectView } from "@/server/autopilot";
-import { getProductionJourneyByProject } from "@/server/production-journey/service";
 import { getProductionIntelligence } from "@/server/production-intelligence/service";
-import { toJourneyPreview } from "@/brain/production-journey";
 
 interface ProjectDetailPageProps {
   params: Promise<{ id: string }>;
@@ -95,21 +92,17 @@ export default async function ProjectDetailPage({
     ? `/projects/${p.id}/scans/${latestScan.id}/report`
     : undefined;
 
-  let journey = null;
   let intelligence = null;
   let autopilot = null;
   try {
-    [journey, intelligence, autopilot] = await Promise.all([
-      getProductionJourneyByProject(supabase, p.id, user.id, { limit: 30 }),
+    [intelligence, autopilot] = await Promise.all([
       getProductionIntelligence(supabase, p.id, user.id),
       getAutopilotProjectView(supabase, p.id, user.id),
     ]);
   } catch {
-    journey = null;
     intelligence = null;
     autopilot = null;
   }
-  const journeyPreview = journey ? toJourneyPreview(journey) : null;
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-6xl">
@@ -145,9 +138,6 @@ export default async function ProjectDetailPage({
                   <ExternalLink className="h-3 w-3 shrink-0" />
                 </a>
               )}
-              <span className="text-xs text-muted-foreground">
-                {t("created")} {formatLocalizedDate(locale, p.created_at)}
-              </span>
             </div>
           </div>
         </div>
@@ -176,8 +166,6 @@ export default async function ProjectDetailPage({
         </div>
       )}
 
-      {autopilot && <AutopilotSection view={autopilot} />}
-
       {intelligence && (
         <ProductionIntelligencePanel
           intelligence={intelligence}
@@ -187,13 +175,7 @@ export default async function ProjectDetailPage({
         />
       )}
 
-      {journeyPreview && journey && (
-        <ProductionJourneyPreviewCard
-          projectId={p.id}
-          preview={journeyPreview}
-          timeline={journey.timeline}
-        />
-      )}
+      {autopilot && <AutopilotSection view={autopilot} />}
     </div>
   );
 }

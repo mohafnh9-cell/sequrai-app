@@ -1,24 +1,21 @@
 import { ProductDashboardPreview } from "@/components/landing/product-dashboard-preview";
-import { PRODUCT_LABELS } from "@/content/landing";
 
 export function ProductProof() {
   return (
-    <section id="product" className="relative bg-background py-24 md:py-32 lg:py-40">
+    <section id="product" className="relative bg-background-deep py-24 md:py-32 lg:py-40">
       <div className="mx-auto max-w-[1200px] px-6">
-        <div className="mb-12 flex flex-wrap items-end justify-between gap-6 md:mb-16">
-          <div className="max-w-md">
-            <p className="text-[11px] uppercase tracking-[0.24em] text-text-muted">Product</p>
-          </div>
-          <ul className="flex flex-wrap gap-x-8 gap-y-2">
-            {PRODUCT_LABELS.map((label) => (
-              <li key={label} className="text-sm text-muted-foreground">
-                {label}
-              </li>
-            ))}
-          </ul>
-        </div>
+        <p className="text-[11px] uppercase tracking-[0.24em] text-text-muted">Product</p>
+        <h2 className="mt-4 max-w-lg text-2xl font-semibold tracking-[-0.03em] md:text-3xl">
+          Your Production Verdict, updated on every push.
+        </h2>
+        <p className="mt-4 max-w-xl text-sm leading-relaxed text-muted-foreground">
+          SequrAI watches your repository. When your code changes, you see whether you can
+          deploy — and what to fix first.
+        </p>
 
-        <ProductDashboardPreview variant="full" />
+        <div className="mt-12">
+          <ProductDashboardPreview variant="full" />
+        </div>
       </div>
     </section>
   );

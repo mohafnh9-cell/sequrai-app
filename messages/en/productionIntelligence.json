@@ -7,7 +7,7 @@
   "recommendedNextAction": "Top recommendation",
   "currentFocus": "Current Focus",
   "estimatedTime": "Estimated Time to Improvement",
-  "journeySummary": "Production Journey Summary",
+  "journeySummary": "Production Verdict History summary",
   "scoreEvolutionSummary": "Score Evolution",
   "whatChangedTitle": "What changed since your last review?",
   "noSignificantChanges": "No significant changes detected.",
@@ -22,7 +22,7 @@
   "productionMomentum": "Production Momentum",
   "projectHealth": "Project Health Summary",
   "productionInsights": "Production Insights",
-  "viewJourney": "View Production Journey",
+  "viewJourney": "View Production Verdict History",
   "viewReport": "View report",
   "runReview": "Run production review",
   "scorePoints": "{points} points",
@@ -65,7 +65,7 @@
     "customDescription": "The latest review identified a clear next step for your application.",
     "runReviewCta": "Run production review",
     "viewReportCta": "View latest report",
-    "viewJourneyCta": "View Production Journey"
+    "viewJourneyCta": "View Production Verdict History"
   },
   "momentum": {
     "improving": "Improving",

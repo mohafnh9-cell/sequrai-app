@@ -1,6 +1,6 @@
 {
   "title": "Continuous Reviews",
-  "oneLiner": "Every push is reviewed automatically. Your Production Verdict stays up to date.",
+  "oneLiner": "Every time your code changes, SequrAI automatically reviews it.",
   "subtitleReviewed": "Your latest changes have been reviewed.",
   "subtitleWaiting": "Waiting for your next push.",
   "subtitleReviewing": "Reviewing your latest changes.",
@@ -28,8 +28,8 @@
   },
   "dashboard": {
     "title": "Continuous Reviews",
-    "subtitle": "Projects reviewed automatically after each push.",
-    "monitored": "Monitored",
+    "subtitle": "Every time your code changes, SequrAI automatically reviews it.",
+    "monitored": "projects monitored",
     "waiting": "Waiting for changes",
     "approaching": "Approaching production",
     "latestReview": "Latest review",

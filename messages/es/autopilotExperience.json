@@ -1,6 +1,6 @@
 {
   "title": "Continuous Reviews",
-  "oneLiner": "Cada push se revisa automáticamente. Tu Production Verdict se mantiene al día.",
+  "oneLiner": "Cada vez que tu código cambia, SequrAI lo revisa automáticamente.",
   "subtitleReviewed": "Tus últimos cambios han sido revisados.",
   "subtitleWaiting": "Esperando tu próximo push.",
   "subtitleReviewing": "Revisando tus últimos cambios.",

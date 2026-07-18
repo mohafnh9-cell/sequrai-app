@@ -29,6 +29,9 @@ import { isVerdictAutopilotEnabled } from "@/server/autopilot";
 import { formatGithubCheckDescription } from "@/brain/production-verdict/build-verdict";
 import { buildScanProductionVerdict } from "@/server/brain/build-scan-verdict";
 import { extractCriticalPaths } from "./health";
+import {
+  isDeliveryAlreadyHandled,
+} from "./delivery-idempotency";
 
 type ProjectRow = {
   id: string;
@@ -434,6 +437,15 @@ async function handlePushEvent(
     return { ok: true, action: "ignored", reason: "branch_delete_or_invalid" };
   }
 
+  if (await isDeliveryAlreadyHandled(admin, input.deliveryId)) {
+    log("duplicate_delivery", {
+      projectId: input.project.id,
+      deliveryId: input.deliveryId,
+      commitSha: parsed.commitSha,
+    });
+    return { ok: true, action: "ignored", reason: "duplicate_delivery" };
+  }
+
   await recordEvent(admin, {
     organizationId: input.project.organization_id,
     projectId: input.project.id,
@@ -455,6 +467,81 @@ async function handlePushEvent(
     });
     await touchWebhookLastDelivery(admin, input.project.id);
 
+    let outcome:
+      | { ok: boolean; action: string; reason?: string; [key: string]: unknown };
+
+    if (REPOSITORY_SYNC_CONFIG.pushTriggersScan) {
+      outcome = await handlePushEventWithScan(admin, input, parsed);
+    } else if (AUTOMATIC_REVIEW_CONFIG.enabled) {
+      const autopilotEnabled = await isVerdictAutopilotEnabled(
+        admin,
+        input.project.organization_id
+      );
+
+      if (!autopilotEnabled) {
+        log("autopilot_disabled", { projectId: input.project.id });
+        outcome = {
+          ok: true,
+          action: "change_detected",
+          branch: parsed.branch,
+          commitSha: parsed.commitSha,
+          reason: "autopilot_disabled",
+        };
+      } else {
+        const reviewResult = await runAutomaticProductionReview(admin, {
+          project: input.project,
+          detection: parsed,
+          token: input.token,
+          userId: input.userId,
+        });
+
+        log("automatic_review", {
+          projectId: input.project.id,
+          branch: parsed.branch,
+          commitSha: parsed.commitSha,
+          action: reviewResult.action,
+        });
+
+        outcome = {
+          ok: reviewResult.ok,
+          action: reviewResult.action,
+          branch: parsed.branch,
+          commitSha: parsed.commitSha,
+          ...(reviewResult.action === "automatic_review_started"
+            ? {
+                scanId: reviewResult.scanId,
+                reviewStatus: reviewResult.status,
+                verdictUpdated: reviewResult.verdictUpdated,
+              }
+            : {}),
+          ...(reviewResult.action === "automatic_review_skipped"
+            ? { reason: reviewResult.reason }
+            : {}),
+          ...(reviewResult.action === "automatic_review_failed"
+            ? { reason: reviewResult.reason }
+            : {}),
+        };
+      }
+    } else {
+      log("change_detected", {
+        projectId: input.project.id,
+        branch: parsed.branch,
+        commitSha: parsed.commitSha,
+      });
+
+      outcome = {
+        ok: true,
+        action: "change_detected",
+        branch: parsed.branch,
+        commitSha: parsed.commitSha,
+      };
+    }
+
+    const eventStatus =
+      outcome.ok === false || outcome.action === "automatic_review_failed"
+        ? "failed"
+        : "processed";
+
     await recordEvent(admin, {
       organizationId: input.project.organization_id,
       projectId: input.project.id,
@@ -464,73 +551,14 @@ async function handlePushEvent(
       commitSha: parsed.commitSha,
       baseCommitSha: input.payload.before,
       payload: input.payload as unknown as Record<string, unknown>,
-      status: "processed",
+      status: eventStatus,
+      errorMessage:
+        eventStatus === "failed" && typeof outcome.reason === "string"
+          ? outcome.reason
+          : undefined,
     });
 
-    if (REPOSITORY_SYNC_CONFIG.pushTriggersScan) {
-      return handlePushEventWithScan(admin, input, parsed);
-    }
-
-    if (AUTOMATIC_REVIEW_CONFIG.enabled) {
-      const autopilotEnabled = await isVerdictAutopilotEnabled(
-        admin,
-        input.project.organization_id
-      );
-
-      if (!autopilotEnabled) {
-        log("autopilot_disabled", { projectId: input.project.id });
-        return {
-          ok: true,
-          action: "change_detected",
-          branch: parsed.branch,
-          commitSha: parsed.commitSha,
-          reason: "autopilot_disabled",
-        };
-      }
-
-      const reviewResult = await runAutomaticProductionReview(admin, {
-        project: input.project,
-        detection: parsed,
-        token: input.token,
-        userId: input.userId,
-      });
-
-      log("automatic_review", {
-        projectId: input.project.id,
-        branch: parsed.branch,
-        commitSha: parsed.commitSha,
-        action: reviewResult.action,
-      });
-
-      return {
-        ok: reviewResult.ok,
-        action: reviewResult.action,
-        branch: parsed.branch,
-        commitSha: parsed.commitSha,
-        ...(reviewResult.action === "automatic_review_started"
-          ? { scanId: reviewResult.scanId, reviewStatus: reviewResult.status }
-          : {}),
-        ...(reviewResult.action === "automatic_review_skipped"
-          ? { reason: reviewResult.reason }
-          : {}),
-        ...(reviewResult.action === "automatic_review_failed"
-          ? { reason: reviewResult.reason }
-          : {}),
-      };
-    }
-
-    log("change_detected", {
-      projectId: input.project.id,
-      branch: parsed.branch,
-      commitSha: parsed.commitSha,
-    });
-
-    return {
-      ok: true,
-      action: "change_detected",
-      branch: parsed.branch,
-      commitSha: parsed.commitSha,
-    };
+    return outcome;
   } catch (error) {
     await markRepositorySyncError(admin, {
       organizationId: input.project.organization_id,

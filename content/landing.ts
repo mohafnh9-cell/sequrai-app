@@ -1,92 +1,100 @@
 export const BRAND = {
   name: "SequrAI",
-  slogan: "Think Ahead.",
-  positioning: "SequrAI tells you when your AI-built application is ready to ship and the fastest path to get there.",
+  positioning:
+    "Know if your AI-built application is ready for production before you deploy.",
 } as const;
 
 export const NAV_LINKS = [
   { href: "#product", label: "Product", labelKey: "product" },
-  { href: "#workflow", label: "Workflow", labelKey: "workflow" },
+  { href: "#how-it-works", label: "How it works", labelKey: "howItWorks" },
   { href: "#pricing", label: "Pricing", labelKey: "pricing" },
+] as const;
+
+export const HERO = {
+  eyebrow: "For Cursor, Claude Code, and AI builders",
+  headline: "Know if your AI-built app is ready for production before you deploy.",
+  subline:
+    "Connect GitHub. Every push is reviewed automatically. You get a Production Verdict and clear Recommendations.",
+  ctaPrimary: "Connect your repository",
+  ctaSecondary: "See how it works",
+  footnote: "Private beta · First verdict in minutes",
+} as const;
+
+export const V1_FEATURES = [
+  "Production Verdict",
+  "Continuous Reviews",
+  "Recommendations",
+  "Production Verdict History",
 ] as const;
 
 export const PRODUCT_FLOW = [
   {
     word: "Connect",
-    line: "Link the repositories you want SequrAI to protect.",
+    line: "Link your GitHub repository.",
   },
   {
-    word: "Analyze",
-    line: "Every push is reviewed against production and security risks.",
+    word: "Push",
+    line: "SequrAI runs a Continuous Review on every code change.",
   },
   {
-    word: "Improve",
-    line: "SequrAI tells you what matters and prepares the fastest fix.",
+    word: "Verdict",
+    line: "See your Production Verdict — ready or not.",
   },
   {
-    word: "Ship",
-    line: "Deploy when your application is truly ready.",
+    word: "Deploy",
+    line: "Follow Recommendations, then ship with confidence.",
   },
 ] as const;
 
-export const WORKFLOW_STEPS = [
-  "Push received",
-  "Incremental analysis",
-  "Risk evaluated",
-  "Roadmap updated",
-  "Ready to ship",
-] as const;
-
-/** Static preview data — faithful reconstruction of real dashboard UI patterns */
+/** Static preview — matches Builder Edition V1 dashboard patterns */
 export const PREVIEW = {
+  verdictStatus: "Almost Ready",
   score: 64,
-  projectedScore: 87,
-  blockers: 3,
-  estimatedMinutes: 12,
-  roadmap: [
-    { rank: 1, title: "Remove service role key from client bundle", delta: 8, minutes: 4 },
-    { rank: 2, title: "Add auth guard to admin API route", delta: 9, minutes: 5 },
-    { rank: 3, title: "Restrict CORS to production domains", delta: 6, minutes: 3 },
-  ],
-  timeline: [
-    { title: "Production check completed", time: "2m ago" },
-    { title: "Roadmap updated — 3 blockers", time: "2m ago" },
-    { title: "Push received on main", time: "3m ago" },
-  ],
-  githubCheck: {
-    repo: "mohafnh9-cell/sequrai-app",
-    commit: "feat: production readiness",
-    status: "SequrAI — 3 blockers found",
+  verdictSummary: "Fix 3 issues before you deploy to production.",
+  continuousReviews: {
+    state: "Up to date",
+    lastReview: "2m ago",
   },
+  recommendations: [
+    { rank: 1, title: "Remove service role key from client bundle" },
+    { rank: 2, title: "Add auth guard to admin API route" },
+    { rank: 3, title: "Restrict CORS to production domains" },
+  ],
 } as const;
 
 export const PLANS = [
   {
-    name: "Builder",
-    price: "49",
-    positioning: "For individual developers.",
+    name: "Builder Edition",
+    phase: "Private Beta",
+    price: "29",
+    positioning: "For indie hackers and AI builders shipping every week.",
     features: [
-      "5 projects",
-      "50 scans per month",
-      "AI fix prompts",
-      "Production Ready Score",
-      "14-day free trial",
-    ],
-    highlighted: false,
-  },
-  {
-    name: "Studio",
-    price: "99",
-    positioning: "For agencies and teams with multiple projects.",
-    features: [
-      "20 projects",
-      "200 scans per month",
-      "Full AI Fix Center",
-      "GitHub automation",
-      "14-day free trial",
+      "Production Verdict",
+      "Continuous Reviews",
+      "Recommendations",
+      "Production Verdict History",
+      "GitHub repository connection",
     ],
     highlighted: true,
   },
+  {
+    name: "Builder Edition",
+    phase: "Public Beta",
+    price: "49",
+    positioning: "Same product. Opens after private beta.",
+    features: [
+      "Production Verdict",
+      "Continuous Reviews",
+      "Recommendations",
+      "Production Verdict History",
+      "GitHub repository connection",
+    ],
+    highlighted: false,
+  },
 ] as const;
 
-export const PRODUCT_LABELS = ["One score.", "Clear priorities.", "Every push reviewed."] as const;
+export const FINAL_CTA = {
+  headline: "Get your Production Verdict",
+  subline: "Connect your repository. SequrAI reviews every push automatically.",
+  button: "Connect your repository",
+} as const;

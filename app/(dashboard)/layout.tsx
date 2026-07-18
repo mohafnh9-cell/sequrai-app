@@ -5,6 +5,8 @@ import { I18nShell } from "@/components/shared/I18nShell";
 import { getServerAuthContext } from "@/lib/auth/dev-bypass";
 import type { Metadata } from "next";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: {
     default: "Dashboard",

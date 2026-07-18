@@ -4,19 +4,18 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "SequrAI — Think Ahead.",
+    default: "SequrAI — Production Verdict for AI-built apps",
     template: "%s | SequrAI",
   },
   description:
-    "SequrAI tells you when your AI-built application is ready to ship and the fastest path to get there. Think Ahead — every push reviewed.",
+    "Know if your AI-built application is ready for production before you deploy. Connect GitHub, get a Production Verdict on every push.",
   keywords: [
-    "production readiness",
-    "AI development",
+    "production verdict",
+    "AI-built apps",
     "Cursor",
     "Claude Code",
-    "Supabase",
-    "deployment",
-    "production engineer",
+    "continuous reviews",
+    "deploy with confidence",
   ],
   authors: [{ name: "SequrAI" }],
   creator: "SequrAI",
@@ -24,15 +23,16 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "https://sequrai.com",
-    title: "SequrAI — Think Ahead.",
+    title: "SequrAI — Production Verdict for AI-built apps",
     description:
-      "SequrAI tells you when your AI-built application is ready to ship and the fastest path to get there.",
+      "Know if your AI-built application is ready for production before you deploy.",
     siteName: "SequrAI",
   },
   twitter: {
     card: "summary_large_image",
-    title: "SequrAI — Think Ahead.",
-    description: "Build with AI. Ship with engineering excellence.",
+    title: "SequrAI — Production Verdict for AI-built apps",
+    description:
+      "Connect GitHub. Every push reviewed. Get your Production Verdict before you deploy.",
     creator: "@sequrai",
   },
   robots: {

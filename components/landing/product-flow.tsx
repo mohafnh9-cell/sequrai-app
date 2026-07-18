@@ -2,9 +2,15 @@ import { PRODUCT_FLOW } from "@/content/landing";
 
 export function ProductFlow() {
   return (
-    <section className="border-t border-border bg-background py-24 md:py-32 lg:py-40">
+    <section
+      id="how-it-works"
+      className="border-t border-border bg-background py-24 md:py-32 lg:py-40"
+    >
       <div className="mx-auto max-w-[1200px] px-6">
         <p className="text-[11px] uppercase tracking-[0.24em] text-text-muted">How it works</p>
+        <h2 className="mt-4 max-w-xl text-2xl font-semibold tracking-[-0.03em] md:text-3xl">
+          Connect. Push. Get your verdict.
+        </h2>
 
         <div className="mt-16 grid gap-12 md:grid-cols-2 lg:grid-cols-4 lg:gap-8">
           {PRODUCT_FLOW.map((step, index) => (

@@ -17,6 +17,8 @@
     "validate:env": "node scripts/validate-env.mjs",
     "validate:env:production": "node scripts/validate-env.mjs --production",
     "validate:schema": "node scripts/schema-health-check.mjs",
+    "validate:rls": "node scripts/validate-rls-rpc.mjs",
+    "db:apply-migrations": "node scripts/apply-migrations.mjs",
     "mcp": "node mcp/stdio-bridge.mjs"
   },
   "dependencies": {

@@ -78,7 +78,10 @@ export async function recordPushDetection(
   );
 
   if (error) {
-    throw new Error(`Push detection storage failed: ${error.message}`);
+    console.warn("repository_sync_push_detection_failed", {
+      projectId: input.projectId,
+      message: error.message,
+    });
   }
 }
 

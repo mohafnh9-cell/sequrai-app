@@ -12,14 +12,11 @@ import {
   shouldSkipGitHubStep,
 } from "../onboarding-flow";
 import { OnboardingProgressTracker } from "./OnboardingProgressTracker";
-import { VendorLockInNotice } from "./VendorLockInNotice";
 import { OnboardingWelcomeStep } from "./OnboardingWelcomeStep";
 import { OnboardingGitHubStep } from "./OnboardingGitHubStep";
 import { OnboardingRepoPicker } from "./OnboardingRepoPicker";
 import { OnboardingReviewStep } from "./OnboardingReviewStep";
 import { OnboardingVerdictReveal } from "./OnboardingVerdictReveal";
-import { OnboardingFastestPath } from "./OnboardingFastestPath";
-import { OnboardingEngineerStep } from "./OnboardingEngineerStep";
 import { OnboardingDashboardEntry } from "./OnboardingDashboardEntry";
 
 type FlowState = {
@@ -173,28 +170,10 @@ export function OnboardingFlow({ initialContext }: { initialContext: OnboardingC
       )}
 
       {step === "verdict" && flow.verdict && (
-        <OnboardingVerdictReveal verdict={flow.verdict} onContinue={() => goTo("roadmap")} />
-      )}
-
-      {step === "roadmap" && flow.verdict && (
-        <OnboardingFastestPath
-          priorities={flow.verdict.topPriorities}
-          onContinue={() => goTo("engineer")}
-        />
-      )}
-
-      {step === "engineer" && flow.verdict && flow.scanId && flow.projectId && (
-        <OnboardingEngineerStep
-          scanId={flow.scanId}
-          verdict={flow.verdict}
-          projectId={flow.projectId}
-          onContinue={() => goTo("dashboard")}
-        />
+        <OnboardingVerdictReveal verdict={flow.verdict} onContinue={() => goTo("dashboard")} />
       )}
 
       {step === "dashboard" && <OnboardingDashboardEntry />}
-
-      {step !== "dashboard" && step !== "review" && <VendorLockInNotice />}
     </div>
   );
 }

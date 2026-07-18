@@ -7,8 +7,9 @@
   "productionJourney": "Production Journey",
   "technicalDetails": "Detalles técnicos",
   "product": "Producto",
+  "howItWorks": "Cómo funciona",
   "workflow": "Flujo",
   "pricing": "Precios",
   "signIn": "Iniciar sesión",
-  "analyzeProject": "Analiza tu proyecto"
+  "connectRepository": "Conectar tu repositorio"
 }

@@ -9,11 +9,17 @@ import {
 import { AUTOMATIC_VERDICT_UPDATE_CONFIG } from "@/brain/automatic-verdict-update";
 import { InlineScanJobRunner } from "@/server/security-scanner/scan-job-runner";
 import { finalizeProjectStateAfterAutomaticReview } from "@/server/automatic-verdict-update";
+import { GitHubServiceError } from "@/lib/github/repository-service";
+import { markRepositorySyncError } from "@/server/repository-sync";
 import {
   buildCommitValidationInput,
   hasActiveRepositoryReview,
   hasCompletedAutomaticReviewForCommit,
 } from "./queries";
+
+function log(event: string, fields: Record<string, unknown>) {
+  console.info({ component: "automatic-review", event, ...fields });
+}
 
 type ProjectRow = {
   id: string;
@@ -143,6 +149,24 @@ export async function runAutomaticProductionReview(
       persistMode: "review_only",
     });
   } catch (error) {
+    if (
+      error instanceof GitHubServiceError &&
+      (error.code === "GITHUB_AUTH" || error.code === "GITHUB_FORBIDDEN")
+    ) {
+      await markRepositorySyncError(admin, {
+        organizationId: input.project.organization_id,
+        projectId: input.project.id,
+        githubRepositoryId: input.project.github_repository_id,
+        errorCode: "invalid_github_connection",
+      });
+    }
+
+    log("automatic_review_failed", {
+      projectId: input.project.id,
+      commitSha: input.detection.commitSha,
+      reason: error instanceof Error ? error.message : "review_failed",
+    });
+
     return {
       ok: false,
       action: "automatic_review_failed",
