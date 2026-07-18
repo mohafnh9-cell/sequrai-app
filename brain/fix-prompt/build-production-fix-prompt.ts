@@ -5,6 +5,7 @@ import {
 } from "@/brain/production-verdict/schema";
 import type { ScanFinding } from "@/features/security-scanner/components/types";
 import { findingFile } from "@/features/security-scanner/components/types";
+import { assessSafeFix, formatEstimatedFixTime } from "./assessment";
 import { guidanceForCategory } from "./category-guidance";
 import { formatStackLines } from "./format-stack";
 import type { FixPromptStack, ProductionFixPromptInput, ProductionFixPromptResult } from "./types";
@@ -29,6 +30,14 @@ function severityImpact(severity: string): string {
       return "Low — incremental improvement to production readiness.";
   }
 }
+
+const SAFE_IMPLEMENTATION_PRINCIPLES = [
+  "Make the smallest possible safe change that fully resolves this blocker.",
+  "Do not introduce breaking changes to existing behaviour.",
+  "Preserve the user's project intent, architecture, and UX.",
+  "Prefer additive or narrowly scoped edits over refactors.",
+  "Stop once the blocker is resolved — do not improve unrelated code.",
+];
 
 export function projectedVerdictAfterFix(input: ProductionFixPromptInput): string {
   const current = input.currentVerdictStatus ?? "not_ready";
@@ -58,6 +67,7 @@ export function buildProductionFixPrompt(
   const currentVerdictLabel = input.currentVerdictStatus
     ? VERDICT_STATUS_LABELS[input.currentVerdictStatus]
     : "Not Ready to Ship";
+  const assessment = assessSafeFix(input);
 
   const files =
     input.affectedFiles.length > 0
@@ -65,53 +75,62 @@ export function buildProductionFixPrompt(
       : "- Review the codebase area related to this issue during implementation.";
 
   const stackLines = formatStackLines(input.stack).join("\n");
+  const severityLabel = input.severity.charAt(0).toUpperCase() + input.severity.slice(1);
 
   const prompt = [
     section(
       "PROJECT CONTEXT",
       [
         input.projectName ? `Project: ${input.projectName}` : null,
-        "Project stack:",
+        "Detected stack:",
         stackLines,
       ]
         .filter(Boolean)
         .join("\n")
     ),
     section(
-      "ISSUE DETECTED",
-      [input.issueTitle, "", input.issueDescription].filter(Boolean).join("\n")
+      "PRODUCTION BLOCKER",
+      [
+        `Title: ${input.issueTitle}`,
+        `Severity: ${severityLabel}`,
+        input.affectedFiles[0] ? `Location: ${input.affectedFiles[0]}` : null,
+        "",
+        input.issueDescription,
+        "",
+        `Estimated impact: ${input.estimatedImpact ?? severityImpact(input.severity)}`,
+      ]
+        .filter(Boolean)
+        .join("\n")
     ),
     section(
       "WHY THIS MATTERS",
-      [input.whyItMatters, "", `Estimated impact: ${input.estimatedImpact ?? severityImpact(input.severity)}`].join(
-        "\n"
-      )
+      [
+        input.whyItMatters,
+        "",
+        `Production risk: ${assessment.riskReason}`,
+        `Implementation risk: ${assessment.implementationRisk}`,
+      ].join("\n")
     ),
     section(
       "GOAL",
       [
-        `Resolve this ${input.category.replace(/_/g, " ")} production blocker with the smallest safe change.`,
+        `Fix this ${input.category.replace(/_/g, " ")} production blocker with the smallest possible safe change.`,
         input.recommendedAction,
-        input.estimatedFixMinutes
-          ? `Target fix time: approximately ${input.estimatedFixMinutes} minutes.`
-          : null,
-      ]
-        .filter(Boolean)
-        .join("\n")
+      ].join("\n")
     ),
     section("FILES TO REVIEW", files),
     section("PRESERVE THE FOLLOWING", bulletList(guidance.preserve)),
     section("DO NOT MODIFY", bulletList(guidance.doNotModify)),
     section("IMPLEMENTATION REQUIREMENTS", [
-      "Apply the smallest possible change that fully resolves this blocker.",
+      "Apply the minimum required code changes using the safest possible approach.",
       "Match existing project conventions, naming, and file structure.",
-      "Do not refactor unrelated code or redesign the architecture.",
       "",
       input.recommendedAction,
     ].join("\n")),
+    section("SAFE IMPLEMENTATION PRINCIPLES", bulletList(SAFE_IMPLEMENTATION_PRINCIPLES)),
     section("REGRESSION TESTS", bulletList(guidance.regressionTests)),
     section(
-      "VALIDATION",
+      "BUILD REQUIREMENTS",
       [
         "Before finishing, run:",
         bulletList(buildCommands),
@@ -119,13 +138,29 @@ export function buildProductionFixPrompt(
         "Confirm the fix does not introduce new TypeScript, lint, or test failures.",
       ].join("\n")
     ),
+    section("CONFIDENCE SCORE", [
+      `Safe Fix Confidence: ${assessment.safeFixConfidence}%`,
+      "",
+      "This score represents how confident SequrAI is that this change can be implemented safely without introducing regressions.",
+    ].join("\n")),
+    section("IMPLEMENTATION RISK", [
+      assessment.implementationRisk,
+      "",
+      assessment.riskReason,
+    ].join("\n")),
+    section("ESTIMATED FIX TIME", formatEstimatedFixTime(input.estimatedFixMinutes)),
+    section("ESTIMATED SCOPE", [
+      `Files expected to change: ${assessment.estimatedScope.filesExpected}`,
+      `Estimated LOC modifications: ${assessment.estimatedScope.estimatedLocMin}–${assessment.estimatedScope.estimatedLocMax}`,
+      `Complexity: ${assessment.estimatedScope.complexityLabel}`,
+    ].join("\n")),
     section(
-      "EXPECTED RESULT",
+      "PROJECTED PRODUCTION VERDICT",
       [
-        "Current Production Verdict:",
+        "Current:",
         currentVerdictLabel,
         "",
-        "Projected after this fix:",
+        "Projected:",
         projectedVerdictLabel,
         input.projectedScoreImpact
           ? `(Estimated score improvement: +${input.projectedScoreImpact} points)`
@@ -136,7 +171,11 @@ export function buildProductionFixPrompt(
     ),
   ].join("\n\n------------------------------------------------------------\n\n");
 
-  return { prompt, projectedVerdictLabel };
+  return { prompt, projectedVerdictLabel, assessment };
+}
+
+export function buildSafeFixPrompt(input: ProductionFixPromptInput): ProductionFixPromptResult {
+  return buildProductionFixPrompt(input);
 }
 
 export function fixPromptInputFromPriority(
@@ -189,6 +228,7 @@ export function fixPromptInputFromFinding(
     currentVerdictStatus?: VerdictStatus;
     currentScore?: number | null;
     projectedScoreImpact?: number;
+    estimatedFixMinutes?: number;
   } = {}
 ): ProductionFixPromptInput {
   const path = findingFile(finding);
@@ -209,6 +249,7 @@ export function fixPromptInputFromFinding(
       options.recommendedAction ??
       finding.recommendation ??
       "Apply the smallest safe fix that resolves this production blocker.",
+    estimatedFixMinutes: options.estimatedFixMinutes,
     currentVerdictStatus: options.currentVerdictStatus,
     currentScore: options.currentScore,
     projectedScoreImpact: options.projectedScoreImpact,

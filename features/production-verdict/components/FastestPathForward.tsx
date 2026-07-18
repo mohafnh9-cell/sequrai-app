@@ -11,7 +11,8 @@ import type { ProductionPriority } from "@/brain/production-verdict/schema";
 import { trackEvent } from "@/lib/analytics/track";
 import { useI18n } from "@/lib/i18n/client";
 import type { FixPromptContext } from "../fix-prompt-context";
-import { CopyProductionFixPromptButton } from "./CopyProductionFixPromptButton";
+import { CopySafeFixPromptButton } from "./CopySafeFixPromptButton";
+import { SafeFixMetrics } from "./SafeFixMetrics";
 
 function severityLabel(severity: ProductionPriority["severity"]) {
   return severity.charAt(0).toUpperCase() + severity.slice(1);
@@ -79,22 +80,18 @@ export function ProductionPriorityItem({
           )}
         </div>
 
-        <div className="shrink-0 space-y-2 text-sm md:text-right md:min-w-[140px]">
+        <div className="shrink-0 space-y-3 text-sm md:text-right md:min-w-[160px]">
           <div>
             <p className="text-xs text-muted-foreground">{t("estimatedTime")}</p>
             <p className="font-medium">{priority.estimatedTimeLabel}</p>
           </div>
           <div>
-            <p className="text-xs text-muted-foreground">{t("estimatedImprovement")}</p>
-            <p className="font-medium text-[#64D98B]">
-              {t("points", { count: priority.projectedScoreImpact })}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              {t("projectedVerdictAfterFix")}: {projectedVerdict}
-            </p>
+            <p className="text-xs text-muted-foreground">{t("projectedVerdictAfterFix")}</p>
+            <p className="font-medium">{projectedVerdict}</p>
           </div>
+          <SafeFixMetrics input={fixPromptInput} />
           <div className="flex flex-col gap-2 md:items-end">
-            <CopyProductionFixPromptButton
+            <CopySafeFixPromptButton
               input={fixPromptInput}
               source="priority"
               priorityId={priority.id}
@@ -144,9 +141,9 @@ export function FastestPathForward({
     <section aria-labelledby="fastest-path-heading" className="space-y-4">
       <div>
         <h2 id="fastest-path-heading" className="text-lg font-semibold tracking-tight">
-          {t("productionBlockersTitle")}
+          {t("criticalBlockersTitle")}
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">{t("productionBlockersSubtitle")}</p>
+        <p className="text-sm text-muted-foreground mt-1">{t("criticalBlockersSubtitle")}</p>
       </div>
       <ol className="space-y-3 list-none">
         {priorities.slice(0, 3).map((priority) => (

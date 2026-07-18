@@ -3,11 +3,11 @@
 import { useCallback, useState } from "react";
 import { Check, ClipboardCopy } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { buildProductionFixPrompt, type ProductionFixPromptInput } from "@/brain/fix-prompt";
+import { buildSafeFixPrompt, type ProductionFixPromptInput } from "@/brain/fix-prompt";
 import { trackEvent } from "@/lib/analytics/track";
 import { useI18n } from "@/lib/i18n/client";
 
-export function CopyProductionFixPromptButton({
+export function CopySafeFixPromptButton({
   input,
   source,
   priorityId,
@@ -28,16 +28,18 @@ export function CopyProductionFixPromptButton({
   const [copied, setCopied] = useState(false);
 
   const copyPrompt = useCallback(async () => {
-    const { prompt } = buildProductionFixPrompt(input);
+    const { prompt, assessment } = buildSafeFixPrompt(input);
     await navigator.clipboard.writeText(prompt);
     setCopied(true);
     if (typeof window !== "undefined" && !window.location.pathname.startsWith("/demo")) {
-      trackEvent("fix_prompt_copied", {
+      trackEvent("safe_fix_prompt_copied", {
         source,
         priorityId,
         findingId,
         category: input.category,
         severity: input.severity,
+        confidence: assessment.safeFixConfidence,
+        risk: assessment.implementationRisk,
       });
     }
     window.setTimeout(() => setCopied(false), 2000);
@@ -54,14 +56,17 @@ export function CopyProductionFixPromptButton({
       {copied ? (
         <>
           <Check className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-          {t("copiedFixPrompt")}
+          {t("copiedSafeFixPrompt")}
         </>
       ) : (
         <>
           <ClipboardCopy className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-          {t("copyFixPrompt")}
+          {t("copySafeFixPrompt")}
         </>
       )}
     </Button>
   );
 }
+
+/** @deprecated Use CopySafeFixPromptButton */
+export const CopyProductionFixPromptButton = CopySafeFixPromptButton;

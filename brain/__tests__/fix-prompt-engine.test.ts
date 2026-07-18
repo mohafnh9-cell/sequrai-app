@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildProductionFixPrompt,
+  assessSafeFix,
+  buildSafeFixPrompt,
   fixPromptInputFromFinding,
   fixPromptInputFromPriority,
   projectedVerdictAfterFix,
@@ -25,9 +26,9 @@ const basePriority: ProductionPriority = {
   findingIds: ["f1"],
 };
 
-describe("Production Fix Prompt Engine", () => {
-  it("builds a complete senior-engineer prompt with all required sections", () => {
-    const { prompt } = buildProductionFixPrompt({
+describe("Production Safe Fix Engine", () => {
+  it("builds a complete safe fix prompt with all required sections", () => {
+    const { prompt, assessment } = buildSafeFixPrompt({
       projectName: "Acme SaaS",
       issueTitle: basePriority.title,
       issueDescription: basePriority.reason,
@@ -48,20 +49,55 @@ describe("Production Fix Prompt Engine", () => {
     });
 
     expect(prompt).toContain("PROJECT CONTEXT");
-    expect(prompt).toContain("ISSUE DETECTED");
+    expect(prompt).toContain("PRODUCTION BLOCKER");
     expect(prompt).toContain("WHY THIS MATTERS");
     expect(prompt).toContain("GOAL");
     expect(prompt).toContain("FILES TO REVIEW");
     expect(prompt).toContain("PRESERVE THE FOLLOWING");
     expect(prompt).toContain("DO NOT MODIFY");
     expect(prompt).toContain("IMPLEMENTATION REQUIREMENTS");
+    expect(prompt).toContain("SAFE IMPLEMENTATION PRINCIPLES");
     expect(prompt).toContain("REGRESSION TESTS");
-    expect(prompt).toContain("VALIDATION");
-    expect(prompt).toContain("EXPECTED RESULT");
-    expect(prompt).toContain("Next.js");
-    expect(prompt).toContain("Supabase");
-    expect(prompt).toContain("npm run build");
-    expect(prompt).toContain("smallest possible change");
+    expect(prompt).toContain("BUILD REQUIREMENTS");
+    expect(prompt).toContain("CONFIDENCE SCORE");
+    expect(prompt).toContain("IMPLEMENTATION RISK");
+    expect(prompt).toContain("ESTIMATED FIX TIME");
+    expect(prompt).toContain("ESTIMATED SCOPE");
+    expect(prompt).toContain("PROJECTED PRODUCTION VERDICT");
+    expect(prompt).toContain("smallest possible safe change");
+    expect(assessment.safeFixConfidence).toBeGreaterThanOrEqual(70);
+    expect(assessment.safeFixConfidence).toBeLessThanOrEqual(98);
+    expect(["LOW", "MEDIUM", "HIGH"]).toContain(assessment.implementationRisk);
+  });
+
+  it("assigns higher risk to authorization blockers", () => {
+    const authz = assessSafeFix({
+      issueTitle: "Permissive RLS policy",
+      issueDescription: "Users can read all rows.",
+      category: "authorization",
+      severity: "critical",
+      whyItMatters: "Data exposure risk.",
+      affectedFiles: ["supabase/schema.sql"],
+      stack: { languages: [], frameworks: [], services: ["Supabase"] },
+      recommendedAction: "Restrict RLS policy.",
+    });
+    expect(authz.implementationRisk).toBe("HIGH");
+  });
+
+  it("assigns lower risk to single-file deployment fixes", () => {
+    const low = assessSafeFix({
+      issueTitle: "Missing security header",
+      issueDescription: "X-Frame-Options not set.",
+      category: "deployment",
+      severity: "high",
+      whyItMatters: "Clickjacking risk.",
+      affectedFiles: ["next.config.ts"],
+      stack: { languages: ["TypeScript"], frameworks: ["Next.js"], services: [] },
+      recommendedAction: "Add headers in next.config.ts.",
+      estimatedFixMinutes: 5,
+    });
+    expect(low.implementationRisk).toBe("LOW");
+    expect(low.safeFixConfidence).toBeGreaterThan(85);
   });
 
   it("derives prompt input from a production priority", () => {
@@ -72,38 +108,9 @@ describe("Production Fix Prompt Engine", () => {
       currentScore: 50,
     });
 
-    const { prompt } = buildProductionFixPrompt(input);
+    const { prompt } = buildSafeFixPrompt(input);
     expect(prompt).toContain("Northwind API");
     expect(prompt).toContain("src/middleware.ts");
-    expect(prompt).toContain("Rotate session tokens");
-  });
-
-  it("derives prompt input from an individual finding", () => {
-    const input = fixPromptInputFromFinding(
-      {
-        id: "f1",
-        title: "Service role referenced in client bundle",
-        description: "Admin client imported from a client component.",
-        severity: "CRITICAL",
-        category: "secrets",
-        recommendation: "Move service role usage to server-only code.",
-        file_path: "src/lib/supabase/admin-client.ts",
-      },
-      {
-        stack: {
-          languages: ["TypeScript"],
-          frameworks: ["Next.js"],
-          services: ["Supabase"],
-        },
-        currentVerdictStatus: "not_ready",
-        currentScore: 30,
-      }
-    );
-
-    const { prompt } = buildProductionFixPrompt(input);
-    expect(prompt).toContain("Service role referenced in client bundle");
-    expect(prompt).toContain("src/lib/supabase/admin-client.ts");
-    expect(prompt).toContain("Server-only secrets");
   });
 
   it("detects enriched stack labels from detected_stack dependencies", () => {
@@ -139,5 +146,33 @@ describe("Production Fix Prompt Engine", () => {
         projectedScoreImpact: 20,
       })
     ).toBe("Ready to Ship");
+  });
+
+  it("includes finding-based safe fix prompts", () => {
+    const input = fixPromptInputFromFinding(
+      {
+        id: "f1",
+        title: "Service role referenced in client bundle",
+        description: "Admin client imported from a client component.",
+        severity: "CRITICAL",
+        category: "secrets",
+        recommendation: "Move service role usage to server-only code.",
+        file_path: "src/lib/supabase/admin-client.ts",
+      },
+      {
+        stack: {
+          languages: ["TypeScript"],
+          frameworks: ["Next.js"],
+          services: ["Supabase"],
+        },
+        currentVerdictStatus: "not_ready",
+        currentScore: 30,
+        estimatedFixMinutes: 12,
+      }
+    );
+
+    const { prompt, assessment } = buildSafeFixPrompt(input);
+    expect(prompt).toContain("Service role referenced in client bundle");
+    expect(assessment.estimatedScope.filesExpected).toBe(1);
   });
 });

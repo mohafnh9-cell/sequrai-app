@@ -16,7 +16,8 @@ import {
 import { trackEvent } from "@/lib/analytics/track";
 import { fixPromptInputFromFinding } from "@/brain/fix-prompt";
 import type { FixPromptContext } from "../fix-prompt-context";
-import { CopyProductionFixPromptButton } from "./CopyProductionFixPromptButton";
+import { CopySafeFixPromptButton } from "./CopySafeFixPromptButton";
+import { SafeFixMetrics } from "./SafeFixMetrics";
 import {
   findingConfidence,
   findingEvidence,
@@ -198,11 +199,14 @@ function FindingCard({
           </div>
         )}
         {fixPromptInput && (
-          <CopyProductionFixPromptButton
-            input={fixPromptInput}
-            source="finding"
-            findingId={finding.id}
-          />
+          <div className="space-y-3 border-t border-border/50 pt-3">
+            <SafeFixMetrics input={fixPromptInput} />
+            <CopySafeFixPromptButton
+              input={fixPromptInput}
+              source="finding"
+              findingId={finding.id}
+            />
+          </div>
         )}
       </CardContent>
     </Card>

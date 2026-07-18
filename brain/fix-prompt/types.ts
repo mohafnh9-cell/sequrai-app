@@ -1,4 +1,5 @@
 import type { VerdictStatus } from "@/brain/production-verdict/schema";
+import type { SafeFixAssessment } from "./assessment";
 
 export type FixPromptStack = {
   languages: string[];
@@ -27,4 +28,5 @@ export type ProductionFixPromptInput = {
 export type ProductionFixPromptResult = {
   prompt: string;
   projectedVerdictLabel: string;
+  assessment: SafeFixAssessment;
 };

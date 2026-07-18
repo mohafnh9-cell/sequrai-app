@@ -15,7 +15,8 @@ export type AnalyticsEvent =
   | "production_journey_cta_clicked"
   | "production_intelligence_viewed"
   | "production_intelligence_cta_clicked"
-  | "fix_prompt_copied";
+  | "fix_prompt_copied"
+  | "safe_fix_prompt_copied";
 
 export type AnalyticsPayload = Record<string, string | number | boolean | null | undefined>;
 

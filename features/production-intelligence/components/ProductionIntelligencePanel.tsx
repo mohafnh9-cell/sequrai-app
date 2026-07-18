@@ -22,7 +22,7 @@ import { trackEvent } from "@/lib/analytics/track";
 import type { ProductionPriority } from "@/brain/production-verdict/schema";
 import { fixPromptInputFromPriority } from "@/brain/fix-prompt";
 import type { FixPromptContext } from "@/features/production-verdict/fix-prompt-context";
-import { CopyProductionFixPromptButton } from "@/features/production-verdict/components/CopyProductionFixPromptButton";
+import { CopySafeFixPromptButton } from "@/features/production-verdict/components/CopySafeFixPromptButton";
 
 function MomentumIcon({ momentum }: { momentum: ProductionIntelligence["momentum"] }) {
   if (momentum === "improving") {
@@ -151,7 +151,7 @@ export function ProductionIntelligencePanel({
             {action.ctaKey && (
               <div className="flex flex-wrap gap-2">
                 {action.type === "fix_blocker" && topPriority && (
-                  <CopyProductionFixPromptButton
+                  <CopySafeFixPromptButton
                     input={fixPromptInputFromPriority(topPriority, {
                       projectName: fixPromptContext?.projectName,
                       stack: fixPromptContext?.stack,
