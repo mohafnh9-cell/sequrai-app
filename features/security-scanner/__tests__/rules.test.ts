@@ -80,6 +80,52 @@ describe("critical deterministic rules", () => {
     expect(exposed[0]?.location.path).toBe("config.ts");
   });
 
+  it("does not flag routes that use project auth helpers as missing authentication", async () => {
+    const result = await scanRepository([
+      {
+        path: "app/api/brain/organization/route.ts",
+        content:
+          'import { getServerAuthContext } from "@/lib/auth/dev-bypass";\nexport async function GET() {\n  const auth = await getServerAuthContext();\n}',
+      },
+      {
+        path: "app/api/repositories/[repositoryId]/scans/route.ts",
+        content:
+          'import { getScanRequestContext } from "@/server/security-scanner/request-context";\nexport async function POST() {\n  await getScanRequestContext("id", true);\n}',
+      },
+      {
+        path: "app/api/projects/route.ts",
+        content:
+          'export async function GET() {\n  const { data: { user } } = await supabase.auth.getUser();\n}',
+      },
+      {
+        path: "app/api/webhooks/github/route.ts",
+        content:
+          'import { verifyGitHubWebhookSignature } from "@/server/github-automation/webhook-utils";\nexport async function POST(req) {\n  verifyGitHubWebhookSignature(req);\n}',
+      },
+      {
+        path: "app/api/mcp/route.ts",
+        content:
+          'import { resolveMcpAuth } from "@/server/mcp/auth";\nexport async function POST(request) {\n  const auth = await resolveMcpAuth(request);\n}',
+      },
+      {
+        path: "app/api/ai/fix/route.ts",
+        content:
+          'const deprecated = { error: "deprecated", migration: "x" };\nexport async function POST() {\n  return NextResponse.json(deprecated, { status: 410 });\n}',
+      },
+      {
+        path: "app/auth/callback/route.ts",
+        content: 'export async function GET() {\n  await supabase.auth.exchangeCodeForSession(code);\n}',
+      },
+      {
+        path: "app/api/unprotected/route.ts",
+        content: "export async function POST() {\n  return Response.json({ ok: true });\n}",
+      },
+    ]);
+    const authMissing = result.findings.filter((finding) => finding.ruleId === "auth.missing");
+    expect(authMissing).toHaveLength(1);
+    expect(authMissing[0]?.location.path).toBe("app/api/unprotected/route.ts");
+  });
+
   it("reports capability catalog entries without CVE claims", async () => {
     const result = await scanRepository([
       { path: "package.json", content: '{"dependencies":{"vm2":"1.0.0","other":"git+https://example.invalid/repo.git"}}' },
