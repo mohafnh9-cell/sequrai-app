@@ -11,12 +11,7 @@ function redirectOrigin(request: NextRequest) {
   return new URL(request.url).origin;
 }
 
-function safeNextPath(value: string | null | undefined) {
-  if (!value || !value.startsWith("/") || value.startsWith("//")) {
-    return "/onboarding";
-  }
-  return value;
-}
+import { safeNextPath } from "@/lib/auth/safe-next-path";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -24,7 +19,8 @@ export async function GET(request: NextRequest) {
   const origin = redirectOrigin(request);
   const cookieNext = request.cookies.get("sequrai_auth_next")?.value;
   const next = safeNextPath(
-    cookieNext ? decodeURIComponent(cookieNext) : searchParams.get("next")
+    cookieNext ? decodeURIComponent(cookieNext) : searchParams.get("next"),
+    "/onboarding"
   );
 
   if (!code) {

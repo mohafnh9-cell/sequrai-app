@@ -17,6 +17,14 @@ describe("verifyGitHubWebhookSignature", () => {
   it("rejects invalid signatures", () => {
     expect(verifyGitHubWebhookSignature("{}", "sha256=deadbeef", "secret")).toBe(false);
   });
+
+  it("rejects missing signature header", () => {
+    expect(verifyGitHubWebhookSignature("{}", null, "secret")).toBe(false);
+  });
+
+  it("rejects sha1-only signatures", () => {
+    expect(verifyGitHubWebhookSignature("{}", "sha1=abc", "secret")).toBe(false);
+  });
 });
 
 describe("branchFromRef", () => {

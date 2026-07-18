@@ -10,7 +10,7 @@
   "scoreDelta": "Score delta",
   "afterPriorities": "After recommended priorities",
   "sincePreviousReview": "Since previous review",
-  "fastestPathTitle": "Fastest Path Forward",
+  "fastestPathTitle": "Recommendations",
   "fastestPathSubtitle": "Resolve these priorities in order for the fastest route to production.",
   "whyItMatters": "Why it matters",
   "technicalSeverity": "Technical severity",

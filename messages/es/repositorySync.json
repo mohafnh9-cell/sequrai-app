@@ -1,0 +1,25 @@
+{
+  "title": "Estado del repositorio",
+  "connected": "Conectado.",
+  "waitingForChanges": "Esperando cambios.",
+  "latestChangeDetected": "Último cambio detectado {timeAgo}.",
+  "latestDetectedChange": "Último cambio detectado:",
+  "connectionIssue": "Problema de conexión.",
+  "reconnectRepository": "Vuelve a conectar tu repositorio.",
+  "commit": "Commit:",
+  "disconnected": "No conectado.",
+  "connectRepository": "Conecta un repositorio de GitHub para detectar cambios.",
+  "relative": {
+    "never": "Nunca",
+    "justNow": "Ahora mismo",
+    "minutesAgo": "hace {count} min",
+    "hoursAgo": "hace {count} h",
+    "daysAgo": "hace {count} d"
+  },
+  "errors": {
+    "repository_disconnected": "Repositorio desconectado.",
+    "invalid_github_connection": "Conexión de GitHub no válida.",
+    "missing_repository": "Repositorio no encontrado.",
+    "push_detection_failed": "Error al detectar el push."
+  }
+}

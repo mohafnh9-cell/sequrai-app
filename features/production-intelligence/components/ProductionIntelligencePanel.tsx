@@ -74,7 +74,8 @@ export function ProductionIntelligencePanel({
         </Card>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className={compact ? "space-y-4" : "grid gap-4 lg:grid-cols-2"}>
+        {!compact && (
         <Card className="border-primary/20 bg-gradient-to-b from-primary/5 to-transparent">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">{t("currentStatus")}</CardTitle>
@@ -108,8 +109,9 @@ export function ProductionIntelligencePanel({
             </div>
           </CardContent>
         </Card>
+        )}
 
-        <Card className="border-border/50">
+        <Card className={compact ? "border-border/50" : "border-border/50"}>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Target className="h-4 w-4 text-primary" aria-hidden />

@@ -41,7 +41,7 @@
     "dependencies": "Dependencias",
     "deployment": "Configuración de despliegue"
   },
-  "fastestPathTitle": "Camino más rápido hacia producción",
+  "fastestPathTitle": "Recommendations",
   "fastestPathSubtitle": "Resuelve estas tres prioridades para llegar antes a producción.",
   "fastestPathEmpty": "No se detectaron bloqueadores de producción. Tu aplicación está cerca de estar lista.",
   "engineerTitle": "Revisión del AI Production Engineer",
@@ -50,7 +50,7 @@
   "dashboardReadyTitle": "Tu primer Production Verdict está listo.",
   "dashboardReadyBody": "SequrAI seguirá revisando tu aplicación a medida que evolucione.",
   "goToDashboard": "Ir al dashboard",
-  "reviewFastestPath": "Revisar el camino más rápido hacia producción",
+  "reviewFastestPath": "Ver recomendaciones",
   "vendorTitle": "Tú siempre mantienes el control",
   "vendorNever": "SequrAI nunca:",
   "vendorDeploy": "Despliega tu aplicación",

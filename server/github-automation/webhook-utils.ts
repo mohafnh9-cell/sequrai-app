@@ -14,13 +14,8 @@ export function verifyGitHubWebhookSignature(
   return timingSafeEqual(Buffer.from(expected), Buffer.from(received));
 }
 
-export type GitHubPushPayload = {
-  ref: string;
-  before: string;
-  after: string;
-  repository: { id: number; full_name: string; default_branch: string; name: string; owner: { login: string } };
-  commits?: Array<{ id: string; message: string }>;
-};
+export type { GitHubPushPayload } from "@/lib/github/push-payload";
+export { branchFromRef } from "@/lib/github/push-payload";
 
 export type GitHubPullRequestPayload = {
   action: string;
@@ -39,11 +34,6 @@ export type GitHubRepositoryPayload = {
   repository?: { id: number; full_name: string; default_branch: string };
   changes?: { repository?: { name?: { from?: string } } };
 };
-
-export function branchFromRef(ref: string): string | null {
-  if (!ref.startsWith("refs/heads/")) return null;
-  return ref.slice("refs/heads/".length);
-}
 
 export function parseRepositoryFullName(fullName: string): { owner: string; repo: string } | null {
   const parts = fullName.split("/");

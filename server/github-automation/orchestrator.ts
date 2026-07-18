@@ -17,6 +17,15 @@ import {
 } from "./webhook-utils";
 import { recordRepositoryActivity } from "./activity";
 import { estimateRiskFromScan } from "@/brain";
+import { REPOSITORY_SYNC_CONFIG, parsePushDetection } from "@/brain/repository-sync";
+import { AUTOMATIC_REVIEW_CONFIG } from "@/brain/automatic-review";
+import {
+  markRepositorySyncError,
+  recordPushDetection,
+  touchWebhookLastDelivery,
+} from "@/server/repository-sync";
+import { runAutomaticProductionReview } from "@/server/automatic-review";
+import { isVerdictAutopilotEnabled } from "@/server/autopilot";
 import { formatGithubCheckDescription } from "@/brain/production-verdict/build-verdict";
 import { buildScanProductionVerdict } from "@/server/brain/build-scan-verdict";
 import { extractCriticalPaths } from "./health";
@@ -325,6 +334,12 @@ export async function processGitHubWebhookEvent(input: {
       status: "failed",
       errorMessage: "No GitHub token available for organization",
     });
+    await markRepositorySyncError(admin, {
+      organizationId: project.organization_id,
+      projectId: project.id,
+      githubRepositoryId: project.github_repository_id,
+      errorCode: "invalid_github_connection",
+    });
     return { ok: false, action: "failed", reason: "no_token" };
   }
 
@@ -402,18 +417,17 @@ async function handlePushEvent(
     appUrl?: string;
   }
 ) {
-  const branch = branchFromRef(input.payload.ref);
-  const headSha = input.payload.after;
-  const baseSha = input.payload.before;
+  const parsed = parsePushDetection(input.payload);
 
-  if (!branch || !headSha || headSha === "0000000000000000000000000000000000000000") {
+  if (!parsed) {
+    const branch = branchFromRef(input.payload.ref);
     await recordEvent(admin, {
       organizationId: input.project.organization_id,
       projectId: input.project.id,
       deliveryId: input.deliveryId,
       eventType: "push",
       branch: branch ?? undefined,
-      commitSha: headSha,
+      commitSha: input.payload.after,
       payload: input.payload as unknown as Record<string, unknown>,
       status: "ignored",
     });
@@ -425,12 +439,135 @@ async function handlePushEvent(
     projectId: input.project.id,
     deliveryId: input.deliveryId,
     eventType: "push",
-    branch,
-    commitSha: headSha,
-    baseCommitSha: baseSha,
+    branch: parsed.branch,
+    commitSha: parsed.commitSha,
+    baseCommitSha: input.payload.before,
     payload: input.payload as unknown as Record<string, unknown>,
     status: "processing",
   });
+
+  try {
+    await recordPushDetection(admin, {
+      organizationId: input.project.organization_id,
+      projectId: input.project.id,
+      githubRepositoryId: input.project.github_repository_id,
+      detection: parsed,
+    });
+    await touchWebhookLastDelivery(admin, input.project.id);
+
+    await recordEvent(admin, {
+      organizationId: input.project.organization_id,
+      projectId: input.project.id,
+      deliveryId: input.deliveryId,
+      eventType: "push",
+      branch: parsed.branch,
+      commitSha: parsed.commitSha,
+      baseCommitSha: input.payload.before,
+      payload: input.payload as unknown as Record<string, unknown>,
+      status: "processed",
+    });
+
+    if (REPOSITORY_SYNC_CONFIG.pushTriggersScan) {
+      return handlePushEventWithScan(admin, input, parsed);
+    }
+
+    if (AUTOMATIC_REVIEW_CONFIG.enabled) {
+      const autopilotEnabled = await isVerdictAutopilotEnabled(
+        admin,
+        input.project.organization_id
+      );
+
+      if (!autopilotEnabled) {
+        log("autopilot_disabled", { projectId: input.project.id });
+        return {
+          ok: true,
+          action: "change_detected",
+          branch: parsed.branch,
+          commitSha: parsed.commitSha,
+          reason: "autopilot_disabled",
+        };
+      }
+
+      const reviewResult = await runAutomaticProductionReview(admin, {
+        project: input.project,
+        detection: parsed,
+        token: input.token,
+        userId: input.userId,
+      });
+
+      log("automatic_review", {
+        projectId: input.project.id,
+        branch: parsed.branch,
+        commitSha: parsed.commitSha,
+        action: reviewResult.action,
+      });
+
+      return {
+        ok: reviewResult.ok,
+        action: reviewResult.action,
+        branch: parsed.branch,
+        commitSha: parsed.commitSha,
+        ...(reviewResult.action === "automatic_review_started"
+          ? { scanId: reviewResult.scanId, reviewStatus: reviewResult.status }
+          : {}),
+        ...(reviewResult.action === "automatic_review_skipped"
+          ? { reason: reviewResult.reason }
+          : {}),
+        ...(reviewResult.action === "automatic_review_failed"
+          ? { reason: reviewResult.reason }
+          : {}),
+      };
+    }
+
+    log("change_detected", {
+      projectId: input.project.id,
+      branch: parsed.branch,
+      commitSha: parsed.commitSha,
+    });
+
+    return {
+      ok: true,
+      action: "change_detected",
+      branch: parsed.branch,
+      commitSha: parsed.commitSha,
+    };
+  } catch (error) {
+    await markRepositorySyncError(admin, {
+      organizationId: input.project.organization_id,
+      projectId: input.project.id,
+      githubRepositoryId: input.project.github_repository_id,
+      errorCode: "push_detection_failed",
+    });
+    await recordEvent(admin, {
+      organizationId: input.project.organization_id,
+      projectId: input.project.id,
+      deliveryId: input.deliveryId,
+      eventType: "push",
+      branch: parsed.branch,
+      commitSha: parsed.commitSha,
+      payload: input.payload as unknown as Record<string, unknown>,
+      status: "failed",
+      errorMessage: error instanceof Error ? error.message : "Push detection failed",
+    });
+    throw error;
+  }
+}
+
+async function handlePushEventWithScan(
+  admin: SupabaseClient,
+  input: {
+    project: ProjectRow;
+    deliveryId: string | null;
+    payload: GitHubPushPayload;
+    token: string;
+    userId: string;
+    appUrl?: string;
+  },
+  parsed: { branch: string; commitSha: string }
+) {
+  const branch = parsed.branch;
+  const headSha = parsed.commitSha;
+  const baseSha = input.payload.before;
 
   await recordRepositoryActivity(admin, {
     organizationId: input.project.organization_id,
@@ -516,18 +653,6 @@ async function handlePushEvent(
       critical_files_changed: extractCriticalPaths(changedPaths),
     });
   }
-
-  await recordEvent(admin, {
-    organizationId: input.project.organization_id,
-    projectId: input.project.id,
-    deliveryId: input.deliveryId,
-    eventType: "push",
-    branch,
-    commitSha: headSha,
-    baseCommitSha: effectiveBase,
-    payload: input.payload as unknown as Record<string, unknown>,
-    status: "processed",
-  });
 
   return { ok: true, action: "scan_completed", scanId };
 }

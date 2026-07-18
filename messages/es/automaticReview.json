@@ -1,0 +1,33 @@
+{
+  "title": "Production Reviews automáticas",
+  "enabled": "Activadas.",
+  "disabled": "No disponible hasta que el repositorio esté conectado.",
+  "latestAutomaticReview": "Última review automática:",
+  "statusLabel": "Estado:",
+  "reviewTypeLabel": "Tipo de review:",
+  "reviewTypeAutomatic": "Automática",
+  "reviewTypeManual": "Manual",
+  "noReviewsYet": "Aún no hay reviews automáticas.",
+  "relative": {
+    "never": "Nunca",
+    "justNow": "Ahora mismo",
+    "minutesAgo": "hace {count} min",
+    "hoursAgo": "hace {count} h",
+    "daysAgo": "hace {count} d"
+  },
+  "status": {
+    "pending": "Pendiente",
+    "processing": "Procesando",
+    "completed": "Completada",
+    "failed": "Fallida"
+  },
+  "errors": {
+    "invalid_repository": "Repositorio no válido.",
+    "missing_commit": "Falta información del commit.",
+    "duplicate_review": "Este commit ya fue revisado.",
+    "review_failed": "La review automática falló.",
+    "repository_disconnected": "Repositorio desconectado.",
+    "review_in_progress": "Ya hay una review en curso."
+  },
+  "verdictUpdated": "Production Verdict actualizado."
+}

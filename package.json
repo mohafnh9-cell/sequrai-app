@@ -14,6 +14,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:security-scanner": "vitest run features/security-scanner",
+    "validate:env": "node scripts/validate-env.mjs",
+    "validate:env:production": "node scripts/validate-env.mjs --production",
+    "validate:schema": "node scripts/schema-health-check.mjs",
     "mcp": "node mcp/stdio-bridge.mjs"
   },
   "dependencies": {

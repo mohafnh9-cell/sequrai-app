@@ -11,6 +11,8 @@ import { LanguageSelector } from "@/components/shared/LanguageSelector";
 import { getTranslator } from "@/lib/i18n/server";
 import type { Metadata } from "next";
 import { McpApiKeysPanel } from "@/features/settings/McpApiKeysPanel";
+import { VerdictAutopilotToggle } from "@/features/autopilot/components/VerdictAutopilotToggle";
+import { isVerdictAutopilotEnabled } from "@/server/autopilot";
 
 export const metadata: Metadata = { title: "Settings" };
 
@@ -21,6 +23,7 @@ export default async function SettingsPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
   const { t } = await getTranslator("settings");
+  const { t: ta } = await getTranslator("autopilotExperience");
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -35,7 +38,17 @@ export default async function SettingsPage() {
     .limit(1)
     .maybeSingle();
 
-  const org = membership?.organization as { id: string; name: string; slug: string; plan: string } | null;
+  const org = membership?.organization as {
+    id: string;
+    name: string;
+    slug: string;
+    plan: string;
+    verdict_autopilot_enabled?: boolean;
+  } | null;
+
+  const autopilotEnabled = org
+    ? await isVerdictAutopilotEnabled(supabase, org.id)
+    : true;
 
   const displayName =
     profile?.full_name ??
@@ -56,6 +69,21 @@ export default async function SettingsPage() {
           <LanguageSelector variant="settings" />
         </CardContent>
       </Card>
+
+      {org && (
+        <Card className="border-border/50">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-base">{ta("settings.title")}</CardTitle>
+            <CardDescription>{ta("settings.subtitle")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <VerdictAutopilotToggle enabled={autopilotEnabled} />
+            <p className="text-xs text-muted-foreground">
+              {autopilotEnabled ? ta("settings.enabledHelp") : ta("settings.disabledHelp")}
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="border-border/50">
         <CardHeader className="pb-4">

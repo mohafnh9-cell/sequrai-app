@@ -1,0 +1,1 @@
+export { finalizeProjectStateAfterAutomaticReview } from "./finalize";

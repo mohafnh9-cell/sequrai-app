@@ -51,6 +51,7 @@ export type OrganizationRow = {
   slug: string;
   plan: OrgPlan;
   logo_url: string | null;
+  verdict_autopilot_enabled?: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -104,6 +105,7 @@ export type ScanRow = {
   repository_id: string;
   triggered_by_user_id: string;
   trigger_type: "manual" | "webhook" | "scheduled" | "mcp";
+  review_type: "manual" | "automatic";
   scan_type: ScanType;
   status: ScanStatus;
   progress: number;

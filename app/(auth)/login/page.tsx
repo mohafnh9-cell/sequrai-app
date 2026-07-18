@@ -1,17 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Shield, Eye, EyeOff, Loader2, AlertCircle } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Shield, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n/client";
+import { safeNextPath } from "@/lib/auth/safe-next-path";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useI18n("auth");
   const { t: tc } = useI18n("common");
   const [email, setEmail] = useState("");
@@ -20,6 +22,8 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const redirectTarget = safeNextPath(searchParams.get("redirectTo"));
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +42,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.push("/onboarding");
+    router.push(redirectTarget);
     router.refresh();
   };
 
@@ -46,6 +50,7 @@ export default function LoginPage() {
     setGithubLoading(true);
     setError(null);
     try {
+      document.cookie = `sequrai_auth_next=${encodeURIComponent(redirectTarget)}; path=/; max-age=600; SameSite=Lax`;
       const supabase = createClient();
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "github",
@@ -166,5 +171,13 @@ export default function LoginPage() {
         </Link>
       </p>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="w-full max-w-sm h-96 animate-pulse rounded-lg bg-muted/30" />}>
+      <LoginForm />
+    </Suspense>
   );
 }

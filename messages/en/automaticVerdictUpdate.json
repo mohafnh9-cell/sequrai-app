@@ -1,0 +1,10 @@
+{
+  "errors": {
+    "automatic_review_failed": "Automatic review failed.",
+    "verdict_generation_failed": "Production Verdict could not be updated.",
+    "journey_update_failed": "Production Journey could not be updated.",
+    "missing_repository": "Repository not found.",
+    "missing_review": "Review not found.",
+    "invalid_commit": "Invalid commit."
+  }
+}

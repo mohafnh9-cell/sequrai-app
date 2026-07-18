@@ -21,6 +21,8 @@ type ScanContext = {
   scanType?: "full" | "incremental";
   baseCommitSha?: string;
   headCommitSha?: string;
+  /** Automatic reviews store scan results without updating verdicts or project scores. */
+  persistMode?: "full" | "review_only";
 };
 
 type Finding = {
@@ -271,30 +273,38 @@ export class InlineScanJobRunner implements ScanJobRunner {
         info_count: counts.info,
         completed_at: completedAt,
       });
-      await this.supabase
-        .from("projects")
-        .update({ security_score: score, last_scan_at: completedAt })
-        .eq("id", context.repositoryId)
-        .eq("organization_id", context.organizationId);
+
+      const reviewOnly = context.persistMode === "review_only";
+
+      if (!reviewOnly) {
+        await this.supabase
+          .from("projects")
+          .update({ security_score: score, last_scan_at: completedAt })
+          .eq("id", context.repositoryId)
+          .eq("organization_id", context.organizationId);
+      }
+
       await this.updateState(context, {
         active_scan_id: null,
         last_scan_id: context.scanId,
         last_commit_sha: snapshot.commitSha,
-        ...(isIncremental ? {} : { last_full_scan_at: completedAt }),
-        last_security_score: score,
-        open_findings_count: rows.length,
+        ...(isIncremental || reviewOnly ? {} : { last_full_scan_at: completedAt }),
+        ...(reviewOnly ? {} : { last_security_score: score, open_findings_count: rows.length }),
       });
-      await generateAndPersistProductionVerdict(this.supabase, {
-        organizationId: context.organizationId,
-        projectId: context.repositoryId,
-        scanId: context.scanId,
-      }).catch((error) => {
-        logScan("error", "verdict_persistence_failed", {
+
+      if (!reviewOnly) {
+        await generateAndPersistProductionVerdict(this.supabase, {
+          organizationId: context.organizationId,
+          projectId: context.repositoryId,
           scanId: context.scanId,
-          repositoryId: context.repositoryId,
-          error: error instanceof Error ? error.message : String(error),
+        }).catch((error) => {
+          logScan("error", "verdict_persistence_failed", {
+            scanId: context.scanId,
+            repositoryId: context.repositoryId,
+            error: error instanceof Error ? error.message : String(error),
+          });
         });
-      });
+      }
       logScan("info", "scan_completed", {
         scanId: context.scanId,
         repositoryId: context.repositoryId,

@@ -12,7 +12,9 @@ import { PortfolioVerdictCard } from "@/features/production-verdict/components/P
 import { FirstVerdictDashboardModal } from "@/features/onboarding/components/FirstVerdictDashboardModal";
 import { buildOrgBrain } from "@/server/brain/build-org-brain";
 import { DashboardProductionIntelligence } from "@/features/production-intelligence/components/DashboardProductionIntelligence";
+import { AutopilotDashboardSection } from "@/features/autopilot/components/AutopilotDashboardSection";
 import { getProductionIntelligencePreview } from "@/server/production-intelligence/service";
+import { getAutopilotDashboardView } from "@/server/autopilot";
 import { organizationHasProductionVerdict } from "@/server/onboarding/has-production-verdict";
 import { getTranslator } from "@/lib/i18n/server";
 import type { Metadata } from "next";
@@ -66,6 +68,7 @@ export default async function DashboardPage() {
   if (!hasVerdict) redirect("/onboarding");
 
   const brain = await buildOrgBrain(supabase, org.id);
+  const autopilotDashboard = await getAutopilotDashboardView(supabase, org.id);
 
   const { data: recentProjects } = await supabase
     .from("projects")
@@ -139,6 +142,8 @@ export default async function DashboardPage() {
       </div>
 
       <ProductionHero orgBrain={brain} />
+
+      <AutopilotDashboardSection view={autopilotDashboard} />
 
       <DashboardProductionIntelligence
         improvingCount={improvingCount}

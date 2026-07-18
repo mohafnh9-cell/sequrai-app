@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RunSecurityScanButton } from "./RunSecurityScanButton";
+import { useI18n } from "@/lib/i18n/client";
 import {
   formatScanDate,
   scanCommit,
@@ -40,6 +41,7 @@ export function ProjectScanOverview({
   projectId: string;
   repositoryConnected: boolean;
 }) {
+  const { t } = useI18n("projects");
   const [scans, setScans] = useState<ScanRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -57,15 +59,15 @@ export function ProjectScanOverview({
       const body = (await response.json().catch(() => null)) as
         | { scans?: ScanRecord[]; nextCursor?: string | null; error?: string }
         | null;
-      if (!response.ok) throw new Error(body?.error || "Could not load scan history.");
+      if (!response.ok) throw new Error(body?.error || t("reviewHistory.loadError"));
       setScans(Array.isArray(body?.scans) ? body.scans : []);
       setNextCursor(body?.nextCursor ?? null);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not load scan history.");
+      setError(cause instanceof Error ? cause.message : t("reviewHistory.loadError"));
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, [projectId, t]);
 
   const loadMore = async () => {
     if (!nextCursor || loadingMore) return;
@@ -79,12 +81,12 @@ export function ProjectScanOverview({
       const body = (await response.json().catch(() => null)) as
         | { scans?: ScanRecord[]; nextCursor?: string | null; error?: string }
         | null;
-      if (!response.ok) throw new Error(body?.error || "Could not load more scans.");
+      if (!response.ok) throw new Error(body?.error || t("reviewHistory.loadMoreError"));
       setScans((current) => [...current, ...(body?.scans ?? [])]);
       setNextCursor(body?.nextCursor ?? null);
     } catch (cause) {
       setPaginationError(
-        cause instanceof Error ? cause.message : "Could not load more scans."
+        cause instanceof Error ? cause.message : t("reviewHistory.loadMoreError")
       );
     } finally {
       setLoadingMore(false);
@@ -107,22 +109,20 @@ export function ProjectScanOverview({
       : null);
 
   return (
-    <section className="space-y-4" aria-labelledby="security-scans-heading">
+    <section className="space-y-4" aria-labelledby="review-history-heading">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
         <div>
-          <h2 id="security-scans-heading" className="text-lg font-semibold">
-            Production analyses
+          <h2 id="review-history-heading" className="text-lg font-semibold">
+            {t("reviewHistory.title")}
           </h2>
-          <p className="text-sm text-muted-foreground">
-            Static analysis results from the connected repository.
-          </p>
+          <p className="text-sm text-muted-foreground">{t("reviewHistory.subtitle")}</p>
         </div>
         <RunSecurityScanButton projectId={projectId} disabled={!repositoryConnected} />
       </div>
 
       {!repositoryConnected && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700">
-          Connect a GitHub repository before running a scan.
+          {t("reviewHistory.connectFirst")}
         </div>
       )}
 
@@ -130,7 +130,7 @@ export function ProjectScanOverview({
         <Card>
           <CardContent className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Loading scan history…
+            {t("reviewHistory.loading")}
           </CardContent>
         </Card>
       ) : error ? (
@@ -142,7 +142,7 @@ export function ProjectScanOverview({
             </p>
             <Button variant="outline" size="sm" onClick={() => void load()}>
               <RefreshCw className="mr-2 h-3.5 w-3.5" />
-              Retry
+              {t("reviewHistory.retry")}
             </Button>
           </CardContent>
         </Card>
@@ -150,9 +150,9 @@ export function ProjectScanOverview({
         <Card>
           <CardContent className="flex flex-col items-center py-10 text-center">
             <ShieldCheck className="mb-3 h-9 w-9 text-muted-foreground" />
-            <p className="font-medium">No security scans yet</p>
+            <p className="font-medium">{t("reviewHistory.emptyTitle")}</p>
             <p className="mt-1 max-w-md text-sm text-muted-foreground">
-              Run the first scan to establish a security score and review findings.
+              {t("reviewHistory.emptyBody")}
             </p>
           </CardContent>
         </Card>
@@ -161,7 +161,9 @@ export function ProjectScanOverview({
           <div className="grid gap-3 sm:grid-cols-3">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">Latest score</CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">
+                  {t("reviewHistory.latestScore")}
+                </CardTitle>
               </CardHeader>
               <CardContent className="text-3xl font-bold">
                 {latestScore === null ? "—" : `${latestScore}/100`}
@@ -169,7 +171,9 @@ export function ProjectScanOverview({
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">Findings</CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">
+                  {t("reviewHistory.findings")}
+                </CardTitle>
               </CardHeader>
               <CardContent className="text-3xl font-bold">
                 {latestCount === null ? "—" : latestCount}
@@ -177,7 +181,9 @@ export function ProjectScanOverview({
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">Last scan</CardTitle>
+                <CardTitle className="text-sm text-muted-foreground">
+                  {t("reviewHistory.lastReview")}
+                </CardTitle>
               </CardHeader>
               <CardContent className="text-sm font-medium">
                 {formatScanDate(scanDate(latest))}
@@ -187,7 +193,7 @@ export function ProjectScanOverview({
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Scan history</CardTitle>
+              <CardTitle className="text-base">{t("reviewHistory.historyTitle")}</CardTitle>
             </CardHeader>
             <CardContent className="divide-y p-0">
               {scans.map((scan, index) => {
@@ -200,14 +206,14 @@ export function ProjectScanOverview({
                     <div className="min-w-0 space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge variant="outline" className={statusClass(scan.status)}>
-                          {scan.status || "Unknown"}
+                          {scan.status || t("reviewHistory.unknown")}
                         </Badge>
                         {scanScore(scan) !== null && (
                           <span className="text-sm font-semibold">{scanScore(scan)}/100</span>
                         )}
                         {scan.findings_count !== undefined && (
                           <span className="text-xs text-muted-foreground">
-                            {scan.findings_count} findings
+                            {t("reviewHistory.findingsCount", { count: scan.findings_count })}
                           </span>
                         )}
                       </div>
@@ -227,7 +233,8 @@ export function ProjectScanOverview({
                     {id && (
                       <Button variant="ghost" size="sm" asChild>
                         <Link href={`/projects/${projectId}/scans/${id}`}>
-                          View results <ArrowRight className="ml-2 h-3.5 w-3.5" />
+                          {t("reviewHistory.viewResults")}{" "}
+                          <ArrowRight className="ml-2 h-3.5 w-3.5" />
                         </Link>
                       </Button>
                     )}
@@ -243,7 +250,7 @@ export function ProjectScanOverview({
                     disabled={loadingMore}
                   >
                     {loadingMore && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
-                    Load more scans
+                    {t("reviewHistory.loadMore")}
                   </Button>
                   {paginationError && (
                     <p className="text-xs text-destructive">{paginationError}</p>

@@ -211,7 +211,7 @@ describe("Block 6.6 Production Intelligence", () => {
     const { loadNamespace } = await import("@/lib/i18n/load-messages");
     const en = loadNamespace("en", "productionIntelligence");
     const es = loadNamespace("es", "productionIntelligence");
-    expect(en.panelTitle).toBe("Production Intelligence");
+    expect(en.panelTitle).toBe("Recommendations");
     expect((es.momentum as Record<string, string>).improving).toBe("Mejorando");
     expect((en.whatChanged as Record<string, string>).scoreIncreased).toContain("{points}");
   });

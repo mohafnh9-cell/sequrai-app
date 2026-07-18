@@ -1,0 +1,48 @@
+{
+  "title": "Continuous Reviews",
+  "oneLiner": "Cada push se revisa automáticamente. Tu Production Verdict se mantiene al día.",
+  "subtitleReviewed": "Tus últimos cambios han sido revisados.",
+  "subtitleWaiting": "Esperando tu próximo push.",
+  "subtitleReviewing": "Revisando tus últimos cambios.",
+  "subtitleDisabled": "Continuous Reviews están en pausa.",
+  "subtitleDisconnected": "Conecta un repositorio para activar Continuous Reviews.",
+  "subtitleFailed": "No se pudo completar la última revisión.",
+  "subtitleEnabled": "Monitorizando este repositorio.",
+  "subtitleCloser": "Tu aplicación está más cerca de estar lista para producción.",
+  "lastReviewLabel": "Última revisión",
+  "states": {
+    "enabled": "Activo",
+    "reviewing_changes": "Revisando",
+    "up_to_date": "Al día",
+    "waiting_for_changes": "Esperando",
+    "review_failed": "Revisión fallida",
+    "repository_disconnected": "Sin conexión",
+    "disabled": "En pausa"
+  },
+  "relative": {
+    "never": "Nunca",
+    "justNow": "Ahora mismo",
+    "minutesAgo": "hace {count} min",
+    "hoursAgo": "hace {count} h",
+    "daysAgo": "hace {count} d"
+  },
+  "dashboard": {
+    "title": "Continuous Reviews",
+    "subtitle": "Proyectos revisados automáticamente tras cada push.",
+    "monitored": "Monitorizados",
+    "waiting": "Esperando cambios",
+    "approaching": "Cerca de producción",
+    "latestReview": "Última revisión",
+    "latestReviewProject": "en {project}",
+    "empty": "Conecta un repositorio para iniciar Continuous Reviews.",
+    "connect": "Conectar repositorio"
+  },
+  "settings": {
+    "title": "Continuous Reviews",
+    "subtitle": "Revisa tu aplicación automáticamente cuando el código cambia.",
+    "on": "ON",
+    "off": "OFF",
+    "enabledHelp": "SequrAI revisa cada push y mantiene tu Production Verdict al día.",
+    "disabledHelp": "Continuous Reviews están en pausa. Puedes ejecutar revisiones manualmente."
+  }
+}

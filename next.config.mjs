@@ -1,3 +1,13 @@
+const bypass = process.env.SEQURAI_BYPASS_AUTH?.trim().toLowerCase();
+const bypassEnabled = bypass === "true" || bypass === "1" || bypass === "yes";
+const deployedProduction = process.env.VERCEL_ENV === "production";
+
+if (deployedProduction && bypassEnabled) {
+  throw new Error(
+    "SEQURAI_BYPASS_AUTH cannot be enabled on Vercel production. Remove it from your deployment environment."
+  );
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   turbopack: {},

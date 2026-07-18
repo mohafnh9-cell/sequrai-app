@@ -22,14 +22,18 @@ export async function GET() {
   );
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const providerToken = await resolveGitHubAccessToken(session.user.id, session);
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const providerToken = await resolveGitHubAccessToken(user.id, session);
 
   if (!providerToken) {
     return NextResponse.json(

@@ -41,7 +41,7 @@
     "dependencies": "Dependencies",
     "deployment": "Deployment configuration"
   },
-  "fastestPathTitle": "Fastest Path Forward",
+  "fastestPathTitle": "Recommendations",
   "fastestPathSubtitle": "Resolve these three priorities for the fastest route to production.",
   "fastestPathEmpty": "No production blockers detected. Your application looks close to production readiness.",
   "engineerTitle": "AI Production Engineer Review",
@@ -50,7 +50,7 @@
   "dashboardReadyTitle": "Your first Production Verdict is ready.",
   "dashboardReadyBody": "SequrAI will continue reviewing your application as it evolves.",
   "goToDashboard": "Go to Dashboard",
-  "reviewFastestPath": "Review Fastest Path Forward",
+  "reviewFastestPath": "View recommendations",
   "vendorTitle": "You always remain in control",
   "vendorNever": "SequrAI never:",
   "vendorDeploy": "Deploys your application",

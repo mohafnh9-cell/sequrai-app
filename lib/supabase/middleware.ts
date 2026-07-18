@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { isAuthBypassEnabled } from "@/lib/auth/dev-bypass";
+import { safeNextPath } from "@/lib/auth/safe-next-path";
 
 const PROTECTED_PATHS = [
   "/dashboard",
@@ -59,7 +60,8 @@ export async function updateSession(request: NextRequest) {
 
   if (user && isAuthPath) {
     const url = request.nextUrl.clone();
-    url.pathname = "/onboarding";
+    url.pathname = safeNextPath(request.nextUrl.searchParams.get("redirectTo"));
+    url.searchParams.delete("redirectTo");
     return NextResponse.redirect(url);
   }
 

@@ -13,6 +13,10 @@ import enErrors from "@/messages/en/errors.json";
 import enIntegrations from "@/messages/en/integrations.json";
 import enProductionJourney from "@/messages/en/productionJourney.json";
 import enProductionIntelligence from "@/messages/en/productionIntelligence.json";
+import enRepositorySync from "@/messages/en/repositorySync.json";
+import enAutomaticReview from "@/messages/en/automaticReview.json";
+import enAutomaticVerdictUpdate from "@/messages/en/automaticVerdictUpdate.json";
+import enAutopilotExperience from "@/messages/en/autopilotExperience.json";
 import enTechnicalDetails from "@/messages/en/technicalDetails.json";
 
 import esCommon from "@/messages/es/common.json";
@@ -27,6 +31,10 @@ import esErrors from "@/messages/es/errors.json";
 import esIntegrations from "@/messages/es/integrations.json";
 import esProductionJourney from "@/messages/es/productionJourney.json";
 import esProductionIntelligence from "@/messages/es/productionIntelligence.json";
+import esRepositorySync from "@/messages/es/repositorySync.json";
+import esAutomaticReview from "@/messages/es/automaticReview.json";
+import esAutomaticVerdictUpdate from "@/messages/es/automaticVerdictUpdate.json";
+import esAutopilotExperience from "@/messages/es/autopilotExperience.json";
 import esTechnicalDetails from "@/messages/es/technicalDetails.json";
 
 const PACKAGES: Record<AppLocale, Record<MessageNamespace, Messages>> = {
@@ -40,6 +48,10 @@ const PACKAGES: Record<AppLocale, Record<MessageNamespace, Messages>> = {
     verdict: enVerdict,
     productionJourney: enProductionJourney,
     productionIntelligence: enProductionIntelligence,
+    repositorySync: enRepositorySync,
+    automaticReview: enAutomaticReview,
+    automaticVerdictUpdate: enAutomaticVerdictUpdate,
+    autopilotExperience: enAutopilotExperience,
     integrations: enIntegrations,
     settings: enSettings,
     errors: enErrors,
@@ -56,6 +68,10 @@ const PACKAGES: Record<AppLocale, Record<MessageNamespace, Messages>> = {
     verdict: esVerdict,
     productionJourney: esProductionJourney,
     productionIntelligence: esProductionIntelligence,
+    repositorySync: esRepositorySync,
+    automaticReview: esAutomaticReview,
+    automaticVerdictUpdate: esAutomaticVerdictUpdate,
+    autopilotExperience: esAutopilotExperience,
     integrations: esIntegrations,
     settings: esSettings,
     errors: esErrors,
@@ -82,6 +98,10 @@ export function loadAllMessages(locale: AppLocale): Messages {
     { integrations: PACKAGES[locale].integrations },
     { productionJourney: PACKAGES[locale].productionJourney },
     { productionIntelligence: PACKAGES[locale].productionIntelligence },
+    { repositorySync: PACKAGES[locale].repositorySync },
+    { automaticReview: PACKAGES[locale].automaticReview },
+    { automaticVerdictUpdate: PACKAGES[locale].automaticVerdictUpdate },
+    { autopilotExperience: PACKAGES[locale].autopilotExperience },
     { technicalDetails: PACKAGES[locale].technicalDetails }
   );
 }

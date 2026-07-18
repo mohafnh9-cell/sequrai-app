@@ -1,0 +1,48 @@
+{
+  "title": "Continuous Reviews",
+  "oneLiner": "Every push is reviewed automatically. Your Production Verdict stays up to date.",
+  "subtitleReviewed": "Your latest changes have been reviewed.",
+  "subtitleWaiting": "Waiting for your next push.",
+  "subtitleReviewing": "Reviewing your latest changes.",
+  "subtitleDisabled": "Continuous Reviews are paused.",
+  "subtitleDisconnected": "Connect a repository to enable Continuous Reviews.",
+  "subtitleFailed": "The latest review could not be completed.",
+  "subtitleEnabled": "Monitoring this repository for changes.",
+  "subtitleCloser": "Your application is getting closer to production.",
+  "lastReviewLabel": "Last review",
+  "states": {
+    "enabled": "Active",
+    "reviewing_changes": "Reviewing",
+    "up_to_date": "Up to date",
+    "waiting_for_changes": "Waiting",
+    "review_failed": "Review failed",
+    "repository_disconnected": "Not connected",
+    "disabled": "Paused"
+  },
+  "relative": {
+    "never": "Never",
+    "justNow": "Just now",
+    "minutesAgo": "{count} minutes ago",
+    "hoursAgo": "{count} hours ago",
+    "daysAgo": "{count} days ago"
+  },
+  "dashboard": {
+    "title": "Continuous Reviews",
+    "subtitle": "Projects reviewed automatically after each push.",
+    "monitored": "Monitored",
+    "waiting": "Waiting for changes",
+    "approaching": "Approaching production",
+    "latestReview": "Latest review",
+    "latestReviewProject": "in {project}",
+    "empty": "Connect a repository to start Continuous Reviews.",
+    "connect": "Connect repository"
+  },
+  "settings": {
+    "title": "Continuous Reviews",
+    "subtitle": "Review your application automatically when code changes.",
+    "on": "ON",
+    "off": "OFF",
+    "enabledHelp": "SequrAI reviews every push and keeps your Production Verdict up to date.",
+    "disabledHelp": "Continuous Reviews are paused. You can still run reviews manually."
+  }
+}

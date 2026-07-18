@@ -66,9 +66,9 @@ export default async function ProjectsPage() {
         description={t("subtitle", { count: projectList.length })}
         action={
           <Button size="sm" asChild>
-            <Link href="/projects/new">
+            <Link href="/integrations">
               <Plus className="mr-2 h-4 w-4" />
-              {t("newProject")}
+              {t("connectRepository")}
             </Link>
           </Button>
         }

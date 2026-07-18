@@ -43,9 +43,15 @@ type User = {
 export function DashboardSidebar({
   user,
   orgName,
+  onNavigate,
+  headerAction,
+  className,
 }: {
   user: User;
   orgName?: string;
+  onNavigate?: () => void;
+  headerAction?: React.ReactNode;
+  className?: string;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -72,14 +78,16 @@ export function DashboardSidebar({
     href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
 
   return (
-    <aside className="flex h-full w-60 shrink-0 flex-col border-r border-border bg-card">
+    <aside className={cn("flex h-full w-60 shrink-0 flex-col border-r border-border bg-card", className)}>
       <div className="flex h-14 items-center gap-2.5 border-b border-border px-4">
         <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary">
           <Shield className="h-4 w-4 text-white" />
         </div>
         <div className="flex flex-1 items-center justify-between min-w-0">
           <span className="truncate text-sm font-semibold">{orgName ?? "SequrAI"}</span>
-          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          {headerAction ?? (
+            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          )}
         </div>
       </div>
 
@@ -91,6 +99,7 @@ export function DashboardSidebar({
             label={t(item.labelKey)}
             icon={item.icon}
             active={isActive(item.href)}
+            onNavigate={onNavigate}
           />
         ))}
       </nav>
@@ -138,15 +147,18 @@ function NavLink({
   label,
   icon: Icon,
   active,
+  onNavigate,
 }: {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   active: boolean;
+  onNavigate?: () => void;
 }) {
   return (
     <Link
       href={href}
+      onClick={onNavigate}
       className={cn(
         "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors",
         active

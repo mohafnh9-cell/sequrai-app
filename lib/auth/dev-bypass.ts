@@ -3,11 +3,10 @@ import "server-only";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { isAuthBypassAllowed } from "@/lib/env/production-guard";
 
 export function isAuthBypassEnabled(): boolean {
-  return (
-    process.env.SEQURAI_BYPASS_AUTH === "true" || process.env.SEQURAI_BYPASS_AUTH === "1"
-  );
+  return isAuthBypassAllowed();
 }
 
 type BypassContext = {

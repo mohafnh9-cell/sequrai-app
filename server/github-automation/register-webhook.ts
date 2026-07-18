@@ -12,6 +12,7 @@ import {
   resolveWebhookCallbackUrl,
   SEQURAI_WEBHOOK_EVENTS,
 } from "@/lib/github/webhook-service";
+import { initializeRepositorySyncStatus } from "@/server/repository-sync";
 
 export type WebhookRegistrationResult =
   | { status: "created"; hookId: number }
@@ -84,6 +85,12 @@ export async function registerProjectWebhook(
     })
     .eq("id", input.projectId)
     .eq("organization_id", input.organizationId);
+
+  await initializeRepositorySyncStatus(admin, {
+    organizationId: input.organizationId,
+    projectId: input.projectId,
+    githubRepositoryId: input.repo.id,
+  });
 
   return { status, hookId };
 }

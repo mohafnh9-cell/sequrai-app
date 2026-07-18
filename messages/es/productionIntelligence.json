@@ -1,10 +1,10 @@
 {
-  "panelTitle": "Production Intelligence",
-  "panelSubtitle": "Qué ha cambiado, qué necesita atención y qué hacer a continuación.",
+  "panelTitle": "Recommendations",
+  "panelSubtitle": "En qué enfocarte a continuación.",
   "currentStatus": "Estado de producción actual",
   "latestImprovements": "Últimas mejoras",
   "latestRegressions": "Últimas regresiones",
-  "recommendedNextAction": "Siguiente acción recomendada",
+  "recommendedNextAction": "Recomendación principal",
   "currentFocus": "Foco actual",
   "estimatedTime": "Tiempo estimado de mejora",
   "journeySummary": "Resumen del Production Journey",
@@ -27,7 +27,7 @@
   "runReview": "Ejecutar revisión de producción",
   "scorePoints": "{points} puntos",
   "emptyStates": {
-    "first_review": "Tu Production Intelligence comienza con tu primera revisión.",
+    "first_review": "Tus recomendaciones comienzan con tu primera revisión.",
     "one_review": "Completa otra revisión para desbloquear el seguimiento de cambios y recomendaciones.",
     "no_activity": "No se detectó actividad de producción reciente.",
     "no_blockers": "Sin bloqueadores de producción activos. Mantén revisiones periódicas.",
@@ -98,7 +98,7 @@
     "technicalReview": "Una revisión técnica enfocada aclarará el camino más rápido hacia producción."
   },
   "dashboard": {
-    "title": "Production Intelligence",
+    "title": "Recommendations",
     "subtitle": "Qué ha cambiado, qué necesita atención y qué hacer a continuación en tu portfolio.",
     "whatChanged": "¿Qué ha cambiado?",
     "needsAttention": "¿Qué necesita atención?",

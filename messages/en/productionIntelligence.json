@@ -1,10 +1,10 @@
 {
-  "panelTitle": "Production Intelligence",
-  "panelSubtitle": "What changed, what needs attention, and what to do next.",
+  "panelTitle": "Recommendations",
+  "panelSubtitle": "What to focus on next.",
   "currentStatus": "Current Production Status",
   "latestImprovements": "Latest Improvements",
   "latestRegressions": "Latest Regressions",
-  "recommendedNextAction": "Recommended Next Action",
+  "recommendedNextAction": "Top recommendation",
   "currentFocus": "Current Focus",
   "estimatedTime": "Estimated Time to Improvement",
   "journeySummary": "Production Journey Summary",
@@ -27,7 +27,7 @@
   "runReview": "Run production review",
   "scorePoints": "{points} points",
   "emptyStates": {
-    "first_review": "Your production intelligence begins with your first review.",
+    "first_review": "Your recommendations begin with your first review.",
     "one_review": "Complete another review to unlock change tracking and recommendations.",
     "no_activity": "No recent production activity detected.",
     "no_blockers": "No active production blockers. Keep validating with regular reviews.",
@@ -98,7 +98,7 @@
     "technicalReview": "A focused technical review will clarify the fastest path to production."
   },
   "dashboard": {
-    "title": "Production Intelligence",
+    "title": "Recommendations",
     "subtitle": "What changed, what needs attention, and what to do next across your portfolio.",
     "whatChanged": "What changed?",
     "needsAttention": "What needs attention?",

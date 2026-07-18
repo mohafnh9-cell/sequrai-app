@@ -18,12 +18,23 @@ export async function POST(request: Request) {
     );
   }
 
+  const contentType = request.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/json")) {
+    return NextResponse.json({ error: "Unsupported content type" }, { status: 415 });
+  }
+
   const deliveryId = request.headers.get("x-github-delivery");
   const eventType = request.headers.get("x-github-event") ?? "unknown";
   const signature = request.headers.get("x-hub-signature-256");
   const rawBody = await request.text();
 
   if (!verifyGitHubWebhookSignature(rawBody, signature, secret)) {
+    console.warn({
+      component: "github-webhook",
+      event: "invalid_signature",
+      deliveryId,
+      eventType: request.headers.get("x-github-event") ?? "unknown",
+    });
     return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 

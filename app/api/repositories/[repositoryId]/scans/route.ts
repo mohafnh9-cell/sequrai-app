@@ -134,6 +134,7 @@ export async function POST(
         repository_id: project.id,
         triggered_by_user_id: user.id,
         trigger_type: "manual",
+        review_type: "manual",
         scan_type: parsedBody.data.scanType,
         status: "queued",
         progress: 0,

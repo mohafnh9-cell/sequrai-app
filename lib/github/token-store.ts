@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { decryptToken, encryptToken } from "@/lib/crypto/token-encryption";
 
 export async function saveGitHubToken(
   userId: string,
@@ -11,8 +12,8 @@ export async function saveGitHubToken(
     const admin = createAdminClient();
     const { error } = await admin.from("user_github_tokens").upsert({
       user_id: userId,
-      access_token: accessToken,
-      refresh_token: refreshToken ?? null,
+      access_token: encryptToken(accessToken),
+      refresh_token: refreshToken ? encryptToken(refreshToken) : null,
       updated_at: new Date().toISOString(),
     });
     if (error) {
@@ -38,7 +39,8 @@ export async function getStoredGitHubToken(userId: string): Promise<string | nul
       console.error("github_token_read_failed", { code: error.code, userId });
       return null;
     }
-    return data?.access_token ?? null;
+    if (!data?.access_token) return null;
+    return decryptToken(data.access_token);
   } catch {
     return null;
   }
