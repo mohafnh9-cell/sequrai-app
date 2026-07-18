@@ -2,9 +2,16 @@
 
 import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import {
+  findingsByIdMap,
+  fixPromptInputFromPriority,
+  projectedVerdictAfterFix,
+} from "@/brain/fix-prompt";
 import type { ProductionPriority } from "@/brain/production-verdict/schema";
 import { trackEvent } from "@/lib/analytics/track";
 import { useI18n } from "@/lib/i18n/client";
+import type { FixPromptContext } from "../fix-prompt-context";
+import { CopyProductionFixPromptButton } from "./CopyProductionFixPromptButton";
 
 function severityLabel(severity: ProductionPriority["severity"]) {
   return severity.charAt(0).toUpperCase() + severity.slice(1);
@@ -13,11 +20,24 @@ function severityLabel(severity: ProductionPriority["severity"]) {
 export function ProductionPriorityItem({
   priority,
   onReview,
+  fixPromptContext,
 }: {
   priority: ProductionPriority;
   onReview?: () => void;
+  fixPromptContext?: FixPromptContext;
 }) {
   const { t } = useI18n("verdict");
+  const findingsMap = fixPromptContext?.findings
+    ? findingsByIdMap(fixPromptContext.findings)
+    : undefined;
+  const fixPromptInput = fixPromptInputFromPriority(priority, {
+    projectName: fixPromptContext?.projectName,
+    stack: fixPromptContext?.stack,
+    findingsById: findingsMap,
+    currentVerdictStatus: fixPromptContext?.currentVerdictStatus,
+    currentScore: fixPromptContext?.currentScore,
+  });
+  const projectedVerdict = projectedVerdictAfterFix(fixPromptInput);
 
   return (
     <li className="group relative rounded-xl border border-border/70 bg-[#101014]/60 p-4 md:p-5">
@@ -69,20 +89,31 @@ export function ProductionPriorityItem({
             <p className="font-medium text-[#64D98B]">
               {t("points", { count: priority.projectedScoreImpact })}
             </p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {t("projectedVerdictAfterFix")}: {projectedVerdict}
+            </p>
           </div>
-          {onReview && (
-            <button
-              type="button"
-              onClick={() => {
-                trackEvent("priority_opened", { priorityId: priority.id, rank: priority.rank });
-                onReview();
-              }}
-              className="inline-flex items-center gap-1 text-sm text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
-            >
-              {t("reviewFix")}
-              <ChevronRight className="h-3.5 w-3.5" aria-hidden />
-            </button>
-          )}
+          <div className="flex flex-col gap-2 md:items-end">
+            <CopyProductionFixPromptButton
+              input={fixPromptInput}
+              source="priority"
+              priorityId={priority.id}
+              className="w-full md:w-auto"
+            />
+            {onReview && (
+              <button
+                type="button"
+                onClick={() => {
+                  trackEvent("priority_opened", { priorityId: priority.id, rank: priority.rank });
+                  onReview();
+                }}
+                className="inline-flex items-center gap-1 text-sm text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded"
+              >
+                {t("reviewFix")}
+                <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -99,9 +130,11 @@ export function ProductionPriorityItem({
 export function FastestPathForward({
   priorities,
   onReviewPriority,
+  fixPromptContext,
 }: {
   priorities: ProductionPriority[];
   onReviewPriority?: (priority: ProductionPriority) => void;
+  fixPromptContext?: FixPromptContext;
 }) {
   const { t } = useI18n("verdict");
 
@@ -111,9 +144,9 @@ export function FastestPathForward({
     <section aria-labelledby="fastest-path-heading" className="space-y-4">
       <div>
         <h2 id="fastest-path-heading" className="text-lg font-semibold tracking-tight">
-          {t("fastestPathTitle")}
+          {t("productionBlockersTitle")}
         </h2>
-        <p className="text-sm text-muted-foreground mt-1">{t("fastestPathSubtitle")}</p>
+        <p className="text-sm text-muted-foreground mt-1">{t("productionBlockersSubtitle")}</p>
       </div>
       <ol className="space-y-3 list-none">
         {priorities.slice(0, 3).map((priority) => (
@@ -121,6 +154,7 @@ export function FastestPathForward({
             key={priority.id}
             priority={priority}
             onReview={onReviewPriority ? () => onReviewPriority(priority) : undefined}
+            fixPromptContext={fixPromptContext}
           />
         ))}
       </ol>

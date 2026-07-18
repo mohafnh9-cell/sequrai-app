@@ -19,6 +19,10 @@ import { VerdictStatusBadge } from "@/features/production-verdict/components/Ver
 import { useI18n } from "@/lib/i18n/client";
 import { useDemoNavigation } from "@/features/demo/use-demo-navigation";
 import { trackEvent } from "@/lib/analytics/track";
+import type { ProductionPriority } from "@/brain/production-verdict/schema";
+import { fixPromptInputFromPriority } from "@/brain/fix-prompt";
+import type { FixPromptContext } from "@/features/production-verdict/fix-prompt-context";
+import { CopyProductionFixPromptButton } from "@/features/production-verdict/components/CopyProductionFixPromptButton";
 
 function MomentumIcon({ momentum }: { momentum: ProductionIntelligence["momentum"] }) {
   if (momentum === "improving") {
@@ -35,11 +39,15 @@ export function ProductionIntelligencePanel({
   projectId,
   latestReportHref,
   compact = false,
+  topPriority,
+  fixPromptContext,
 }: {
   intelligence: ProductionIntelligence;
   projectId: string;
   latestReportHref?: string;
   compact?: boolean;
+  topPriority?: ProductionPriority | null;
+  fixPromptContext?: FixPromptContext;
 }) {
   const { t } = useI18n("productionIntelligence");
   const { t: tj } = useI18n("productionJourney");
@@ -141,20 +149,35 @@ export function ProductionIntelligencePanel({
               </p>
             )}
             {action.ctaKey && (
-              <Button size="sm" asChild>
-                <Link
-                  href={ctaHref}
-                  onClick={() =>
-                    trackEvent("production_intelligence_cta_clicked", {
-                      projectId,
-                      action: action.type,
-                    })
-                  }
-                >
-                  {t(action.ctaKey)}
-                  <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-                </Link>
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                {action.type === "fix_blocker" && topPriority && (
+                  <CopyProductionFixPromptButton
+                    input={fixPromptInputFromPriority(topPriority, {
+                      projectName: fixPromptContext?.projectName,
+                      stack: fixPromptContext?.stack,
+                      currentVerdictStatus:
+                        fixPromptContext?.currentVerdictStatus ?? intelligence.currentStatus ?? undefined,
+                      currentScore: fixPromptContext?.currentScore ?? intelligence.currentScore,
+                    })}
+                    source="intelligence"
+                    priorityId={topPriority.id}
+                  />
+                )}
+                <Button size="sm" asChild>
+                  <Link
+                    href={ctaHref}
+                    onClick={() =>
+                      trackEvent("production_intelligence_cta_clicked", {
+                        projectId,
+                        action: action.type,
+                      })
+                    }
+                  >
+                    {t(action.ctaKey)}
+                    <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                  </Link>
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>

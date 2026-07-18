@@ -22,6 +22,7 @@ import { ProductionIntelligencePanel } from "@/features/production-intelligence/
 import { AutopilotSection } from "@/features/autopilot/components/AutopilotSection";
 import { getAutopilotProjectView } from "@/server/autopilot";
 import { getProductionIntelligence } from "@/server/production-intelligence/service";
+import { fixPromptContextFromScan } from "@/features/production-verdict/fix-prompt-context";
 
 interface ProjectDetailPageProps {
   params: Promise<{ id: string }>;
@@ -77,7 +78,7 @@ export default async function ProjectDetailPage({
 
   const { data: latestScan } = await supabase
     .from("scans")
-    .select("id")
+    .select("id, detected_stack")
     .eq("project_id", p.id)
     .eq("status", "completed")
     .order("completed_at", { ascending: false })
@@ -103,6 +104,16 @@ export default async function ProjectDetailPage({
     intelligence = null;
     autopilot = null;
   }
+
+  const fixPromptContext = brain?.currentVerdict
+    ? fixPromptContextFromScan({
+        projectName: p.name,
+        detectedStack: latestScan?.detected_stack,
+        framework: p.framework,
+        currentVerdictStatus: brain.currentVerdict.status,
+        currentScore: brain.currentVerdict.score,
+      })
+    : undefined;
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-6xl">
@@ -172,6 +183,8 @@ export default async function ProjectDetailPage({
           projectId={p.id}
           latestReportHref={latestReportHref}
           compact
+          topPriority={brain?.currentVerdict?.topPriorities[0]}
+          fixPromptContext={fixPromptContext}
         />
       )}
 

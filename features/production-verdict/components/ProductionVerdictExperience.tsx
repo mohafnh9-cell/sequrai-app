@@ -11,6 +11,7 @@ import { ProductionEngineerSummary } from "./ProductionEngineerSummary";
 import { trackEvent } from "@/lib/analytics/track";
 import { useEffect } from "react";
 import { useDemoNavigation } from "@/features/demo/use-demo-navigation";
+import type { FixPromptContext } from "../fix-prompt-context";
 
 export function ProductionVerdictExperience({
   verdict,
@@ -19,6 +20,7 @@ export function ProductionVerdictExperience({
   scanCompleted = true,
   showEngineer = true,
   onReviewPriority,
+  fixPromptContext,
 }: {
   verdict: ProductionVerdictV1;
   projectId: string;
@@ -26,6 +28,7 @@ export function ProductionVerdictExperience({
   scanCompleted?: boolean;
   showEngineer?: boolean;
   onReviewPriority?: () => void;
+  fixPromptContext?: FixPromptContext;
 }) {
   const { href } = useDemoNavigation();
   const view = verdictExperienceFromVerdict(verdict);
@@ -60,6 +63,11 @@ export function ProductionVerdictExperience({
         <FastestPathForward
           priorities={verdict.topPriorities}
           onReviewPriority={onReviewPriority}
+          fixPromptContext={{
+            ...fixPromptContext,
+            currentVerdictStatus: verdict.status,
+            currentScore: verdict.score,
+          }}
         />
       )}
 

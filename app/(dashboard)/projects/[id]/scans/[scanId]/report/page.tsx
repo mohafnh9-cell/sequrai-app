@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/server/security-scanner/admin-client";
 import { buildScanProductionVerdict } from "@/server/brain/build-scan-verdict";
 import { ProductionVerdictExperience } from "@/features/production-verdict/components/ProductionVerdictExperience";
+import { fixPromptContextFromScan } from "@/features/production-verdict/fix-prompt-context";
 import { VERDICT_STATUS_LABELS } from "@/brain/production-verdict/schema";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -49,7 +50,9 @@ export default async function ProductionReportPage({
 
   const { data: findings } = await supabase
     .from("scan_findings")
-    .select("title, severity, recommendation, category")
+    .select(
+      "id, title, description, severity, recommendation, category, file_path, start_line, impact"
+    )
     .eq("scan_id", scanId);
 
   const categoryCounts: Record<string, number> = {};
@@ -80,6 +83,14 @@ export default async function ProductionReportPage({
   });
 
   const verdict = legacyVerdict.v1;
+  const fixPromptContext = fixPromptContextFromScan({
+    projectName: project.name,
+    detectedStack: scan.detected_stack,
+    framework: null,
+    findings: findings ?? [],
+    currentVerdictStatus: verdict.status,
+    currentScore: verdict.score,
+  });
   const commitSha = scan.commit_sha ?? scan.commit;
   const completedAt = scan.completed_at ?? scan.created_at;
 
@@ -126,6 +137,7 @@ export default async function ProductionReportPage({
         projectId={projectId}
         scanId={scanId}
         showEngineer
+        fixPromptContext={fixPromptContext}
       />
 
       <footer className="text-center text-xs text-muted-foreground">

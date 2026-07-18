@@ -14,6 +14,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { trackEvent } from "@/lib/analytics/track";
+import { fixPromptInputFromFinding } from "@/brain/fix-prompt";
+import type { FixPromptContext } from "../fix-prompt-context";
+import { CopyProductionFixPromptButton } from "./CopyProductionFixPromptButton";
 import {
   findingConfidence,
   findingEvidence,
@@ -113,11 +116,28 @@ function FilterSelect({
   );
 }
 
-function FindingCard({ finding, index }: { finding: ScanFinding; index: number }) {
+function FindingCard({
+  finding,
+  index,
+  fixPromptContext,
+}: {
+  finding: ScanFinding;
+  index: number;
+  fixPromptContext?: FixPromptContext;
+}) {
   const path = findingFile(finding);
   const line = findingLine(finding);
   const snippet = findingSnippet(finding);
   const group = findingGroup(finding.severity);
+  const isBlocker = group === "blockers";
+  const fixPromptInput = isBlocker
+    ? fixPromptInputFromFinding(finding, {
+        projectName: fixPromptContext?.projectName,
+        stack: fixPromptContext?.stack,
+        currentVerdictStatus: fixPromptContext?.currentVerdictStatus,
+        currentScore: fixPromptContext?.currentScore,
+      })
+    : null;
 
   return (
     <Card key={finding.id || `${finding.rule_id}-${path}-${line}-${index}`}>
@@ -177,12 +197,25 @@ function FindingCard({ finding, index }: { finding: ScanFinding; index: number }
             <p>{finding.recommendation}</p>
           </div>
         )}
+        {fixPromptInput && (
+          <CopyProductionFixPromptButton
+            input={fixPromptInput}
+            source="finding"
+            findingId={finding.id}
+          />
+        )}
       </CardContent>
     </Card>
   );
 }
 
-export function TechnicalFindingsSection({ findings }: { findings: ScanFinding[] }) {
+export function TechnicalFindingsSection({
+  findings,
+  fixPromptContext,
+}: {
+  findings: ScanFinding[];
+  fixPromptContext?: FixPromptContext;
+}) {
   const [query, setQuery] = useState("");
   const [severity, setSeverity] = useState("all");
   const [category, setCategory] = useState("all");
@@ -318,7 +351,12 @@ export function TechnicalFindingsSection({ findings }: { findings: ScanFinding[]
             <div key={group} className="space-y-3">
               <h3 className="text-sm font-medium text-muted-foreground">{groupLabel(group)}</h3>
               {items.map((finding, index) => (
-                <FindingCard key={finding.id ?? index} finding={finding} index={index} />
+                <FindingCard
+                  key={finding.id ?? index}
+                  finding={finding}
+                  index={index}
+                  fixPromptContext={fixPromptContext}
+                />
               ))}
             </div>
           ))

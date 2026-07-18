@@ -25,6 +25,7 @@ import {
   type ScanRecord,
 } from "./types";
 import { trackEvent } from "@/lib/analytics/track";
+import { fixPromptContextFromScan } from "@/features/production-verdict/fix-prompt-context";
 
 function statusIsActive(status?: string) {
   return [
@@ -129,6 +130,14 @@ export function ScanDetailView({
   const active = statusIsActive(scan.status);
   const scanCompleted = !active && scan.status?.toLowerCase() === "completed";
   const verdictV1 = verdict?.v1 ?? null;
+  const fixPromptContext = verdictV1
+    ? fixPromptContextFromScan({
+        detectedStack: scan.detected_stack,
+        findings,
+        currentVerdictStatus: verdictV1.status,
+        currentScore: verdictV1.score,
+      })
+    : undefined;
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6">
@@ -190,6 +199,7 @@ export function ScanDetailView({
           scanId={scanId}
           scanCompleted={scanCompleted}
           onReviewPriority={scrollToFindings}
+          fixPromptContext={fixPromptContext}
         />
       )}
 
@@ -202,7 +212,7 @@ export function ScanDetailView({
       )}
 
       <div ref={findingsRef}>
-        <TechnicalFindingsSection findings={findings} />
+        <TechnicalFindingsSection findings={findings} fixPromptContext={fixPromptContext} />
       </div>
     </div>
   );

@@ -1,6 +1,11 @@
 import "server-only";
 
 import type { CopilotReadableContext } from "@/brain/copilot-contract";
+import {
+  buildProductionFixPrompt,
+  fixPromptInputFromFinding,
+  stackFromDetectedStack,
+} from "@/brain/fix-prompt";
 import { toLegacyVerdict } from "@/brain/production-verdict/adapters/legacy";
 import { formatMcpVerdictSummary } from "@/brain/production-verdict/adapters/format";
 import { VERDICT_STATUS_LABELS } from "@/brain/production-verdict/schema";
@@ -127,7 +132,7 @@ export async function explainProductionBlocker(
   const { data: finding } = await ctx.admin
     .from("scan_findings")
     .select(
-      "id, title, description, severity, category, file_path, start_line, recommendation, scan_id"
+      "id, title, description, severity, category, file_path, start_line, recommendation, impact, scan_id"
     )
     .eq("id", findingId)
     .eq("project_id", projectId)
@@ -137,7 +142,29 @@ export async function explainProductionBlocker(
     throw new Error("Production blocker not found");
   }
 
+  const { data: scan } = await ctx.admin
+    .from("scans")
+    .select("detected_stack")
+    .eq("id", finding.scan_id)
+    .maybeSingle();
+
   const isBlocker = finding.severity === "critical" || finding.severity === "high";
+  const stack = stackFromDetectedStack(scan?.detected_stack);
+  const promptInput = fixPromptInputFromFinding(
+    {
+      id: finding.id,
+      title: finding.title,
+      description: finding.description,
+      severity: finding.severity,
+      category: finding.category,
+      recommendation: finding.recommendation,
+      file_path: finding.file_path,
+      start_line: finding.start_line,
+      impact: finding.impact,
+    },
+    { stack }
+  );
+  const { prompt: cursorPrompt } = buildProductionFixPrompt(promptInput);
 
   return {
     blockerId: finding.id,
@@ -153,9 +180,7 @@ export async function explainProductionBlocker(
     engineerNote: isBlocker
       ? "This issue prevents safe production deployment. Resolve it before shipping."
       : "This improvement will increase your Production Ready Score but does not block deployment.",
-    cursorPrompt: finding.recommendation
-      ? `Fix this production blocker in my codebase:\n\n${finding.title}\n${finding.description}\n\nRecommended approach:\n${finding.recommendation}`
-      : undefined,
+    cursorPrompt,
   };
 }
 
