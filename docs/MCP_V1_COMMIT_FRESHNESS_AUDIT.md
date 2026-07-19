@@ -93,12 +93,31 @@ Migration 017 applied directly to the production database (additive `add column 
 
 A full live end-to-end run of §7 of the request (push A → B, verify stale mid-scan, verify current after scan, push C with an intentionally failed scan) requires a repository with a **working** webhook connection, which `sequrai-app` does not currently have (see §1a — this is the actual product bug being reported, not a test-environment limitation). Reconnecting GitHub for `sequrai-app` from the **deployed** app (not `localhost`) will register a webhook with a reachable `callback_url`, which the fix will then treat as trustworthy going forward.
 
-What *was* validated live, before and after deploying this fix, against the real `sequrai-app` project and its real, currently-broken webhook:
+What *was* validated live — the fix was pushed to `main` (`871144a..b3c8434`), deployed on Vercel, and `can_i_deploy` was called again for the real `sequrai-app` project/its real, currently-broken webhook:
 
-| | Before fix | After fix |
-|---|---|---|
-| `can_i_deploy.stale` | `false` | `true` |
-| `can_i_deploy.freshnessStatus` | *(field did not exist)* | `"unknown"` |
-| `can_i_deploy.summary` | No warning; presented as a confident, current `SHIP_IT` | Includes: *"SequrAI could not verify whether this verdict covers your latest code…"* |
+**Before fix** (captured at the top of this audit):
 
-This is the exact behavior change required: the system no longer claims a stale/unverifiable verdict is current. The unit and integration tests in §4 cover the full state-machine (stale-before-scan, stale-through-failure, current-only-on-match, unknown-never-treated-as-current, idempotent/ordered push detection) that the live environment's broken webhook cannot currently exercise end-to-end.
+```json
+{ "stale": false, "latestDetectedCommitSha": "3fe74b3…", "reviewedCommitSha": "3fe74b3…" }
+```
+
+No `freshnessStatus` field existed. No warning in `summary`. Presented as a confident, current `SHIP_IT`.
+
+**After fix** (captured live, same project, same still-broken webhook, immediately after deploy):
+
+```json
+{
+  "reviewedCommitSha": "3fe74b32f4a3e373c95acd72e40a0cac34dffe40",
+  "latestDetectedCommitSha": null,
+  "stale": true,
+  "freshnessStatus": "unknown",
+  "reviewInProgress": false,
+  "reviewFailed": false,
+  "deploymentRecommendation": "SHIP_IT",
+  "summary": "...\n\nSequrAI no pudo verificar si este veredicto cubre tu código más reciente. La detección de pushes no tiene ninguna señal confirmada para este repositorio — reconecta GitHub o ejecuta una nueva revisión para estar seguro."
+}
+```
+
+This is the exact behavior change required: `stale` flipped from a confidently-wrong `false` to `true`, `latestDetectedCommitSha` is honestly `null` instead of an unfounded value, and every response now carries an explicit, localized warning that SequrAI cannot verify the verdict is current — instead of silently presenting a two-day-stale verdict as fresh. `deploymentRecommendation` remains `SHIP_IT` here because no automatic review has ever run to *fail* (`reviewFailed: false` — this repository's webhook has never delivered at all, so there is nothing to downgrade against; the warning is the correct signal for this specific failure mode, per §3's requirement to distinguish "unknown" from "stale with positive evidence").
+
+The unit and integration tests in §4 cover the rest of the state-machine (stale-before-scan, stale-through-failure, current-only-on-match, idempotent/ordered push detection) that this specific project's permanently-broken webhook cannot exercise end-to-end. Reconnecting GitHub for `sequrai-app` from the **deployed** app (not `localhost`) will register a webhook with a reachable `callback_url`; once GitHub delivers at least one push to it, freshness will resolve to `"current"`/`"stale"` with a real `latestDetectedCommitSha` instead of `"unknown"`.
