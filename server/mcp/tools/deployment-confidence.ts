@@ -24,6 +24,7 @@ export type DeploymentConfidenceResult = {
   reviewedCommitSha: string | null;
   latestDetectedCommitSha: string | null;
   stale: boolean;
+  freshnessStatus: "current" | "stale" | "unknown";
   disclaimer: string;
   summary: string;
 };
@@ -48,7 +49,13 @@ export async function deploymentConfidence(
   }
 
   const staleness = await getStalenessInfo(ctx.admin, project.id, verdict.commitSha);
-  const decision = mapVerdictStatusToDecision(verdict.status);
+  const engineDecision = mapVerdictStatusToDecision(verdict.status);
+  // A failed automatic review is positive proof of an unreviewed newer
+  // commit — never let a "deploy" recommendation stand on a verdict known to
+  // be outdated for that reason. This still only translates already-known
+  // facts (ADR-001): it does not recompute score, status, or blockers.
+  const decision: DeploymentDecision =
+    staleness.reviewFailed && engineDecision === "deploy" ? "more_analysis_required" : engineDecision;
 
   const reason =
     verdict.status === "insufficient_data"
@@ -84,8 +91,13 @@ export async function deploymentConfidence(
     t("deploymentConfidence.nextActionLabel"),
     verdict.recommendedAction,
   ];
-  if (staleness.stale) {
+  if (staleness.freshnessStatus === "stale") {
     lines.push("", t("deploymentConfidence.staleNote"));
+  } else if (staleness.freshnessStatus === "unknown") {
+    lines.push("", t("deploymentConfidence.freshnessUnknown"));
+  }
+  if (staleness.reviewFailed) {
+    lines.push("", t("deploymentConfidence.reviewFailedWarning"));
   }
 
   return {
@@ -100,6 +112,7 @@ export async function deploymentConfidence(
     reviewedCommitSha: verdict.commitSha,
     latestDetectedCommitSha: staleness.latestDetectedCommitSha,
     stale: staleness.stale,
+    freshnessStatus: staleness.freshnessStatus,
     disclaimer: t("deploymentConfidence.disclaimer"),
     summary: buildTextResponse("deployment_confidence", t, lines),
   };

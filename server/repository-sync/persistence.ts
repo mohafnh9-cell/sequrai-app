@@ -50,6 +50,15 @@ export async function initializeRepositorySyncStatus(
   }
 }
 
+/**
+ * GitHub does not guarantee webhook deliveries arrive in push order — retries
+ * and network jitter can deliver an older push after a newer one has already
+ * been recorded. Without a defense here, that reorder would regress
+ * `latestDetectedCommitSha` back to an older commit, which downstream
+ * staleness comparisons treat as ground truth. Guard using the push's own
+ * event timestamp (`pushedAt`), which is the best ordering signal available
+ * without fetching commit ancestry from GitHub.
+ */
 export async function recordPushDetection(
   admin: SupabaseClient,
   input: {
@@ -59,6 +68,29 @@ export async function recordPushDetection(
     detection: ParsedPushDetection;
   }
 ): Promise<void> {
+  const { data: existing } = await admin
+    .from("repository_sync_status")
+    .select("pushed_at, commit_sha")
+    .eq("project_id", input.projectId)
+    .maybeSingle();
+
+  if (existing?.pushed_at && existing.commit_sha) {
+    const existingPushedAt = new Date(existing.pushed_at as string).getTime();
+    const incomingPushedAt = new Date(input.detection.pushedAt).getTime();
+    if (
+      Number.isFinite(existingPushedAt) &&
+      Number.isFinite(incomingPushedAt) &&
+      incomingPushedAt < existingPushedAt
+    ) {
+      console.info("repository_sync_push_detection_out_of_order_ignored", {
+        projectId: input.projectId,
+        incomingCommitSha: input.detection.commitSha,
+        currentCommitSha: existing.commit_sha,
+      });
+      return;
+    }
+  }
+
   const detectedAt = new Date().toISOString();
   const { error } = await admin.from("repository_sync_status").upsert(
     {

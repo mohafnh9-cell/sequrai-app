@@ -45,4 +45,19 @@ describe("getMcpTranslator", () => {
     const t = getMcpTranslator("en");
     expect(t("deploymentConfidence.reasons.blockers", { count: 3 })).toContain("3");
   });
+
+  it("has EN and ES copy for unknown freshness and failed-review warnings", () => {
+    const en = getMcpTranslator("en");
+    const es = getMcpTranslator("es");
+
+    expect(en("canIDeploy.freshnessUnknown")).toContain("could not verify");
+    expect(es("canIDeploy.freshnessUnknown")).toContain("no pudo verificar");
+    expect(en("canIDeploy.reviewFailedWarning")).toContain("failed to complete");
+    expect(es("canIDeploy.reviewFailedWarning")).toContain("no se completó");
+
+    expect(en("deploymentConfidence.freshnessUnknown")).toContain("could not verify");
+    expect(es("deploymentConfidence.freshnessUnknown")).toContain("no pudo verificar");
+    expect(en("deploymentConfidence.reviewFailedWarning")).toContain("more analysis required");
+    expect(es("deploymentConfidence.reviewFailedWarning")).toContain("más análisis");
+  });
 });

@@ -7,6 +7,7 @@ import {
   createRepositoryWebhook,
   findSequrAIWebhook,
   GitHubWebhookError,
+  isPubliclyReachableCallbackUrl,
   listRepositoryHooks,
   parseRepositoryOwnerRepo,
   resolveWebhookCallbackUrl,
@@ -41,6 +42,17 @@ export async function registerProjectWebhook(
   if (!secret) {
     return { status: "skipped", reason: "GITHUB_WEBHOOK_SECRET is not configured" };
   }
+  if (!isPubliclyReachableCallbackUrl(callbackUrl)) {
+    // Registering against an unreachable URL (e.g. NEXT_PUBLIC_APP_URL still
+    // pointing at http://localhost:3000) would create a webhook GitHub can
+    // never deliver to — silently breaking push detection with no error on
+    // either side. Refuse instead of registering a hook that looks active
+    // but can never fire.
+    return {
+      status: "skipped",
+      reason: `Webhook callback URL "${callbackUrl}" is not publicly reachable from GitHub. Deploy SequrAI (or set GITHUB_WEBHOOK_URL to a public URL) before connecting this repository.`,
+    };
+  }
 
   const ref = parseRepositoryOwnerRepo(input.repo.full_name);
   if (!ref) {
@@ -72,6 +84,7 @@ export async function registerProjectWebhook(
       github_hook_id: hookId,
       events: [...SEQURAI_WEBHOOK_EVENTS],
       secret_hash: hashSecret(secret),
+      callback_url: callbackUrl,
       active: true,
     },
     { onConflict: "project_id" }

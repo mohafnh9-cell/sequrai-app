@@ -59,7 +59,7 @@ No scoring, status, blocker-counting, or priority-ordering logic was written ins
 
 ## 7. Staleness behavior
 
-`getStalenessInfo()` compares the reviewed verdict's commit SHA against `repository_scan_state.last_commit_sha` and surfaces `stale`/`reviewInProgress` booleans plus localized warning copy in every affected tool's `summary`. A stale or in-progress verdict is never presented as current without a warning. Detail: `docs/MCP_V1_IMPLEMENTATION.md` §7; tests: `canonical-tools.test.ts` (`flags a stale verdict...`, `flags reviewInProgress...`, `warns when the recommendation does not cover the latest detected commit`).
+`getStalenessInfo()` compares the reviewed verdict's commit SHA against `repository_sync_status.commit_sha` (written independently of scan success, before any scan runs) and surfaces `freshnessStatus` (`current`/`stale`/`unknown`), `stale`/`reviewInProgress`/`reviewFailed` booleans, plus localized warning copy in every affected tool's `summary`. A stale, unknown, or in-progress verdict is never presented as current without a warning — see `docs/MCP_V1_COMMIT_FRESHNESS_AUDIT.md` for the full root-cause audit and fix. Detail: `docs/MCP_V1_IMPLEMENTATION.md` §7; tests: `staleness.test.ts`, `canonical-tools.test.ts` (`flags a stale verdict...`, `flags reviewInProgress...`, `reports freshnessStatus unknown...`, `warns when the recommendation does not cover the latest detected commit`).
 
 ## 8. Error behavior
 

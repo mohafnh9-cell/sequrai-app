@@ -18,6 +18,8 @@
     "doNotDeploy": "NO DESPLEGAR",
     "moreAnalysisRequired": "SE REQUIERE MÁS ANÁLISIS",
     "staleWarning": "Este veredicto no cubre el último commit detectado ({commitSha}). Los resultados pueden estar desactualizados.",
+    "freshnessUnknown": "SequrAI no pudo verificar si este veredicto cubre tu código más reciente. La detección de pushes no tiene ninguna señal confirmada para este repositorio — reconecta GitHub o ejecuta una nueva revisión para estar seguro.",
+    "reviewFailedWarning": "La revisión automática más reciente para un commit más nuevo no se completó. Este veredicto no refleja ese commit.",
     "reviewInProgress": "La Revisión Continua está procesando este repositorio. Este veredicto refleja la última revisión completada.",
     "insufficientData": "Todavía no hay suficiente cobertura del repositorio para una decisión de producción responsable. Ejecuta primero una revisión completa.",
     "analysisFailed": "La última revisión no se completó correctamente. Vuelve a ejecutar el análisis antes de confiar en este veredicto."
@@ -65,6 +67,8 @@
     "doNotDeploy": "NO DESPLEGAR",
     "moreAnalysisRequired": "SE REQUIERE MÁS ANÁLISIS",
     "staleNote": "Esta recomendación no incluye el último commit detectado.",
+    "freshnessUnknown": "SequrAI no pudo verificar si esta recomendación cubre tu código más reciente. La detección de pushes no tiene ninguna señal confirmada para este repositorio.",
+    "reviewFailedWarning": "La revisión automática más reciente para un commit más nuevo no se completó, por lo que esta recomendación se degradó a se requiere más análisis.",
     "disclaimer": "Esta recomendación refleja el último Veredicto de Producción completado para este repositorio.",
     "reasons": {
       "ready": "No quedan bloqueadores de producción en la última revisión.",

@@ -38,6 +38,32 @@ export function resolveWebhookCallbackUrl(): string | null {
   return null;
 }
 
+const NON_PUBLIC_HOSTNAMES = new Set(["localhost", "127.0.0.1", "0.0.0.0", "::1"]);
+const PRIVATE_IPV4_RANGES = /^(10\.|172\.(1[6-9]|2\d|3[0-1])\.|192\.168\.)/;
+
+/**
+ * GitHub delivers webhooks from its own infrastructure over the public
+ * internet. A callback URL pointing at localhost or a private network
+ * address will never receive a delivery — registering a hook against one
+ * silently breaks the entire push-detection pipeline with no error on
+ * either side (GitHub reports delivery attempts on its own dashboard; our
+ * database simply never records anything).
+ */
+export function isPubliclyReachableCallbackUrl(callbackUrl: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(callbackUrl);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+  const hostname = parsed.hostname.toLowerCase();
+  if (NON_PUBLIC_HOSTNAMES.has(hostname)) return false;
+  if (hostname.endsWith(".local")) return false;
+  if (PRIVATE_IPV4_RANGES.test(hostname)) return false;
+  return true;
+}
+
 function githubHeaders(accessToken: string) {
   return {
     Authorization: `Bearer ${accessToken}`,

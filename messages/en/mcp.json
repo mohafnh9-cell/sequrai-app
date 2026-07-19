@@ -18,6 +18,8 @@
     "doNotDeploy": "DO NOT DEPLOY",
     "moreAnalysisRequired": "MORE ANALYSIS REQUIRED",
     "staleWarning": "This verdict does not cover the latest detected commit ({commitSha}). Results may be outdated.",
+    "freshnessUnknown": "SequrAI could not verify whether this verdict covers your latest code. Push detection has no confirmed signal for this repository — reconnect GitHub or run a new review to be sure.",
+    "reviewFailedWarning": "The most recent automatic review for a newer commit failed to complete. This verdict does not reflect that commit.",
     "reviewInProgress": "Continuous Review is currently processing this repository. This verdict reflects the last completed review.",
     "insufficientData": "There is not enough repository coverage yet for a responsible production decision. Run a full review first.",
     "analysisFailed": "The latest review did not complete successfully. Re-run the analysis before trusting this verdict."
@@ -65,6 +67,8 @@
     "doNotDeploy": "DO NOT DEPLOY",
     "moreAnalysisRequired": "MORE ANALYSIS REQUIRED",
     "staleNote": "This recommendation does not include the latest detected commit.",
+    "freshnessUnknown": "SequrAI could not verify whether this recommendation covers your latest code. Push detection has no confirmed signal for this repository.",
+    "reviewFailedWarning": "The most recent automatic review for a newer commit failed to complete, so this recommendation was downgraded to more analysis required.",
     "disclaimer": "This recommendation reflects the last completed Production Verdict for this repository.",
     "reasons": {
       "ready": "No production blockers remain in the latest review.",

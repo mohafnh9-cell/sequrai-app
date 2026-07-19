@@ -31,6 +31,15 @@ function baseTables(overrides: Partial<FakeTables> = {}): FakeTables {
     ],
     production_verdicts: [],
     repository_scan_state: [],
+    // A healthy, connected repository with no push detected yet since
+    // connecting — this is the "current" default. Tests that need to
+    // exercise stale/unknown freshness override this explicitly.
+    github_webhooks: [
+      { project_id: PROJECT_1, active: true, callback_url: null, last_delivery_at: "2026-01-01T00:00:00.000Z" },
+    ],
+    repository_sync_status: [
+      { project_id: PROJECT_1, commit_sha: null, connection_status: "connected", last_error: null },
+    ],
     scan_findings: [],
     scans: [],
     profiles: [],
@@ -88,10 +97,13 @@ describe("can_i_deploy", () => {
     const verdict = buildVerdictFixture({ commitSha: "aaa1111" });
     const tables = baseTables({
       production_verdicts: [verdictRow(PROJECT_1, verdict)],
-      repository_scan_state: [{ repository_id: PROJECT_1, last_commit_sha: "bbb2222", active_scan_id: null }],
+      repository_sync_status: [
+        { project_id: PROJECT_1, commit_sha: "bbb2222", connection_status: "connected", last_error: null },
+      ],
     });
     const result = await canIDeploy(ctxFor(createFakeAdmin(tables)), {}, t);
     expect(result.stale).toBe(true);
+    expect(result.freshnessStatus).toBe("stale");
     expect(result.latestDetectedCommitSha).toBe("bbb2222");
     expect(result.summary).toContain("outdated");
   });
@@ -100,10 +112,55 @@ describe("can_i_deploy", () => {
     const verdict = buildVerdictFixture({ commitSha: "aaa1111" });
     const tables = baseTables({
       production_verdicts: [verdictRow(PROJECT_1, verdict)],
+      repository_sync_status: [
+        { project_id: PROJECT_1, commit_sha: "aaa1111", connection_status: "connected", last_error: null },
+      ],
       repository_scan_state: [{ repository_id: PROJECT_1, last_commit_sha: "aaa1111", active_scan_id: "scan-99" }],
     });
     const result = await canIDeploy(ctxFor(createFakeAdmin(tables)), {}, t);
     expect(result.reviewInProgress).toBe(true);
+    expect(result.freshnessStatus).toBe("current");
+  });
+
+  it("reports freshnessStatus unknown — never 'current' — when push detection has no proof of working", async () => {
+    // Real-world regression: a webhook exists and is marked active, but it
+    // was registered against an unreachable callback URL (or has otherwise
+    // never delivered), so repository_sync_status was never populated even
+    // though newer commits exist upstream. The system must not invent that
+    // the verdict is current just because it has no signal either way.
+    const verdict = buildVerdictFixture({ commitSha: "aaa1111" });
+    const tables = baseTables({
+      production_verdicts: [verdictRow(PROJECT_1, verdict)],
+      github_webhooks: [],
+      repository_sync_status: [],
+    });
+    const result = await canIDeploy(ctxFor(createFakeAdmin(tables)), {}, t);
+    expect(result.freshnessStatus).toBe("unknown");
+    expect(result.stale).toBe(true);
+    expect(result.summary).toContain(t("canIDeploy.freshnessUnknown"));
+  });
+
+  it("reports a failed automatic review as stale, not merely unknown", async () => {
+    const verdict = buildVerdictFixture({ commitSha: "aaa1111" });
+    const tables = baseTables({
+      production_verdicts: [verdictRow(PROJECT_1, verdict)],
+      repository_sync_status: [
+        { project_id: PROJECT_1, commit_sha: "aaa1111", connection_status: "connected", last_error: null },
+      ],
+      scans: [
+        {
+          repository_id: PROJECT_1,
+          review_type: "automatic",
+          status: "failed",
+          commit_sha: "ccc3333",
+          created_at: "2026-02-01",
+        },
+      ],
+    });
+    const result = await canIDeploy(ctxFor(createFakeAdmin(tables)), {}, t);
+    expect(result.reviewFailed).toBe(true);
+    expect(result.freshnessStatus).toBe("stale");
+    expect(result.summary).toContain(t("canIDeploy.reviewFailedWarning"));
   });
 
   it("throws no_verdict_available when the project has never been reviewed", async () => {
@@ -408,10 +465,68 @@ describe("deployment_confidence", () => {
     const verdict = buildVerdictFixture({ commitSha: "old-sha" });
     const tables = baseTables({
       production_verdicts: [verdictRow(PROJECT_1, verdict)],
-      repository_scan_state: [{ repository_id: PROJECT_1, last_commit_sha: "new-sha", active_scan_id: null }],
+      repository_sync_status: [
+        { project_id: PROJECT_1, commit_sha: "new-sha", connection_status: "connected", last_error: null },
+      ],
     });
     const result = await deploymentConfidence(ctxFor(createFakeAdmin(tables)), {}, t);
     expect(result.stale).toBe(true);
+    expect(result.freshnessStatus).toBe("stale");
     expect(result.summary).toContain(t("deploymentConfidence.staleNote"));
+  });
+
+  it("never reports stale: false when push detection has no confirmed signal", async () => {
+    const verdict = buildVerdictFixture({ commitSha: "aaa1111", status: "ready_to_ship" });
+    const tables = baseTables({
+      production_verdicts: [verdictRow(PROJECT_1, verdict)],
+      github_webhooks: [],
+      repository_sync_status: [],
+    });
+    const result = await deploymentConfidence(ctxFor(createFakeAdmin(tables)), {}, t);
+    expect(result.freshnessStatus).toBe("unknown");
+    expect(result.stale).toBe(true);
+    expect(result.summary).toContain(t("deploymentConfidence.freshnessUnknown"));
+  });
+
+  it("downgrades a deploy recommendation to more_analysis_required when the automatic review for a newer commit failed", async () => {
+    const verdict = buildVerdictFixture({
+      commitSha: "aaa1111",
+      status: "ready_to_ship",
+      score: 96,
+      blockersCount: 0,
+      topPriorities: [],
+    });
+    const tables = baseTables({
+      production_verdicts: [verdictRow(PROJECT_1, verdict)],
+      repository_sync_status: [
+        { project_id: PROJECT_1, commit_sha: "aaa1111", connection_status: "connected", last_error: null },
+      ],
+      scans: [
+        {
+          repository_id: PROJECT_1,
+          review_type: "automatic",
+          status: "failed",
+          commit_sha: "ccc3333",
+          created_at: "2026-02-01",
+        },
+      ],
+    });
+    const result = await deploymentConfidence(ctxFor(createFakeAdmin(tables)), {}, t);
+    expect(result.decision).toBe("more_analysis_required");
+    expect(result.summary).toContain(t("deploymentConfidence.reviewFailedWarning"));
+  });
+
+  it("renders the unknown-freshness warning in Spanish", async () => {
+    const es = getMcpTranslator("es");
+    const verdict = buildVerdictFixture({ commitSha: "aaa1111", status: "ready_to_ship" });
+    const tables = baseTables({
+      production_verdicts: [verdictRow(PROJECT_1, verdict)],
+      github_webhooks: [],
+      repository_sync_status: [],
+    });
+    const result = await deploymentConfidence(ctxFor(createFakeAdmin(tables)), {}, es);
+    expect(result.freshnessStatus).toBe("unknown");
+    expect(result.summary).toContain(es("deploymentConfidence.freshnessUnknown"));
+    expect(result.summary).toContain("no pudo verificar");
   });
 });

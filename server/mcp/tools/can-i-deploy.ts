@@ -39,7 +39,9 @@ export type CanIDeployResult = {
   reviewedCommitSha: string | null;
   latestDetectedCommitSha: string | null;
   stale: boolean;
+  freshnessStatus: "current" | "stale" | "unknown";
   reviewInProgress: boolean;
+  reviewFailed: boolean;
   deploymentRecommendation: "SHIP_IT" | "DO_NOT_DEPLOY" | "MORE_ANALYSIS_REQUIRED";
   reportUrl: string | null;
   summary: string;
@@ -65,7 +67,12 @@ export async function canIDeploy(
 
   const staleness = await getStalenessInfo(ctx.admin, project.id, verdict.commitSha);
 
-  const decision = mapVerdictStatusToDecision(verdict.status);
+  const engineDecision = mapVerdictStatusToDecision(verdict.status);
+  // A failed automatic review is positive proof of an unreviewed newer
+  // commit — never let SHIP_IT stand on a verdict known to be outdated for
+  // that reason. This only translates already-known facts (ADR-001).
+  const decision =
+    staleness.reviewFailed && engineDecision === "deploy" ? "more_analysis_required" : engineDecision;
   const deploymentRecommendation =
     decision === "deploy" ? "SHIP_IT" : decision === "do_not_deploy" ? "DO_NOT_DEPLOY" : "MORE_ANALYSIS_REQUIRED";
 
@@ -109,11 +116,16 @@ export async function canIDeploy(
   if (staleness.reviewInProgress) {
     lines.push("", t("canIDeploy.reviewInProgress"));
   }
-  if (staleness.stale) {
+  if (staleness.freshnessStatus === "stale") {
     lines.push(
       "",
       t("canIDeploy.staleWarning", { commitSha: staleness.latestDetectedCommitSha?.slice(0, 7) ?? "" })
     );
+  } else if (staleness.freshnessStatus === "unknown") {
+    lines.push("", t("canIDeploy.freshnessUnknown"));
+  }
+  if (staleness.reviewFailed) {
+    lines.push("", t("canIDeploy.reviewFailedWarning"));
   }
 
   return {
@@ -135,7 +147,9 @@ export async function canIDeploy(
     reviewedCommitSha: verdict.commitSha,
     latestDetectedCommitSha: staleness.latestDetectedCommitSha,
     stale: staleness.stale,
+    freshnessStatus: staleness.freshnessStatus,
     reviewInProgress: staleness.reviewInProgress,
+    reviewFailed: staleness.reviewFailed,
     deploymentRecommendation,
     reportUrl: buildProjectReportUrl(project.id),
     summary: buildTextResponse("production_review", t, lines),

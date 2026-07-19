@@ -104,13 +104,16 @@ No tool file computes a score, a status, a blocker count, or a priority order. S
 
 ## 7. Staleness behavior
 
-`getStalenessInfo()` compares the verdict's `reviewedCommitSha` (`verdict.commitSha`) against `repository_scan_state.last_commit_sha` (the latest commit SequrAI has detected for that repository) and `repository_scan_state.active_scan_id`:
+`getStalenessInfo()` (`server/mcp/staleness.ts`) compares the verdict's `reviewedCommitSha` (`verdict.commitSha`) against `latestDetectedCommitSha`, sourced from `repository_sync_status.commit_sha` — written immediately when a GitHub push webhook is received, *before* any scan runs, so freshness detection never depends on a scan succeeding. `repository_scan_state.last_commit_sha` (a byproduct of scan completion) is deliberately **not** used for this comparison, since it always mirrors whatever was last reviewed and would silently mask undetected pushes.
 
-- `stale: true` when the latest detected commit differs from the reviewed commit — the tool still returns the last verdict, but every user-facing summary includes an explicit warning ("This verdict does not cover the latest detected commit...").
+Returns `freshnessStatus: "current" | "stale" | "unknown"` (plus the legacy `stale` boolean, `stale === freshnessStatus !== "current"`):
+
+- `"stale"` — the detected commit differs from the reviewed commit, or the most recent automatic (webhook-triggered) review failed for a newer commit (`reviewFailed: true`). The summary includes an explicit warning; `deployment_confidence`/`can_i_deploy` downgrade a `deploy`/`SHIP_IT` recommendation to `more_analysis_required`/`MORE_ANALYSIS_REQUIRED` when `reviewFailed` is true.
+- `"unknown"` — there is no reliable detected-commit signal *and* push detection cannot be proven to work (`isPushDetectionTrustworthy`): no webhook registered/active, the webhook has never once delivered (`github_webhooks.last_delivery_at IS NULL`), its registered `callback_url` no longer matches the URL this deployment currently expects (`resolveWebhookCallbackUrl()`), or `repository_sync_status.connection_status !== "connected"`. The system **never** reports `stale: false` in this state — "do not invent that a verdict is current" (see `docs/MCP_V1_COMMIT_FRESHNESS_AUDIT.md`).
+- `"current"` — the detected commit matches the reviewed commit, or (only when no push has ever been detected) push detection is positively proven to be working.
 - `reviewInProgress: true` when a scan is currently active for the repository — the summary states that Continuous Review is processing and the response reflects the last *completed* review.
-- A verdict is never presented as current without one of these warnings when applicable. Both flags are also returned as raw booleans in the structured response for programmatic clients.
 
-Exercised by `canonical-tools.test.ts` (`flags a stale verdict...`, `flags reviewInProgress...`).
+Exercised by `staleness.test.ts`, `canonical-tools.test.ts` (`flags a stale verdict...`, `flags reviewInProgress...`, `reports freshnessStatus unknown...`, `downgrades a deploy recommendation...`), and `server/repository-sync/__tests__/persistence.test.ts` (push-detection ordering/idempotency).
 
 ---
 
