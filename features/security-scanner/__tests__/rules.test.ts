@@ -157,6 +157,23 @@ describe("critical deterministic rules", () => {
     ]);
   });
 
+  it("does not flag deprecated routes or routes with enforceRateLimit for rate limiting", async () => {
+    const result = await scanRepository([
+      {
+        path: "app/api/scans/route.ts",
+        content:
+          'const deprecated = { error: "deprecated" };\nexport async function POST() {\n  return NextResponse.json(deprecated, { status: 410 });\n}',
+      },
+      {
+        path: "app/api/projects/route.ts",
+        content:
+          'import { enforceRateLimit } from "@/server/http/rate-limit";\nexport async function GET(request) {\n  const rateLimited = enforceRateLimit(request);\n}',
+      },
+    ]);
+    const rateLimitMissing = result.findings.filter((finding) => finding.ruleId === "rate-limit.missing");
+    expect(rateLimitMissing).toHaveLength(0);
+  });
+
   it("reports capability catalog entries without CVE claims", async () => {
     const result = await scanRepository([
       { path: "package.json", content: '{"dependencies":{"vm2":"1.0.0","other":"git+https://example.invalid/repo.git"}}' },

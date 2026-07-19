@@ -3,8 +3,12 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getGitHubRepos, getGitHubTokenScopes } from "@/lib/github";
 import { resolveGitHubAccessToken } from "@/lib/github/resolve-token";
+import { enforceRateLimit } from "@/server/http/rate-limit";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const rateLimited = enforceRateLimit(request);
+  if (rateLimited) return rateLimited;
+
   const cookieStore = await cookies();
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

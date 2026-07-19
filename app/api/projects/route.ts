@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { projectSchema } from "@/features/projects/schemas/project.schema";
+import { enforceRateLimit } from "@/server/http/rate-limit";
 
 // ─── GET /api/projects ────────────────────────────────────────────────────────
 
-export async function GET() {
+export async function GET(request: Request) {
+  const rateLimited = enforceRateLimit(request);
+  if (rateLimited) return rateLimited;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -41,6 +45,9 @@ export async function GET() {
 // ─── POST /api/projects ───────────────────────────────────────────────────────
 
 export async function POST(request: Request) {
+  const rateLimited = enforceRateLimit(request);
+  if (rateLimited) return rateLimited;
+
   const supabase = await createClient();
   const {
     data: { user },

@@ -7,6 +7,7 @@ import {
   runAISecurityAnalysis,
 } from "@/server/ai-security-engine/pipeline";
 import { AIRequestError, getScanAccessContext } from "@/server/ai-security-engine/request-context";
+import { enforceRateLimit } from "@/server/http/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -35,10 +36,13 @@ function respond(error: unknown) {
 }
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ scanId: string }> }
 ) {
   try {
+    const rateLimited = enforceRateLimit(request);
+    if (rateLimited) return rateLimited;
+
     const parsed = paramsSchema.safeParse(await params);
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid scan id" }, { status: 400 });
@@ -57,6 +61,9 @@ export async function POST(
   { params }: { params: Promise<{ scanId: string }> }
 ) {
   try {
+    const rateLimited = enforceRateLimit(request);
+    if (rateLimited) return rateLimited;
+
     const parsed = paramsSchema.safeParse(await params);
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid scan id" }, { status: 400 });

@@ -9,6 +9,7 @@ import {
   webhookErrorMessage,
 } from "@/server/github-automation/register-webhook";
 import { resolveUserOrganizationId } from "@/server/organizations/resolve-user-organization";
+import { enforceRateLimit } from "@/server/http/rate-limit";
 
 const requestSchema = z.object({
   organizationId: z.string().uuid().optional(),
@@ -113,6 +114,9 @@ async function upsertConnectedProject(
 }
 
 async function connectRepositories(request: Request) {
+  const rateLimited = enforceRateLimit(request);
+  if (rateLimited) return rateLimited;
+
   const supabase = await createClient();
   const {
     data: { user },

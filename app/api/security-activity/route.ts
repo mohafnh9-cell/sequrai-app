@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerAuthContext } from "@/lib/auth/dev-bypass";
 import { z } from "zod";
+import { enforceRateLimit } from "@/server/http/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -10,6 +11,9 @@ const querySchema = z.object({
 });
 
 export async function GET(request: Request) {
+  const rateLimited = enforceRateLimit(request);
+  if (rateLimited) return rateLimited;
+
   const auth = await getServerAuthContext();
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!auth.organizationId) return NextResponse.json({ activity: [], notifications: [] });

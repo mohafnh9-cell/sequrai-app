@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { getServerAuthContext } from "@/lib/auth/dev-bypass";
+import { enforceRateLimit } from "@/server/http/rate-limit";
 
-export async function GET() {
+export async function GET(request: Request) {
+  const rateLimited = enforceRateLimit(request);
+  if (rateLimited) return rateLimited;
+
   const auth = await getServerAuthContext();
   if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!auth.organizationId) {

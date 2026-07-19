@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { resolveMcpAuth, McpError } from "@/server/mcp/auth";
 import { executeMcpTool } from "@/server/mcp/execute-tool";
 import { MCP_SERVER_INFO, MCP_TOOL_DEFINITIONS } from "@/server/mcp/tool-definitions";
+import { mcpPostBodySchema } from "@/server/mcp/request.schema";
+import { enforceRateLimit } from "@/server/http/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -11,6 +13,8 @@ type JsonRpcRequest = {
   id?: string | number | null;
   method?: string;
   params?: Record<string, unknown>;
+  tool?: string;
+  input?: Record<string, unknown>;
 };
 
 function jsonRpcResult(id: string | number | null | undefined, result: unknown) {
@@ -82,6 +86,9 @@ async function handleJsonRpc(body: JsonRpcRequest, auth: NonNullable<Awaited<Ret
 }
 
 export async function GET(request: Request) {
+  const rateLimited = enforceRateLimit(request);
+  if (rateLimited) return rateLimited;
+
   const auth = await resolveMcpAuth(request);
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -93,22 +100,28 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const rateLimited = enforceRateLimit(request);
+  if (rateLimited) return rateLimited;
+
   const auth = await resolveMcpAuth(request);
   if (!auth) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = (await request.json().catch(() => null)) as JsonRpcRequest | null;
-  if (!body) {
+  const rawBody = await request.json().catch(() => null);
+  const parsedBody = mcpPostBodySchema.safeParse(rawBody);
+  if (!parsedBody.success) {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
+
+  const body = parsedBody.data as JsonRpcRequest;
 
   if (body.jsonrpc === "2.0" && body.method) {
     return handleJsonRpc(body, auth);
   }
 
-  const toolName = (body as { tool?: string }).tool;
-  const input = ((body as { input?: Record<string, unknown> }).input ?? {}) as Record<string, unknown>;
+  const toolName = body.tool;
+  const input = (body.input ?? {}) as Record<string, unknown>;
   if (!toolName) {
     return NextResponse.json({ error: "Missing tool name" }, { status: 400 });
   }

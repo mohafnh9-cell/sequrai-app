@@ -4,12 +4,16 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateMcpApiKey } from "@/server/mcp/auth";
 import { resolveUserOrganizationId } from "@/server/organizations/resolve-user-organization";
+import { enforceRateLimit } from "@/server/http/rate-limit";
 
 const createKeySchema = z.object({
   name: z.string().trim().min(1).max(80).default("Cursor MCP"),
 });
 
-export async function GET() {
+export async function GET(request: Request) {
+  const rateLimited = enforceRateLimit(request);
+  if (rateLimited) return rateLimited;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -32,6 +36,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const rateLimited = enforceRateLimit(request);
+  if (rateLimited) return rateLimited;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -77,6 +84,9 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const rateLimited = enforceRateLimit(request);
+  if (rateLimited) return rateLimited;
+
   const supabase = await createClient();
   const {
     data: { user },

@@ -6,6 +6,7 @@ import {
 } from "@/server/security-scanner/request-context";
 import { createAdminClient } from "@/server/security-scanner/admin-client";
 import { buildScanProductionVerdict } from "@/server/brain/build-scan-verdict";
+import { enforceRateLimit } from "@/server/http/rate-limit";
 
 const paramsSchema = z.object({
   repositoryId: z.string().uuid(),
@@ -13,10 +14,13 @@ const paramsSchema = z.object({
 });
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ repositoryId: string; scanId: string }> }
 ) {
   try {
+    const rateLimited = enforceRateLimit(request);
+    if (rateLimited) return rateLimited;
+
     const parsed = paramsSchema.safeParse(await params);
     if (!parsed.success) {
       return NextResponse.json({ error: "Invalid repository or scan id" }, { status: 400 });

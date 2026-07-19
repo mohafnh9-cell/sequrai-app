@@ -7,6 +7,7 @@ import {
 } from "@/server/security-scanner/request-context";
 import { GitHubServiceError, parseGitHubRepository } from "@/lib/github/repository-service";
 import { createAdminClient, mapDatabaseError } from "@/server/security-scanner/admin-client";
+import { enforceRateLimit } from "@/server/http/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -57,6 +58,9 @@ export async function POST(
   { params }: { params: Promise<{ repositoryId: string }> }
 ) {
   try {
+    const rateLimited = enforceRateLimit(request);
+    if (rateLimited) return rateLimited;
+
     const parsedParams = paramsSchema.safeParse(await params);
     if (!parsedParams.success) {
       return NextResponse.json({ error: "Invalid repository id" }, { status: 400 });
@@ -221,6 +225,9 @@ export async function GET(
   { params }: { params: Promise<{ repositoryId: string }> }
 ) {
   try {
+    const rateLimited = enforceRateLimit(request);
+    if (rateLimited) return rateLimited;
+
     const parsedParams = paramsSchema.safeParse(await params);
     if (!parsedParams.success) {
       return NextResponse.json({ error: "Invalid repository id" }, { status: 400 });

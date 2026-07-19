@@ -337,11 +337,11 @@ const routeRules: ScanRule[] = [
     ...ROUTE_RULE_EXCLUSIONS,
     includeContent: MUTATING_ROUTE_HANDLER,
   }),
-  contextualRouteRule("rate-limit.missing", "Missing rate limiting", /(?:rateLimit|ratelimit|limiter|throttl|upstash)/i, {
+  contextualRouteRule("rate-limit.missing", "Missing rate limiting", /(?:rateLimit|ratelimit|limiter|throttl|upstash|enforceRateLimit)/i, {
     title: "Route has no visible rate limiting", description: "No local rate-limit control was recognized; infrastructure controls may exist.",
     severity: "low", confidence: "low", category: "availability",
     remediation: "Apply per-identity and per-IP limits to abuse-sensitive endpoints.",
-  }),
+  }, ROUTE_RULE_EXCLUSIONS),
 ];
 
 const backendRules = [

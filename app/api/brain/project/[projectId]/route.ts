@@ -2,15 +2,19 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getServerAuthContext } from "@/lib/auth/dev-bypass";
 import { buildProjectBrain } from "@/server/brain/build-project-brain";
+import { enforceRateLimit } from "@/server/http/rate-limit";
 
 export const runtime = "nodejs";
 
 const paramsSchema = z.object({ projectId: z.string().uuid() });
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ projectId: string }> }
 ) {
+  const rateLimited = enforceRateLimit(request);
+  if (rateLimited) return rateLimited;
+
   const parsed = paramsSchema.safeParse(await params);
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid project id" }, { status: 400 });
