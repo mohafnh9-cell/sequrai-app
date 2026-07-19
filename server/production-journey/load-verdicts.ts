@@ -81,7 +81,11 @@ export async function loadVerdictJourneyRecords(
         scanId: row.scan_id,
         projectId: row.project_id,
         repositoryId: row.repository_id,
-        generatedAt: row.generated_at,
+        // PostgREST returns timestamptz columns with a "+00:00" offset, not a
+        // literal "Z". Normalize at this retrieval boundary so every
+        // downstream consumer (ProductionJourneySchema's strict
+        // z.string().datetime()) always sees a canonical ISO-8601 string.
+        generatedAt: new Date(row.generated_at).toISOString(),
         commitSha: verdict.commitSha,
         branch: verdict.branch,
         status: row.status as VerdictStatus,

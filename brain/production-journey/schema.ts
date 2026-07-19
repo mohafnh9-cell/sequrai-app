@@ -47,7 +47,10 @@ export const ProductionJourneyPointSchema = z.object({
   blockersCount: z.number().int().min(0),
   introducedBlockersCount: z.number().int().min(0),
   resolvedBlockersCount: z.number().int().min(0),
-  generatedAt: z.string().datetime(),
+  // PostgREST/Postgres timestamptz values round-trip with a "+00:00" offset
+  // rather than a literal "Z"; accept both so this schema doesn't reject
+  // real database data (see server/production-journey/load-verdicts.ts).
+  generatedAt: z.string().datetime({ offset: true }),
   isValidForScoreChart: z.boolean(),
 });
 
@@ -58,7 +61,7 @@ export const ProductionMilestoneSchema = z.object({
   type: MilestoneTypeSchema,
   titleKey: z.string(),
   descriptionKey: z.string().optional(),
-  reachedAt: z.string().datetime(),
+  reachedAt: z.string().datetime({ offset: true }),
   score: z.number().min(0).max(100).nullable(),
   verdictId: z.string().uuid(),
 });
@@ -79,7 +82,7 @@ export const JourneyHighlightSchema = z.object({
   id: z.string(),
   titleKey: z.string(),
   descriptionKey: z.string(),
-  occurredAt: z.string().datetime(),
+  occurredAt: z.string().datetime({ offset: true }),
 });
 
 export type JourneyHighlight = z.infer<typeof JourneyHighlightSchema>;
@@ -116,9 +119,9 @@ export const ProductionJourneySchema = z.object({
   currentMilestone: ProductionMilestoneSchema.nullable(),
   nextMilestoneKey: z.string().nullable(),
 
-  firstReviewedAt: z.string().datetime().nullable(),
-  lastReviewedAt: z.string().datetime().nullable(),
-  bestScoreAt: z.string().datetime().nullable(),
+  firstReviewedAt: z.string().datetime({ offset: true }).nullable(),
+  lastReviewedAt: z.string().datetime({ offset: true }).nullable(),
+  bestScoreAt: z.string().datetime({ offset: true }).nullable(),
 
   trend: JourneyTrendSchema,
   maturity: MaturityStageSchema,
