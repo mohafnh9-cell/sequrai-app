@@ -2,10 +2,10 @@ import type { McpTranslator } from "./i18n";
 
 export type McpMode =
   | "production_review"
+  | "production_review_request"
   | "safe_fix"
   | "continuous_review"
-  | "production_history"
-  | "deployment_confidence";
+  | "production_history";
 
 /**
  * Every SequrAI MCP response begins with the same two lines:

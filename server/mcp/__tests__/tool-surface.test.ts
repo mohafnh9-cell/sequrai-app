@@ -14,6 +14,17 @@ describe("MCP public tool surface", () => {
     expect(MCP_TOOL_DEFINITIONS).toHaveLength(5);
   });
 
+  it("registers exactly the five MCP V1 — Remote Production Review tools", () => {
+    const registeredNames = MCP_TOOL_DEFINITIONS.map((tool) => tool.name);
+    expect(registeredNames).toEqual([
+      "review_now",
+      "can_i_deploy",
+      "safe_fix",
+      "what_changed",
+      "production_history",
+    ]);
+  });
+
   it("has no duplicate tool names", () => {
     const names = MCP_TOOL_DEFINITIONS.map((tool) => tool.name);
     expect(new Set(names).size).toBe(names.length);
@@ -25,7 +36,7 @@ describe("MCP public tool surface", () => {
     expect(contractNames).toEqual(registeredNames);
   });
 
-  it("does not expose legacy V0 tool names removed during the ADR-001 cleanup", () => {
+  it("does not expose legacy V0 tool names removed during the ADR-001 cleanup, nor deployment_confidence (retired in favor of review_now)", () => {
     const removedLegacyNames = [
       "get_today_priorities",
       "get_coach_tip",
@@ -34,6 +45,7 @@ describe("MCP public tool surface", () => {
       "explain_issue",
       "generate_blocker_fix",
       "review_before_commit",
+      "deployment_confidence",
     ];
     const registeredNames = MCP_TOOL_DEFINITIONS.map((tool) => tool.name);
     for (const legacyName of removedLegacyNames) {

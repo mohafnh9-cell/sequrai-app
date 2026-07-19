@@ -43,7 +43,7 @@ describe("getMcpTranslator", () => {
 
   it("interpolates params in error messages", () => {
     const t = getMcpTranslator("en");
-    expect(t("deploymentConfidence.reasons.blockers", { count: 3 })).toContain("3");
+    expect(t("canIDeploy.staleWarning", { commitSha: "abc1234" })).toContain("abc1234");
   });
 
   it("has EN and ES copy for unknown freshness and failed-review warnings", () => {
@@ -54,10 +54,27 @@ describe("getMcpTranslator", () => {
     expect(es("canIDeploy.freshnessUnknown")).toContain("no pudo verificar");
     expect(en("canIDeploy.reviewFailedWarning")).toContain("failed to complete");
     expect(es("canIDeploy.reviewFailedWarning")).toContain("no se completó");
+  });
 
-    expect(en("deploymentConfidence.freshnessUnknown")).toContain("could not verify");
-    expect(es("deploymentConfidence.freshnessUnknown")).toContain("no pudo verificar");
-    expect(en("deploymentConfidence.reviewFailedWarning")).toContain("more analysis required");
-    expect(es("deploymentConfidence.reviewFailedWarning")).toContain("más análisis");
+  it("has EN and ES copy for review_now (production review request)", () => {
+    const en = getMcpTranslator("en");
+    const es = getMcpTranslator("es");
+
+    expect(en("modes.production_review_request")).toBe("PRODUCTION REVIEW REQUESTED");
+    expect(es("modes.production_review_request")).toBe("REVISIÓN DE PRODUCCIÓN SOLICITADA");
+    expect(en("reviewNow.nextAction")).toBe("Call can_i_deploy to retrieve the updated verdict.");
+    expect(es("reviewNow.nextAction")).toContain("can_i_deploy");
+    expect(en("reviewNow.statusQueued")).toBe("QUEUED");
+  });
+
+  it("has EN and ES copy for review_now's new error codes", () => {
+    const en = getMcpTranslator("en");
+    const es = getMcpTranslator("es");
+
+    for (const code of ["invalid_commit", "commit_not_found", "review_creation_failed", "repository_too_large"]) {
+      expect(en(`errors.${code}`)).toBeTruthy();
+      expect(es(`errors.${code}`)).toBeTruthy();
+      expect(en(`errors.${code}`)).not.toBe(es(`errors.${code}`));
+    }
   });
 });

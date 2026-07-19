@@ -6,8 +6,8 @@ import { getMcpTranslator, resolveMcpLocale } from "./i18n";
 import { logMcpCall } from "./observability";
 import { MCP_PUBLIC_TOOL_NAMES } from "./tool-definitions";
 import { canIDeploy } from "./tools/can-i-deploy";
-import { deploymentConfidence } from "./tools/deployment-confidence";
 import { productionHistory } from "./tools/production-history";
+import { reviewNow } from "./tools/review-now";
 import { safeFix } from "./tools/safe-fix";
 import { whatChanged } from "./tools/what-changed";
 
@@ -21,6 +21,10 @@ function num(value: unknown): number | undefined {
 
 function range(value: unknown): "7d" | "30d" | "all" | undefined {
   return value === "7d" || value === "30d" || value === "all" ? value : undefined;
+}
+
+function reason(value: unknown): "before_deploy" | "after_fix" | "manual_check" | undefined {
+  return value === "before_deploy" || value === "after_fix" || value === "manual_check" ? value : undefined;
 }
 
 function projectSelector(input: Record<string, unknown>) {
@@ -80,6 +84,18 @@ async function dispatch(
   t: ReturnType<typeof getMcpTranslator>
 ): Promise<unknown> {
   switch (toolName) {
+    case "review_now":
+      return reviewNow(
+        ctx,
+        {
+          ...projectSelector(input),
+          commitSha: str(input.commitSha),
+          branch: str(input.branch),
+          reason: reason(input.reason),
+        },
+        t
+      );
+
     case "can_i_deploy":
       return canIDeploy(ctx, projectSelector(input), t);
 
@@ -108,9 +124,6 @@ async function dispatch(
         },
         t
       );
-
-    case "deployment_confidence":
-      return deploymentConfidence(ctx, projectSelector(input), t);
 
     default:
       throw new McpError(404, "unknown_tool", `Unknown tool: ${toolName}`);

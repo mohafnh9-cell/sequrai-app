@@ -2,10 +2,10 @@
   "header": "SEQURAI",
   "modes": {
     "production_review": "REVISIÓN DE PRODUCCIÓN",
+    "production_review_request": "REVISIÓN DE PRODUCCIÓN SOLICITADA",
     "safe_fix": "CORRECCIÓN SEGURA",
     "continuous_review": "REVISIÓN CONTINUA",
-    "production_history": "HISTORIAL DE PRODUCCIÓN",
-    "deployment_confidence": "CONFIANZA DE DESPLIEGUE"
+    "production_history": "HISTORIAL DE PRODUCCIÓN"
   },
   "canIDeploy": {
     "verdictLabel": "Veredicto:",
@@ -23,6 +23,19 @@
     "reviewInProgress": "La Revisión Continua está procesando este repositorio. Este veredicto refleja la última revisión completada.",
     "insufficientData": "Todavía no hay suficiente cobertura del repositorio para una decisión de producción responsable. Ejecuta primero una revisión completa.",
     "analysisFailed": "La última revisión no se completó correctamente. Vuelve a ejecutar el análisis antes de confiar en este veredicto."
+  },
+  "reviewNow": {
+    "projectLabel": "Proyecto:",
+    "commitLabel": "Commit:",
+    "statusLabel": "Estado:",
+    "statusQueued": "EN COLA",
+    "statusProcessing": "PROCESANDO",
+    "statusAlreadyCompleted": "YA COMPLETADA",
+    "queuedNote": "SequrAI está revisando este commit.",
+    "processingNote": "Ya hay una Revisión de Producción en curso para este repositorio. Esta solicitud no inició una segunda revisión.",
+    "alreadyCompletedNote": "El Veredicto de Producción actual ya cubre este commit. No se inició una nueva revisión.",
+    "nextActionLabel": "Próxima acción:",
+    "nextAction": "Llama a can_i_deploy para obtener el veredicto actualizado."
   },
   "safeFix": {
     "chooseBlocker": "Elige un bloqueador para generar su Safe Fix Prompt.",
@@ -58,31 +71,18 @@
       "insufficient_data": "Todavía sin suficientes datos"
     }
   },
-  "deploymentConfidence": {
-    "recommendationLabel": "Recomendación:",
-    "confidenceLabel": "Confianza:",
-    "reasonLabel": "Motivo:",
-    "nextActionLabel": "Próxima acción:",
-    "deploy": "DESPLEGAR",
-    "doNotDeploy": "NO DESPLEGAR",
-    "moreAnalysisRequired": "SE REQUIERE MÁS ANÁLISIS",
-    "staleNote": "Esta recomendación no incluye el último commit detectado.",
-    "freshnessUnknown": "SequrAI no pudo verificar si esta recomendación cubre tu código más reciente. La detección de pushes no tiene ninguna señal confirmada para este repositorio.",
-    "reviewFailedWarning": "La revisión automática más reciente para un commit más nuevo no se completó, por lo que esta recomendación se degradó a se requiere más análisis.",
-    "disclaimer": "Esta recomendación refleja el último Veredicto de Producción completado para este repositorio.",
-    "reasons": {
-      "ready": "No quedan bloqueadores de producción en la última revisión.",
-      "blockers": "Quedan {count} bloqueador(es) de producción en la última revisión.",
-      "insufficientData": "No hay suficiente cobertura del repositorio para una recomendación responsable.",
-      "analysisFailed": "La última revisión no se completó correctamente."
-    }
-  },
   "errors": {
     "unauthorized": "Tu clave de API de MCP falta o no es válida. Añade un encabezado Authorization válido.",
     "invalid_api_key": "Esta clave de API de MCP no es válida o ha sido revocada. Genera una nueva clave desde tu configuración de SequrAI.",
     "project_not_found": "No se encontró este proyecto en tu organización.",
     "ambiguous_project": "Tu organización tiene más de un proyecto. Especifica un projectId para continuar.",
-    "repository_disconnected": "El repositorio de GitHub de este proyecto no está conectado. Reconéctalo en la configuración de SequrAI.",
+    "repository_disconnected": "El repositorio de GitHub de este proyecto no está conectado, o ningún miembro de la organización tiene una conexión de GitHub válida. Reconéctalo en la configuración de SequrAI.",
+    "invalid_commit": "La referencia de commit proporcionada no es válida.",
+    "commit_not_found": "No se encontró este commit en el repositorio conectado.",
+    "review_already_processing": "Ya hay una Revisión de Producción en curso para este repositorio.",
+    "review_creation_failed": "No se pudo crear la Revisión de Producción. Inténtalo de nuevo en breve.",
+    "review_failed": "La Revisión de Producción no se completó correctamente.",
+    "repository_too_large": "Este repositorio supera el tamaño que SequrAI puede revisar actualmente.",
     "no_verdict_available": "Todavía no existe un Veredicto de Producción para este proyecto. Haz push de un commit o ejecuta una revisión para generar uno.",
     "review_in_progress": "Una Revisión Continua se está ejecutando actualmente para este proyecto. Inténtalo de nuevo en breve.",
     "insufficient_data": "Todavía no hay suficiente cobertura del repositorio para una decisión de producción responsable.",

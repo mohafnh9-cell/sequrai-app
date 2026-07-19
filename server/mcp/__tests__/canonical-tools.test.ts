@@ -3,7 +3,6 @@ import type { McpAuthContext } from "@/server/mcp/auth";
 import { McpError } from "@/server/mcp/auth";
 import { getMcpTranslator } from "@/server/mcp/i18n";
 import { canIDeploy } from "@/server/mcp/tools/can-i-deploy";
-import { deploymentConfidence } from "@/server/mcp/tools/deployment-confidence";
 import { productionHistory } from "@/server/mcp/tools/production-history";
 import { safeFix } from "@/server/mcp/tools/safe-fix";
 import { whatChanged } from "@/server/mcp/tools/what-changed";
@@ -62,6 +61,21 @@ describe("can_i_deploy", () => {
     expect(result.deploymentRecommendation).toBe("DO_NOT_DEPLOY");
     expect(result.summary).toContain("SEQURAI");
     expect(result.summary).toContain("PRODUCTION REVIEW");
+  });
+
+  it("includes the deployment recommendation and the fields migrated from the retired deployment_confidence tool", async () => {
+    const verdict = buildVerdictFixture({ status: "ready_to_ship", score: 96, blockersCount: 0, topPriorities: [], confidence: "low" });
+    const tables = baseTables({
+      production_verdicts: [verdictRow(PROJECT_1, verdict)],
+      scans: [{ id: "scan-latest", repository_id: PROJECT_1, status: "completed", created_at: "2026-03-01" }],
+    });
+    const result = await canIDeploy(ctxFor(createFakeAdmin(tables)), {}, t);
+
+    expect(result.deploymentRecommendation).toBe("SHIP_IT");
+    // Reuses the verdict engine's own confidence field rather than inventing one.
+    expect(result.confidenceBand).toBe("low");
+    expect(result.latestReviewId).toBe("scan-latest");
+    expect(result.latestReviewStatus).toBe("completed");
   });
 
   it("never coerces a null score to zero", async () => {
@@ -162,6 +176,33 @@ describe("can_i_deploy", () => {
     expect(result.freshnessStatus).toBe("stale");
     expect(result.summary).toContain(t("canIDeploy.reviewFailedWarning"));
   });
+
+  it("maps ready_to_ship to SHIP_IT", async () => {
+    const verdict = buildVerdictFixture({ status: "ready_to_ship", score: 96, blockersCount: 0, topPriorities: [] });
+    const tables = baseTables({ production_verdicts: [verdictRow(PROJECT_1, verdict)] });
+    const result = await canIDeploy(ctxFor(createFakeAdmin(tables)), {}, t);
+    expect(result.deploymentRecommendation).toBe("SHIP_IT");
+  });
+
+  it.each(["almost_ready", "needs_improvement", "not_ready"] as const)(
+    "maps %s to DO_NOT_DEPLOY",
+    async (status) => {
+      const verdict = buildVerdictFixture({ status, score: 60 });
+      const tables = baseTables({ production_verdicts: [verdictRow(PROJECT_1, verdict)] });
+      const result = await canIDeploy(ctxFor(createFakeAdmin(tables)), {}, t);
+      expect(result.deploymentRecommendation).toBe("DO_NOT_DEPLOY");
+    }
+  );
+
+  it.each(["insufficient_data", "analysis_failed"] as const)(
+    "maps %s to MORE_ANALYSIS_REQUIRED",
+    async (status) => {
+      const verdict = buildVerdictFixture({ status, score: null, topPriorities: [] });
+      const tables = baseTables({ production_verdicts: [verdictRow(PROJECT_1, verdict)] });
+      const result = await canIDeploy(ctxFor(createFakeAdmin(tables)), {}, t);
+      expect(result.deploymentRecommendation).toBe("MORE_ANALYSIS_REQUIRED");
+    }
+  );
 
   it("throws no_verdict_available when the project has never been reviewed", async () => {
     const tables = baseTables();
@@ -425,108 +466,9 @@ describe("production_history", () => {
   });
 });
 
-describe("deployment_confidence", () => {
-  it("maps ready_to_ship to deploy", async () => {
-    const verdict = buildVerdictFixture({ status: "ready_to_ship", score: 96, blockersCount: 0, topPriorities: [] });
-    const tables = baseTables({ production_verdicts: [verdictRow(PROJECT_1, verdict)] });
-    const result = await deploymentConfidence(ctxFor(createFakeAdmin(tables)), {}, t);
-    expect(result.decision).toBe("deploy");
-    expect(result.summary).toContain(t("deploymentConfidence.deploy"));
-  });
-
-  it.each(["almost_ready", "needs_improvement", "not_ready"] as const)(
-    "maps %s to do_not_deploy",
-    async (status) => {
-      const verdict = buildVerdictFixture({ status, score: 60 });
-      const tables = baseTables({ production_verdicts: [verdictRow(PROJECT_1, verdict)] });
-      const result = await deploymentConfidence(ctxFor(createFakeAdmin(tables)), {}, t);
-      expect(result.decision).toBe("do_not_deploy");
-    }
-  );
-
-  it.each(["insufficient_data", "analysis_failed"] as const)(
-    "maps %s to more_analysis_required",
-    async (status) => {
-      const verdict = buildVerdictFixture({ status, score: null, topPriorities: [] });
-      const tables = baseTables({ production_verdicts: [verdictRow(PROJECT_1, verdict)] });
-      const result = await deploymentConfidence(ctxFor(createFakeAdmin(tables)), {}, t);
-      expect(result.decision).toBe("more_analysis_required");
-    }
-  );
-
-  it("reuses the verdict engine's own confidence field rather than inventing one", async () => {
-    const verdict = buildVerdictFixture({ confidence: "low" });
-    const tables = baseTables({ production_verdicts: [verdictRow(PROJECT_1, verdict)] });
-    const result = await deploymentConfidence(ctxFor(createFakeAdmin(tables)), {}, t);
-    expect(result.confidenceBand).toBe("low");
-  });
-
-  it("warns when the recommendation does not cover the latest detected commit", async () => {
-    const verdict = buildVerdictFixture({ commitSha: "old-sha" });
-    const tables = baseTables({
-      production_verdicts: [verdictRow(PROJECT_1, verdict)],
-      repository_sync_status: [
-        { project_id: PROJECT_1, commit_sha: "new-sha", connection_status: "connected", last_error: null },
-      ],
-    });
-    const result = await deploymentConfidence(ctxFor(createFakeAdmin(tables)), {}, t);
-    expect(result.stale).toBe(true);
-    expect(result.freshnessStatus).toBe("stale");
-    expect(result.summary).toContain(t("deploymentConfidence.staleNote"));
-  });
-
-  it("never reports stale: false when push detection has no confirmed signal", async () => {
-    const verdict = buildVerdictFixture({ commitSha: "aaa1111", status: "ready_to_ship" });
-    const tables = baseTables({
-      production_verdicts: [verdictRow(PROJECT_1, verdict)],
-      github_webhooks: [],
-      repository_sync_status: [],
-    });
-    const result = await deploymentConfidence(ctxFor(createFakeAdmin(tables)), {}, t);
-    expect(result.freshnessStatus).toBe("unknown");
-    expect(result.stale).toBe(true);
-    expect(result.summary).toContain(t("deploymentConfidence.freshnessUnknown"));
-  });
-
-  it("downgrades a deploy recommendation to more_analysis_required when the automatic review for a newer commit failed", async () => {
-    const verdict = buildVerdictFixture({
-      commitSha: "aaa1111",
-      status: "ready_to_ship",
-      score: 96,
-      blockersCount: 0,
-      topPriorities: [],
-    });
-    const tables = baseTables({
-      production_verdicts: [verdictRow(PROJECT_1, verdict)],
-      repository_sync_status: [
-        { project_id: PROJECT_1, commit_sha: "aaa1111", connection_status: "connected", last_error: null },
-      ],
-      scans: [
-        {
-          repository_id: PROJECT_1,
-          review_type: "automatic",
-          status: "failed",
-          commit_sha: "ccc3333",
-          created_at: "2026-02-01",
-        },
-      ],
-    });
-    const result = await deploymentConfidence(ctxFor(createFakeAdmin(tables)), {}, t);
-    expect(result.decision).toBe("more_analysis_required");
-    expect(result.summary).toContain(t("deploymentConfidence.reviewFailedWarning"));
-  });
-
-  it("renders the unknown-freshness warning in Spanish", async () => {
-    const es = getMcpTranslator("es");
-    const verdict = buildVerdictFixture({ commitSha: "aaa1111", status: "ready_to_ship" });
-    const tables = baseTables({
-      production_verdicts: [verdictRow(PROJECT_1, verdict)],
-      github_webhooks: [],
-      repository_sync_status: [],
-    });
-    const result = await deploymentConfidence(ctxFor(createFakeAdmin(tables)), {}, es);
-    expect(result.freshnessStatus).toBe("unknown");
-    expect(result.summary).toContain(es("deploymentConfidence.freshnessUnknown"));
-    expect(result.summary).toContain("no pudo verificar");
-  });
-});
+// deployment_confidence was retired (MCP V1 — Remote Production Review):
+// its unique output (confidenceBand) was migrated into can_i_deploy above,
+// and its deploy/do-not-deploy/more-analysis-required mapping is exercised
+// directly through can_i_deploy's deploymentRecommendation in the
+// describe("can_i_deploy") block. See server/mcp/tools/review-now.ts and
+// docs/MCP_REVIEW_NOW_REPORT.md.

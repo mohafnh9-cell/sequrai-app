@@ -5,6 +5,7 @@ import type { McpAuthContext } from "../auth";
 import { McpError } from "../auth";
 import { mapVerdictStatusToDecision } from "../decision-mapping";
 import type { McpTranslator } from "../i18n";
+import { getLatestReviewSummary } from "../latest-review";
 import type { ProjectSelector } from "../project-resolution";
 import { resolveMcpProject } from "../project-resolution";
 import { buildProjectReportUrl } from "../report-url";
@@ -26,6 +27,8 @@ export type CanIDeployResult = {
   verdictStatus: string;
   score: number | null;
   scoreDelta: number | null;
+  /** Migrated from the retired deployment_confidence tool: the verdict engine's own confidence field, verbatim. */
+  confidenceBand: "high" | "medium" | "low";
   blockersCount: number;
   topBlockers: CanIDeployBlocker[];
   nextAction: string;
@@ -42,6 +45,9 @@ export type CanIDeployResult = {
   freshnessStatus: "current" | "stale" | "unknown";
   reviewInProgress: boolean;
   reviewFailed: boolean;
+  /** The most recently created review of any kind (web, GitHub push, or MCP review_now), regardless of whether it is the one that produced this verdict. */
+  latestReviewId: string | null;
+  latestReviewStatus: string | null;
   deploymentRecommendation: "SHIP_IT" | "DO_NOT_DEPLOY" | "MORE_ANALYSIS_REQUIRED";
   reportUrl: string | null;
   summary: string;
@@ -65,7 +71,10 @@ export async function canIDeploy(
     throw new McpError(404, "no_verdict_available", t("errors.no_verdict_available"));
   }
 
-  const staleness = await getStalenessInfo(ctx.admin, project.id, verdict.commitSha);
+  const [staleness, latestReview] = await Promise.all([
+    getStalenessInfo(ctx.admin, project.id, verdict.commitSha),
+    getLatestReviewSummary(ctx.admin, project.id),
+  ]);
 
   const engineDecision = mapVerdictStatusToDecision(verdict.status);
   // A failed automatic review is positive proof of an unreviewed newer
@@ -134,6 +143,7 @@ export async function canIDeploy(
     verdictStatus: verdict.status,
     score: verdict.score,
     scoreDelta: verdict.scoreDelta,
+    confidenceBand: verdict.confidence,
     blockersCount: verdict.blockersCount,
     topBlockers,
     nextAction: verdict.recommendedAction,
@@ -150,6 +160,8 @@ export async function canIDeploy(
     freshnessStatus: staleness.freshnessStatus,
     reviewInProgress: staleness.reviewInProgress,
     reviewFailed: staleness.reviewFailed,
+    latestReviewId: latestReview?.id ?? null,
+    latestReviewStatus: latestReview?.status ?? null,
     deploymentRecommendation,
     reportUrl: buildProjectReportUrl(project.id),
     summary: buildTextResponse("production_review", t, lines),

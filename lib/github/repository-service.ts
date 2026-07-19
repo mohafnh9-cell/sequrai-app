@@ -151,6 +151,76 @@ function isRelevantPath(path: string): { include: boolean; reason?: string } {
   return { include: true };
 }
 
+export type ResolvedCommitReference = { sha: string; branch: string | null };
+
+/**
+ * Lightweight commit lookup used by review_now to resolve which commit will
+ * be reviewed — either an explicit, authorized commitSha or the latest
+ * commit on a branch (default branch when none is given). This never fetches
+ * file contents; it exists purely for commit resolution, independent of the
+ * (heavier) full-repository snapshot used by the scanner itself.
+ */
+export async function resolveCommitReference(
+  accessToken: string,
+  ref: GitHubRepositoryRef,
+  input: { commitSha?: string; branch?: string }
+): Promise<ResolvedCommitReference> {
+  const controller = new AbortController();
+  const deadline = setTimeout(() => controller.abort(), 10_000);
+  const base = `/repos/${encodeURIComponent(ref.owner)}/${encodeURIComponent(ref.repo)}`;
+
+  async function request<T>(path: string): Promise<T> {
+    const response = await fetch(`${GITHUB_API}${path}`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": API_VERSION,
+        "User-Agent": "SequrAI-Scanner/1.0",
+      },
+      cache: "no-store",
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      const remaining = response.headers.get("x-ratelimit-remaining");
+      if (response.status === 429 || (response.status === 403 && remaining === "0")) {
+        throw new GitHubServiceError("GITHUB_RATE_LIMIT", "GitHub API rate limit reached", 429);
+      }
+      if (response.status === 401) {
+        throw new GitHubServiceError("GITHUB_AUTH", "GitHub authorization has expired", 401);
+      }
+      if (response.status === 403) {
+        throw new GitHubServiceError("GITHUB_FORBIDDEN", "GitHub repository access was denied", 403);
+      }
+      if (response.status === 404) {
+        throw new GitHubServiceError("GITHUB_NOT_FOUND", "GitHub commit or repository was not found", 404);
+      }
+      throw new GitHubServiceError("GITHUB_RESPONSE", `GitHub API request failed (${response.status})`, 502);
+    }
+    return (await response.json()) as T;
+  }
+
+  try {
+    if (input.commitSha?.trim()) {
+      const commit = await request<{ sha: string }>(
+        `${base}/commits/${encodeURIComponent(input.commitSha.trim())}`
+      );
+      return { sha: commit.sha, branch: input.branch?.trim() || null };
+    }
+    const repository = await request<GitHubRepo>(base);
+    const branch = input.branch?.trim() || repository.default_branch;
+    const commit = await request<{ sha: string }>(`${base}/commits/${encodeURIComponent(branch)}`);
+    return { sha: commit.sha, branch };
+  } catch (error) {
+    if (error instanceof GitHubServiceError) throw error;
+    if (controller.signal.aborted) {
+      throw new GitHubServiceError("GITHUB_TIMEOUT", "GitHub commit lookup timed out", 504);
+    }
+    throw error;
+  } finally {
+    clearTimeout(deadline);
+  }
+}
+
 export class GitHubRepositoryService {
   private readonly controller = new AbortController();
   private readonly deadline: ReturnType<typeof setTimeout>;

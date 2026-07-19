@@ -44,6 +44,31 @@ const PROJECT_SELECTOR_PROPERTIES: McpToolDefinition["inputSchema"]["properties"
  */
 export const MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
   {
+    name: "review_now",
+    description:
+      "Starts a real SequrAI Production Review for this project's connected repository (e.g. 'Scan this project', 'Review this repository before I deploy'). Reuses the same review pipeline as GitHub Continuous Review and manual web reviews. Returns quickly with a reviewId; the review continues asynchronously. Call can_i_deploy afterwards for the verdict.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        ...PROJECT_SELECTOR_PROPERTIES,
+        commitSha: {
+          type: "string",
+          description: "Explicit commit SHA to review. Defaults to the latest commit on the branch.",
+        },
+        branch: {
+          type: "string",
+          description: "Branch to review. Defaults to the repository's default branch.",
+        },
+        reason: {
+          type: "string",
+          description: "Why this review was requested. Analytics metadata only; never affects the result.",
+          enum: ["before_deploy", "after_fix", "manual_check"],
+        },
+      },
+      required: [],
+    },
+  },
+  {
     name: "can_i_deploy",
     description:
       "Answers 'Can I deploy this application?' using the latest persisted Production Verdict: status, score, blockers, next action, and deployment recommendation.",
@@ -96,23 +121,13 @@ export const MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
       required: [],
     },
   },
-  {
-    name: "deployment_confidence",
-    description:
-      "Answers 'Would you deploy this if it were your own SaaS?'. Translates the current verdict into a fixed deploy / do-not-deploy / more-analysis-required recommendation with a documented reason.",
-    inputSchema: {
-      type: "object",
-      properties: { ...PROJECT_SELECTOR_PROPERTIES },
-      required: [],
-    },
-  },
 ];
 
 export const MCP_PUBLIC_TOOL_NAMES = MCP_TOOL_DEFINITIONS.map((tool) => tool.name);
 
 export const MCP_SERVER_INFO = {
   name: "sequrai",
-  version: "2.0.0",
+  version: "2.1.0",
   description:
-    "SequrAI Production Engine — the last thing you ask before deploying. Independent Production Verdict, Safe Fix prompts, Continuous Review, and deployment confidence for AI-built software.",
+    "SequrAI Production Engine — the last thing you ask before deploying. Trigger a real Production Review, get an independent verdict and deployment recommendation, Safe Fix prompts, and Continuous Review history for AI-built software.",
 };

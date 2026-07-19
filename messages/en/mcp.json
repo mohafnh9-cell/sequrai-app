@@ -2,10 +2,10 @@
   "header": "SEQURAI",
   "modes": {
     "production_review": "PRODUCTION REVIEW",
+    "production_review_request": "PRODUCTION REVIEW REQUESTED",
     "safe_fix": "SAFE FIX",
     "continuous_review": "CONTINUOUS REVIEW",
-    "production_history": "PRODUCTION HISTORY",
-    "deployment_confidence": "DEPLOYMENT CONFIDENCE"
+    "production_history": "PRODUCTION HISTORY"
   },
   "canIDeploy": {
     "verdictLabel": "Verdict:",
@@ -23,6 +23,19 @@
     "reviewInProgress": "Continuous Review is currently processing this repository. This verdict reflects the last completed review.",
     "insufficientData": "There is not enough repository coverage yet for a responsible production decision. Run a full review first.",
     "analysisFailed": "The latest review did not complete successfully. Re-run the analysis before trusting this verdict."
+  },
+  "reviewNow": {
+    "projectLabel": "Project:",
+    "commitLabel": "Commit:",
+    "statusLabel": "Status:",
+    "statusQueued": "QUEUED",
+    "statusProcessing": "PROCESSING",
+    "statusAlreadyCompleted": "ALREADY COMPLETED",
+    "queuedNote": "SequrAI is reviewing this commit.",
+    "processingNote": "A Production Review is already running for this repository. This request did not start a second review.",
+    "alreadyCompletedNote": "The current Production Verdict already covers this commit. No new review was started.",
+    "nextActionLabel": "Next action:",
+    "nextAction": "Call can_i_deploy to retrieve the updated verdict."
   },
   "safeFix": {
     "chooseBlocker": "Choose a blocker to generate its Safe Fix Prompt.",
@@ -58,31 +71,18 @@
       "insufficient_data": "Not enough data yet"
     }
   },
-  "deploymentConfidence": {
-    "recommendationLabel": "Recommendation:",
-    "confidenceLabel": "Confidence:",
-    "reasonLabel": "Reason:",
-    "nextActionLabel": "Next action:",
-    "deploy": "DEPLOY",
-    "doNotDeploy": "DO NOT DEPLOY",
-    "moreAnalysisRequired": "MORE ANALYSIS REQUIRED",
-    "staleNote": "This recommendation does not include the latest detected commit.",
-    "freshnessUnknown": "SequrAI could not verify whether this recommendation covers your latest code. Push detection has no confirmed signal for this repository.",
-    "reviewFailedWarning": "The most recent automatic review for a newer commit failed to complete, so this recommendation was downgraded to more analysis required.",
-    "disclaimer": "This recommendation reflects the last completed Production Verdict for this repository.",
-    "reasons": {
-      "ready": "No production blockers remain in the latest review.",
-      "blockers": "{count} production blocker(s) remain in the latest review.",
-      "insufficientData": "There is not enough repository coverage for a responsible recommendation.",
-      "analysisFailed": "The latest review did not complete successfully."
-    }
-  },
   "errors": {
     "unauthorized": "Your MCP API key is missing or invalid. Add a valid Authorization header.",
     "invalid_api_key": "This MCP API key is invalid or has been revoked. Generate a new key from your SequrAI settings.",
     "project_not_found": "This project could not be found in your organization.",
     "ambiguous_project": "Your organization has more than one project. Specify a projectId to continue.",
-    "repository_disconnected": "This project's GitHub repository is not connected. Reconnect it in SequrAI settings.",
+    "repository_disconnected": "This project's GitHub repository is not connected, or no organization member has a valid GitHub connection. Reconnect GitHub in SequrAI settings.",
+    "invalid_commit": "The commit reference provided is not valid.",
+    "commit_not_found": "This commit could not be found on the connected repository.",
+    "review_already_processing": "A Production Review is already running for this repository.",
+    "review_creation_failed": "The Production Review could not be created. Try again shortly.",
+    "review_failed": "The Production Review did not complete successfully.",
+    "repository_too_large": "This repository exceeds the size SequrAI can currently review.",
     "no_verdict_available": "No Production Verdict exists yet for this project. Push a commit or run a review to generate one.",
     "review_in_progress": "A Continuous Review is currently running for this project. Try again shortly.",
     "insufficient_data": "There is not enough repository coverage yet for a responsible production decision.",
