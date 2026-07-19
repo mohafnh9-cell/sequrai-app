@@ -13,6 +13,9 @@ export type RateLimitOptions = {
   limit?: number;
   windowMs?: number;
   keyPrefix?: string;
+  /** Typed error code + message for callers that need a structured body (e.g. MCP). */
+  errorCode?: string;
+  errorMessage?: string;
 };
 
 function clientKey(request: Request, keyPrefix: string): string {
@@ -41,7 +44,13 @@ export function enforceRateLimit(
 
   bucket.count += 1;
   if (bucket.count > limit) {
-    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    return NextResponse.json(
+      {
+        error: options.errorMessage ?? "Too many requests",
+        ...(options.errorCode ? { code: options.errorCode } : {}),
+      },
+      { status: 429 }
+    );
   }
 
   return null;

@@ -24,7 +24,6 @@ describe("calculateRepositoryHealth", () => {
   it("marks critical repos", () => {
     const result = calculateRepositoryHealth({
       securityScore: 30,
-      riskScore: 90,
       openFindings: 40,
       criticalOpen: 2,
       scoreTrend: -10,
@@ -35,7 +34,6 @@ describe("calculateRepositoryHealth", () => {
   it("marks excellent repos", () => {
     const result = calculateRepositoryHealth({
       securityScore: 92,
-      riskScore: 15,
       openFindings: 2,
       criticalOpen: 0,
       scoreTrend: 5,

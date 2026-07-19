@@ -8,6 +8,8 @@ import { enforceRateLimit } from "@/server/http/rate-limit";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
+const MAX_REQUEST_BODY_BYTES = 64 * 1024;
+
 type JsonRpcRequest = {
   jsonrpc?: string;
   id?: string | number | null;
@@ -41,10 +43,14 @@ function toolCallResult(payload: unknown) {
   };
 }
 
-function toolCallError(message: string) {
+function toolCallError(error: unknown) {
+  const message = error instanceof Error ? error.message : "Tool execution failed";
   return {
     content: [{ type: "text", text: message }],
     isError: true,
+    ...(error instanceof McpError
+      ? { code: error.code, ...(error.data ? { data: error.data } : {}) }
+      : {}),
   };
 }
 
@@ -77,21 +83,26 @@ async function handleJsonRpc(body: JsonRpcRequest, auth: NonNullable<Awaited<Ret
       const payload = await executeMcpTool(auth, name, args);
       return jsonRpcResult(id, toolCallResult(payload));
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Tool execution failed";
-      return jsonRpcResult(id, toolCallError(message));
+      return jsonRpcResult(id, toolCallError(error));
     }
   }
 
   return jsonRpcError(id, -32601, `Method not found: ${method}`);
 }
 
+const MCP_RATE_LIMIT_OPTIONS = {
+  keyPrefix: "mcp",
+  errorCode: "rate_limited",
+  errorMessage: "Too many requests. Wait a moment before trying again.",
+};
+
 export async function GET(request: Request) {
-  const rateLimited = enforceRateLimit(request);
+  const rateLimited = enforceRateLimit(request, MCP_RATE_LIMIT_OPTIONS);
   if (rateLimited) return rateLimited;
 
   const auth = await resolveMcpAuth(request);
   if (!auth) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized", code: "unauthorized" }, { status: 401 });
   }
   return NextResponse.json({
     server: MCP_SERVER_INFO,
@@ -100,18 +111,26 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const rateLimited = enforceRateLimit(request);
+  const rateLimited = enforceRateLimit(request, MCP_RATE_LIMIT_OPTIONS);
   if (rateLimited) return rateLimited;
 
   const auth = await resolveMcpAuth(request);
   if (!auth) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized", code: "unauthorized" }, { status: 401 });
+  }
+
+  const contentLength = Number(request.headers.get("content-length") ?? 0);
+  if (contentLength > MAX_REQUEST_BODY_BYTES) {
+    return NextResponse.json(
+      { error: "Request body too large", code: "internal_error" },
+      { status: 413 }
+    );
   }
 
   const rawBody = await request.json().catch(() => null);
   const parsedBody = mcpPostBodySchema.safeParse(rawBody);
   if (!parsedBody.success) {
-    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid JSON body", code: "internal_error" }, { status: 400 });
   }
 
   const body = parsedBody.data as JsonRpcRequest;
@@ -123,7 +142,7 @@ export async function POST(request: Request) {
   const toolName = body.tool;
   const input = (body.input ?? {}) as Record<string, unknown>;
   if (!toolName) {
-    return NextResponse.json({ error: "Missing tool name" }, { status: 400 });
+    return NextResponse.json({ error: "Missing tool name", code: "internal_error" }, { status: 400 });
   }
 
   try {
@@ -132,11 +151,11 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof McpError) {
       return NextResponse.json(
-        { error: error.message, code: error.code },
+        { error: error.message, code: error.code, ...(error.data ? { data: error.data } : {}) },
         { status: error.status }
       );
     }
     const message = error instanceof Error ? error.message : "Tool execution failed";
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json({ error: message, code: "internal_error" }, { status: 500 });
   }
 }

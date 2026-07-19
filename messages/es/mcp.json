@@ -1,0 +1,91 @@
+{
+  "header": "SEQURAI",
+  "modes": {
+    "production_review": "REVISIÓN DE PRODUCCIÓN",
+    "safe_fix": "CORRECCIÓN SEGURA",
+    "continuous_review": "REVISIÓN CONTINUA",
+    "production_history": "HISTORIAL DE PRODUCCIÓN",
+    "deployment_confidence": "CONFIANZA DE DESPLIEGUE"
+  },
+  "canIDeploy": {
+    "verdictLabel": "Veredicto:",
+    "scoreLabel": "Puntuación de preparación para producción:",
+    "scoreUnavailable": "Puntuación de preparación no disponible",
+    "blockersLabel": "Bloqueadores de producción:",
+    "nextActionLabel": "Próxima acción:",
+    "recommendationLabel": "Recomendación de despliegue:",
+    "deploy": "DESPLIÉGALO",
+    "doNotDeploy": "NO DESPLEGAR",
+    "moreAnalysisRequired": "SE REQUIERE MÁS ANÁLISIS",
+    "staleWarning": "Este veredicto no cubre el último commit detectado ({commitSha}). Los resultados pueden estar desactualizados.",
+    "reviewInProgress": "La Revisión Continua está procesando este repositorio. Este veredicto refleja la última revisión completada.",
+    "insufficientData": "Todavía no hay suficiente cobertura del repositorio para una decisión de producción responsable. Ejecuta primero una revisión completa.",
+    "analysisFailed": "La última revisión no se completó correctamente. Vuelve a ejecutar el análisis antes de confiar en este veredicto."
+  },
+  "safeFix": {
+    "chooseBlocker": "Elige un bloqueador para generar su Safe Fix Prompt.",
+    "noBlockers": "No se encontraron bloqueadores de producción. No hay nada que corregir ahora mismo.",
+    "blockerLabel": "Bloqueador:",
+    "riskLabel": "Riesgo de implementación:",
+    "timeLabel": "Tiempo estimado:",
+    "projectedVerdictLabel": "Veredicto proyectado:",
+    "projectedEstimateNote": "La puntuación y el veredicto proyectados son estimaciones, no una garantía.",
+    "copyPrompt": "Copia el Safe Fix Prompt a continuación en Cursor o Claude Code.",
+    "unavailable": "No se pudo generar un Safe Fix Prompt para este bloqueador."
+  },
+  "whatChanged": {
+    "scoreChangeLabel": "Puntuación de preparación para producción:",
+    "resolvedHeader": "Resuelto:",
+    "detectedHeader": "Detectado en la última revisión:",
+    "confirmedIntroducedHeader": "Introducido de forma confirmada por tu último cambio:",
+    "nextActionLabel": "Próxima acción:",
+    "noChange": "Sin cambios desde tu última revisión válida.",
+    "noPreviousReview": "Esta es la primera revisión válida de este proyecto. Todavía no hay nada que comparar."
+  },
+  "productionHistory": {
+    "currentScoreLabel": "Puntuación actual:",
+    "bestScoreLabel": "Mejor puntuación:",
+    "trendLabel": "Tendencia:",
+    "recentLabel": "Puntuaciones recientes:",
+    "validReviewsLabel": "Revisiones válidas:",
+    "noHistory": "Todavía no hay revisiones de producción válidas. Ejecuta tu primera revisión para empezar a registrar el historial.",
+    "trend": {
+      "improving": "Mejorando",
+      "stable": "Estable",
+      "declining": "Empeorando",
+      "insufficient_data": "Todavía sin suficientes datos"
+    }
+  },
+  "deploymentConfidence": {
+    "recommendationLabel": "Recomendación:",
+    "confidenceLabel": "Confianza:",
+    "reasonLabel": "Motivo:",
+    "nextActionLabel": "Próxima acción:",
+    "deploy": "DESPLEGAR",
+    "doNotDeploy": "NO DESPLEGAR",
+    "moreAnalysisRequired": "SE REQUIERE MÁS ANÁLISIS",
+    "staleNote": "Esta recomendación no incluye el último commit detectado.",
+    "disclaimer": "Esta recomendación refleja el último Veredicto de Producción completado para este repositorio.",
+    "reasons": {
+      "ready": "No quedan bloqueadores de producción en la última revisión.",
+      "blockers": "Quedan {count} bloqueador(es) de producción en la última revisión.",
+      "insufficientData": "No hay suficiente cobertura del repositorio para una recomendación responsable.",
+      "analysisFailed": "La última revisión no se completó correctamente."
+    }
+  },
+  "errors": {
+    "unauthorized": "Tu clave de API de MCP falta o no es válida. Añade un encabezado Authorization válido.",
+    "invalid_api_key": "Esta clave de API de MCP no es válida o ha sido revocada. Genera una nueva clave desde tu configuración de SequrAI.",
+    "project_not_found": "No se encontró este proyecto en tu organización.",
+    "ambiguous_project": "Tu organización tiene más de un proyecto. Especifica un projectId para continuar.",
+    "repository_disconnected": "El repositorio de GitHub de este proyecto no está conectado. Reconéctalo en la configuración de SequrAI.",
+    "no_verdict_available": "Todavía no existe un Veredicto de Producción para este proyecto. Haz push de un commit o ejecuta una revisión para generar uno.",
+    "review_in_progress": "Una Revisión Continua se está ejecutando actualmente para este proyecto. Inténtalo de nuevo en breve.",
+    "insufficient_data": "Todavía no hay suficiente cobertura del repositorio para una decisión de producción responsable.",
+    "analysis_failed": "La última revisión no se completó correctamente.",
+    "blocker_not_found": "Este bloqueador no se encontró en el último Veredicto de Producción. Puede que ya esté resuelto.",
+    "safe_fix_unavailable": "No se pudo generar un Safe Fix Prompt para este bloqueador.",
+    "rate_limited": "Demasiadas solicitudes. Espera un momento antes de volver a intentarlo.",
+    "internal_error": "Algo salió mal al procesar esta solicitud. Inténtalo de nuevo."
+  }
+}

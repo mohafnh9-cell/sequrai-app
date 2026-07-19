@@ -39,23 +39,37 @@ const SAFE_IMPLEMENTATION_PRINCIPLES = [
   "Stop once the blocker is resolved — do not improve unrelated code.",
 ];
 
-export function projectedVerdictAfterFix(input: ProductionFixPromptInput): string {
+/**
+ * Single formula for "current score + this fix's projected impact", reused
+ * by every consumer (web, MCP) so no caller invents its own arithmetic.
+ * Both inputs are already canonical Production Verdict Engine output.
+ */
+export function projectedScoreAfterFix(input: ProductionFixPromptInput): number {
+  const raw = (input.currentScore ?? 0) + (input.projectedScoreImpact ?? 0);
+  return Math.max(0, Math.min(100, Math.round(raw)));
+}
+
+export function projectedVerdictStatusAfterFix(input: ProductionFixPromptInput): VerdictStatus {
   const current = input.currentVerdictStatus ?? "not_ready";
-  const projectedScore = (input.currentScore ?? 0) + (input.projectedScoreImpact ?? 0);
+  const projectedScore = projectedScoreAfterFix(input);
 
   if (projectedScore >= 85 && current !== "ready_to_ship") {
-    return VERDICT_STATUS_LABELS.ready_to_ship;
+    return "ready_to_ship";
   }
   if (projectedScore >= 70) {
-    return VERDICT_STATUS_LABELS.almost_ready;
+    return "almost_ready";
   }
   if (projectedScore >= 55) {
-    return VERDICT_STATUS_LABELS.needs_improvement;
+    return "needs_improvement";
   }
   if (current === "insufficient_data" || current === "analysis_failed") {
-    return VERDICT_STATUS_LABELS[current];
+    return current;
   }
-  return VERDICT_STATUS_LABELS.not_ready;
+  return "not_ready";
+}
+
+export function projectedVerdictAfterFix(input: ProductionFixPromptInput): string {
+  return VERDICT_STATUS_LABELS[projectedVerdictStatusAfterFix(input)];
 }
 
 export function buildProductionFixPrompt(

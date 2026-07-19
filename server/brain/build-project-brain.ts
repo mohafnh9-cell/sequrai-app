@@ -3,7 +3,6 @@ import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   BRAIN_VERSION,
-  estimateRiskFromScan,
   type BrainActivityEvent,
   type BrainPriority,
   type ProjectBrainSnapshot,
@@ -121,18 +120,6 @@ export async function buildProjectBrain(
       mergeProjectActivity(supabase, project.organization_id, projectId, 10),
     ]);
 
-  const categoryCounts: Record<string, number> = {};
-  if (latestScan.data?.id) {
-    const { data: categoryRows } = await supabase
-      .from("scan_findings")
-      .select("category")
-      .eq("scan_id", latestScan.data.id);
-    for (const row of categoryRows ?? []) {
-      const key = row.category.toLowerCase();
-      categoryCounts[key] = (categoryCounts[key] ?? 0) + 1;
-    }
-  }
-
   const securityScore =
     latestScan.data?.security_score ??
     health.data?.security_score ??
@@ -154,26 +141,12 @@ export async function buildProjectBrain(
         source: "ai" as const,
       }));
 
-  const stack = latestScan.data?.detected_stack as
-    | { frameworks?: string[]; services?: string[] }
-    | undefined;
-
-  let riskScore = latestReport.data?.risk_score ?? health.data?.risk_score ?? null;
-  if (riskScore === null && securityScore !== null && latestScan.data) {
-    riskScore = estimateRiskFromScan({
-      securityScore,
-      severityCounts: {
-        critical: latestScan.data.critical_count ?? 0,
-        high: latestScan.data.high_count ?? 0,
-        medium: latestScan.data.medium_count ?? 0,
-        low: latestScan.data.low_count ?? 0,
-        info: latestScan.data.info_count ?? 0,
-      },
-      categoryCounts,
-      findingsCount: latestScan.data.findings_count ?? 0,
-      stack,
-    });
-  }
+  // ADR-001: riskScore is never computed here. It is only read from persisted
+  // rows that belong to separate, non-authoritative report domains (the AI
+  // Security Engine's ai_reports and GitHub automation's repository_health).
+  // It is historical/display data only and must never feed the Production
+  // Verdict, blockers, or deployment recommendation.
+  const riskScore = latestReport.data?.risk_score ?? health.data?.risk_score ?? null;
 
   if (!currentVerdict && latestScan.data) {
     log("verdict_missing_for_analyzed_repo", { projectId, scanId: latestScan.data.id });

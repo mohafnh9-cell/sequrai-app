@@ -18,7 +18,6 @@ export async function finalizeScanAutomation(
     projectId: string;
     scanId: string;
     securityScore: number;
-    riskScore: number;
     criticalCount: number;
     highCount: number;
     findingsCount: number;
@@ -36,7 +35,6 @@ export async function finalizeScanAutomation(
   });
   const { status: healthStatus, factors } = calculateRepositoryHealth({
     securityScore: input.securityScore,
-    riskScore: input.riskScore,
     openFindings: input.findingsCount,
     criticalOpen: input.criticalCount,
     scoreTrend: scoreDelta,
@@ -47,7 +45,6 @@ export async function finalizeScanAutomation(
     projectId,
     healthStatus,
     securityScore: input.securityScore,
-    riskScore: input.riskScore,
     openFindings: input.findingsCount,
     criticalOpen: input.criticalCount,
     scoreTrend: scoreDelta,
@@ -85,7 +82,6 @@ export async function finalizeScanAutomation(
     title: "GitHub push analyzed",
     description: input.triggerLabel,
     securityScore: input.securityScore,
-    riskScore: input.riskScore,
     metadata: { scoreDelta, checkStatus },
   });
 

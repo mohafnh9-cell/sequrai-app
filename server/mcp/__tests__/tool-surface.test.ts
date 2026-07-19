@@ -1,0 +1,59 @@
+import { describe, expect, it } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
+import { MCP_TOOL_DEFINITIONS } from "../tool-definitions";
+import { COPILOT_BRAIN_TOOLS } from "@/brain/copilot-contract";
+
+/**
+ * ADR-001 / MCP V1 contract: exactly five public tools are registered.
+ * See docs/MCP_V1_PRODUCTION_ENGINE.md §4 and
+ * docs/ADR_001_ARCHITECTURE_CLEANUP_REPORT.md.
+ */
+describe("MCP public tool surface", () => {
+  it("registers exactly five public tools", () => {
+    expect(MCP_TOOL_DEFINITIONS).toHaveLength(5);
+  });
+
+  it("has no duplicate tool names", () => {
+    const names = MCP_TOOL_DEFINITIONS.map((tool) => tool.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+
+  it("keeps brain/copilot-contract.ts in sync with the MCP registration", () => {
+    const registeredNames = new Set(MCP_TOOL_DEFINITIONS.map((tool) => tool.name));
+    const contractNames = new Set(COPILOT_BRAIN_TOOLS);
+    expect(contractNames).toEqual(registeredNames);
+  });
+
+  it("does not expose legacy V0 tool names removed during the ADR-001 cleanup", () => {
+    const removedLegacyNames = [
+      "get_today_priorities",
+      "get_coach_tip",
+      "get_timeline",
+      "run_production_check",
+      "explain_issue",
+      "generate_blocker_fix",
+      "review_before_commit",
+    ];
+    const registeredNames = MCP_TOOL_DEFINITIONS.map((tool) => tool.name);
+    for (const legacyName of removedLegacyNames) {
+      expect(registeredNames).not.toContain(legacyName);
+    }
+  });
+
+  it("does not dispatch any case in executeMcpTool beyond the registered tool set", () => {
+    const registeredNames = new Set(MCP_TOOL_DEFINITIONS.map((tool) => tool.name));
+    const executeToolSource = fs.readFileSync(
+      path.resolve(__dirname, "../execute-tool.ts"),
+      "utf8"
+    );
+    const caseNames = Array.from(
+      executeToolSource.matchAll(/case\s+"([a-z_]+)"\s*:/g)
+    ).map((match) => match[1]);
+
+    expect(caseNames.length).toBeGreaterThan(0);
+    for (const caseName of caseNames) {
+      expect(registeredNames.has(caseName)).toBe(true);
+    }
+  });
+});

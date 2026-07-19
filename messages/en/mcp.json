@@ -1,0 +1,91 @@
+{
+  "header": "SEQURAI",
+  "modes": {
+    "production_review": "PRODUCTION REVIEW",
+    "safe_fix": "SAFE FIX",
+    "continuous_review": "CONTINUOUS REVIEW",
+    "production_history": "PRODUCTION HISTORY",
+    "deployment_confidence": "DEPLOYMENT CONFIDENCE"
+  },
+  "canIDeploy": {
+    "verdictLabel": "Verdict:",
+    "scoreLabel": "Production Ready Score:",
+    "scoreUnavailable": "Production Ready Score unavailable",
+    "blockersLabel": "Production blockers:",
+    "nextActionLabel": "Next action:",
+    "recommendationLabel": "Deployment recommendation:",
+    "deploy": "SHIP IT",
+    "doNotDeploy": "DO NOT DEPLOY",
+    "moreAnalysisRequired": "MORE ANALYSIS REQUIRED",
+    "staleWarning": "This verdict does not cover the latest detected commit ({commitSha}). Results may be outdated.",
+    "reviewInProgress": "Continuous Review is currently processing this repository. This verdict reflects the last completed review.",
+    "insufficientData": "There is not enough repository coverage yet for a responsible production decision. Run a full review first.",
+    "analysisFailed": "The latest review did not complete successfully. Re-run the analysis before trusting this verdict."
+  },
+  "safeFix": {
+    "chooseBlocker": "Choose a blocker to generate its Safe Fix Prompt.",
+    "noBlockers": "No production blockers were found. There is nothing to fix right now.",
+    "blockerLabel": "Blocker:",
+    "riskLabel": "Implementation risk:",
+    "timeLabel": "Estimated time:",
+    "projectedVerdictLabel": "Projected verdict:",
+    "projectedEstimateNote": "Projected score and verdict are estimates, not a guarantee.",
+    "copyPrompt": "Copy the Safe Fix Prompt below into Cursor or Claude Code.",
+    "unavailable": "A Safe Fix Prompt could not be generated for this blocker."
+  },
+  "whatChanged": {
+    "scoreChangeLabel": "Production Ready Score:",
+    "resolvedHeader": "Resolved:",
+    "detectedHeader": "Detected in the latest review:",
+    "confirmedIntroducedHeader": "Confirmed introduced by your latest change:",
+    "nextActionLabel": "Next action:",
+    "noChange": "No change since your last valid review.",
+    "noPreviousReview": "This is the first valid review for this project. There is nothing to compare yet."
+  },
+  "productionHistory": {
+    "currentScoreLabel": "Current score:",
+    "bestScoreLabel": "Best score:",
+    "trendLabel": "Trend:",
+    "recentLabel": "Recent scores:",
+    "validReviewsLabel": "Valid reviews:",
+    "noHistory": "No valid production reviews yet. Run your first review to start tracking history.",
+    "trend": {
+      "improving": "Improving",
+      "stable": "Stable",
+      "declining": "Declining",
+      "insufficient_data": "Not enough data yet"
+    }
+  },
+  "deploymentConfidence": {
+    "recommendationLabel": "Recommendation:",
+    "confidenceLabel": "Confidence:",
+    "reasonLabel": "Reason:",
+    "nextActionLabel": "Next action:",
+    "deploy": "DEPLOY",
+    "doNotDeploy": "DO NOT DEPLOY",
+    "moreAnalysisRequired": "MORE ANALYSIS REQUIRED",
+    "staleNote": "This recommendation does not include the latest detected commit.",
+    "disclaimer": "This recommendation reflects the last completed Production Verdict for this repository.",
+    "reasons": {
+      "ready": "No production blockers remain in the latest review.",
+      "blockers": "{count} production blocker(s) remain in the latest review.",
+      "insufficientData": "There is not enough repository coverage for a responsible recommendation.",
+      "analysisFailed": "The latest review did not complete successfully."
+    }
+  },
+  "errors": {
+    "unauthorized": "Your MCP API key is missing or invalid. Add a valid Authorization header.",
+    "invalid_api_key": "This MCP API key is invalid or has been revoked. Generate a new key from your SequrAI settings.",
+    "project_not_found": "This project could not be found in your organization.",
+    "ambiguous_project": "Your organization has more than one project. Specify a projectId to continue.",
+    "repository_disconnected": "This project's GitHub repository is not connected. Reconnect it in SequrAI settings.",
+    "no_verdict_available": "No Production Verdict exists yet for this project. Push a commit or run a review to generate one.",
+    "review_in_progress": "A Continuous Review is currently running for this project. Try again shortly.",
+    "insufficient_data": "There is not enough repository coverage yet for a responsible production decision.",
+    "analysis_failed": "The latest review did not complete successfully.",
+    "blocker_not_found": "This blocker was not found in the latest Production Verdict. It may already be resolved.",
+    "safe_fix_unavailable": "A Safe Fix Prompt could not be generated for this blocker.",
+    "rate_limited": "Too many requests. Wait a moment before trying again.",
+    "internal_error": "Something went wrong while processing this request. Try again."
+  }
+}

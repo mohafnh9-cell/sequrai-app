@@ -4,7 +4,6 @@
  */
 import type { BrainPriority } from "../types";
 import type { ProductionRoadmap } from "../production-experience/roadmap";
-import type { ReadinessInput } from "../production-readiness/calculator";
 import { generateProductionVerdict } from "./engine";
 import { toLegacyVerdict, LEGACY_VERDICT_LABELS, type LegacyProductionVerdict } from "./adapters/legacy";
 import {
@@ -22,8 +21,21 @@ export type EvaluatedArea = LegacyProductionVerdict["evaluatedAreas"][number];
 
 export const PRODUCTION_VERDICT_LABELS = LEGACY_VERDICT_LABELS;
 
+/**
+ * Legacy input shape kept for this @deprecated adapter's call sites after the
+ * legacy production-readiness engine was removed (ADR-001 cleanup). Only
+ * `securityScore` is read here; the other fields are accepted so existing
+ * callers/tests do not need to change their fixtures.
+ */
+type LegacyReadinessInput = {
+  securityScore: number | null;
+  severityCounts?: Record<string, number>;
+  categoryCounts?: Record<string, number>;
+  estimatedMinutesFromPriorities?: number;
+};
+
 export function buildProductionVerdict(input: {
-  readinessInput: ReadinessInput;
+  readinessInput: LegacyReadinessInput;
   previousScore?: number | null;
   previousBlockersCount?: number;
   priorities?: BrainPriority[];

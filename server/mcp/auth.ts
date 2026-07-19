@@ -74,7 +74,7 @@ export async function assertProjectInOrg(
     .eq("organization_id", organizationId)
     .maybeSingle();
   if (!project) {
-    throw new McpError(404, "PROJECT_NOT_FOUND", "Project not found in your organization");
+    throw new McpError(404, "project_not_found", "Project not found in your organization");
   }
   return project;
 }
@@ -83,7 +83,8 @@ export class McpError extends Error {
   constructor(
     public readonly status: number,
     public readonly code: string,
-    message: string
+    message: string,
+    public readonly data?: Record<string, unknown>
   ) {
     super(message);
     this.name = "McpError";

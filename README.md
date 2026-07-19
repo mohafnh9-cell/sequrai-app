@@ -124,16 +124,19 @@ Connect Cursor or Claude Code to your Production Copilot:
 
 ### Available MCP tools
 
+Exactly five public tools are registered (enforced by
+`server/mcp/__tests__/tool-surface.test.ts`), plus `list_projects` as
+project-selection infrastructure. See `docs/MCP_V1_PRODUCTION_ENGINE.md` for
+the product design behind this constraint and
+`docs/ADR_001_ARCHITECTURE_CLEANUP_REPORT.md` for the naming history.
+
 | Tool | Description |
 |------|-------------|
-| `list_projects` | List org projects with Production Ready Score |
-| `get_production_readiness` | Full Brain snapshot for a project |
-| `get_today_priorities` | Top priorities to improve PRS |
-| `get_coach_tip` | Senior engineer mentor tip |
-| `get_timeline` | Recent production activity |
-| `explain_issue` | Explain a blocker + Cursor fix prompt |
-| `get_production_blockers` | Blockers from latest scan |
-| `run_production_check` | Trigger a production readiness scan |
+| `list_projects` | List org projects with Production Ready Score (infrastructure, not a product question) |
+| `get_production_readiness` | Production Verdict, score, priorities, and recommended action for a project |
+| `review_current_changes` | Run a production check on the latest code and return the updated verdict |
+| `explain_production_blocker` | Explain why a blocker prevents shipping and return a Cursor-ready fix prompt |
+| `get_production_blockers` | List production blockers from the latest completed scan |
 
 ## Scripts
 

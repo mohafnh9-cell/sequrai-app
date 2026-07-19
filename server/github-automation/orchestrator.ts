@@ -16,7 +16,6 @@ import {
   type GitHubRepositoryPayload,
 } from "./webhook-utils";
 import { recordRepositoryActivity } from "./activity";
-import { estimateRiskFromScan } from "@/brain";
 import { REPOSITORY_SYNC_CONFIG, parsePushDetection } from "@/brain/repository-sync";
 import { AUTOMATIC_REVIEW_CONFIG } from "@/brain/automatic-review";
 import {
@@ -246,29 +245,11 @@ async function runScanAndFinalize(
     })),
   });
 
-  const stack = completed.detected_stack as
-    | { frameworks?: string[]; services?: string[] }
-    | undefined;
-
-  const riskScore = estimateRiskFromScan({
-    securityScore: completed.security_score ?? 0,
-    severityCounts: {
-      critical: completed.critical_count ?? 0,
-      high: completed.high_count ?? 0,
-      medium: completed.medium_count ?? 0,
-      low: completed.low_count ?? 0,
-      info: completed.info_count ?? 0,
-    },
-    categoryCounts,
-    findingsCount: completed.findings_count ?? 0,
-    stack,
-  });
   const { checkStatus } = await finalizeScanAutomation(admin, {
     organizationId: input.project.organization_id,
     projectId: input.project.id,
     scanId: input.scanId,
     securityScore: completed.security_score ?? 0,
-    riskScore,
     criticalCount: completed.critical_count ?? 0,
     highCount: completed.high_count ?? 0,
     findingsCount: completed.findings_count ?? 0,

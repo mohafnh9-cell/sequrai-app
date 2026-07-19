@@ -20,6 +20,8 @@ export {
   buildProductionFixPrompt,
   buildSafeFixPrompt,
   projectedVerdictAfterFix,
+  projectedVerdictStatusAfterFix,
+  projectedScoreAfterFix,
   fixPromptInputFromPriority,
   fixPromptInputFromFinding,
   findingsByIdMap,

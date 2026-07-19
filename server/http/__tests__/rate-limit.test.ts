@@ -18,4 +18,28 @@ describe("enforceRateLimit", () => {
 
     expect(blocked?.status).toBe(429);
   });
+
+  it("returns a typed rate_limited error body when errorCode/errorMessage are provided (MCP contract)", async () => {
+    resetRateLimitStateForTests();
+    const request = new Request("https://example.com/api/mcp", {
+      headers: { "x-forwarded-for": "203.0.113.20" },
+    });
+    const options = {
+      limit: 1,
+      windowMs: 60_000,
+      keyPrefix: "mcp-test",
+      errorCode: "rate_limited",
+      errorMessage: "Too many requests. Wait a moment before trying again.",
+    };
+
+    expect(enforceRateLimit(request, options)).toBeNull();
+    const blocked = enforceRateLimit(request, options);
+
+    expect(blocked?.status).toBe(429);
+    const body = await blocked?.json();
+    expect(body).toMatchObject({
+      code: "rate_limited",
+      error: "Too many requests. Wait a moment before trying again.",
+    });
+  });
 });

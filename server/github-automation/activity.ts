@@ -36,10 +36,11 @@ export async function recordTimelineEvent(
     title: string;
     description?: string;
     securityScore?: number;
-    riskScore?: number;
     metadata?: Record<string, unknown>;
   }
 ) {
+  // ADR-001: risk_score is no longer computed; historical rows retain their
+  // value, new rows persist null.
   await admin.from("security_timeline").insert({
     organization_id: input.organizationId,
     project_id: input.projectId,
@@ -48,7 +49,7 @@ export async function recordTimelineEvent(
     title: input.title,
     description: input.description ?? null,
     security_score: input.securityScore ?? null,
-    risk_score: input.riskScore ?? null,
+    risk_score: null,
     metadata: input.metadata ?? {},
     occurred_at: new Date().toISOString(),
   });
@@ -61,20 +62,21 @@ export async function updateRepositoryHealth(
     projectId: string;
     healthStatus: string;
     securityScore: number;
-    riskScore: number;
     openFindings: number;
     criticalOpen: number;
     scoreTrend: number;
     factors: Record<string, unknown>;
   }
 ) {
+  // ADR-001: risk_score is no longer computed. The column is preserved for
+  // historical rows only; new rows persist null here.
   await admin.from("repository_health").upsert(
     {
       organization_id: input.organizationId,
       project_id: input.projectId,
       health_status: input.healthStatus,
       security_score: input.securityScore,
-      risk_score: input.riskScore,
+      risk_score: null,
       open_findings_count: input.openFindings,
       critical_open_count: input.criticalOpen,
       score_trend: input.scoreTrend,

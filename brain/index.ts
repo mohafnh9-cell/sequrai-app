@@ -9,16 +9,12 @@ export type {
   ReadinessDimensions,
 } from "./types";
 export { BRAIN_VERSION } from "./types";
-export {
-  calculateProductionReadiness,
-  estimateRiskFromScan,
-  type ReadinessInput,
-} from "./production-readiness/calculator";
-export {
-  CATEGORY_TO_DIMENSIONS,
-  DIMENSION_LABELS,
-  DIMENSION_WEIGHTS,
-} from "./production-readiness/dimensions";
+// ADR-001: the legacy production-readiness engine has been removed (its two
+// exported calculation functions and dimension weights). The Production
+// Verdict Engine (./production-verdict) is the only module permitted to
+// calculate product-level readiness/risk truth. See
+// docs/ADR_001_SINGLE_SOURCE_OF_TRUTH.md and
+// docs/ADR_001_ARCHITECTURE_CLEANUP_REPORT.md.
 export {
   buildProductionRoadmap,
   normalizeTimelineTitle,
