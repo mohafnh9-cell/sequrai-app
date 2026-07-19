@@ -12,8 +12,12 @@ function redirectOrigin(request: NextRequest) {
 }
 
 import { safeNextPath } from "@/lib/auth/safe-next-path";
+import { enforceRateLimit } from "@/server/http/rate-limit";
 
 export async function GET(request: NextRequest) {
+  const rateLimited = enforceRateLimit(request);
+  if (rateLimited) return rateLimited;
+
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const origin = redirectOrigin(request);

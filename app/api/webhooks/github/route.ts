@@ -1,6 +1,7 @@
 import { NextResponse, after } from "next/server";
 import { verifyGitHubWebhookSignature } from "@/server/github-automation/webhook-utils";
 import { processGitHubWebhookEvent } from "@/server/github-automation/orchestrator";
+import { enforceRateLimit } from "@/server/http/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -10,6 +11,9 @@ function webhookSecret(): string | null {
 }
 
 export async function POST(request: Request) {
+  const rateLimited = enforceRateLimit(request);
+  if (rateLimited) return rateLimited;
+
   const secret = webhookSecret();
   if (!secret) {
     return NextResponse.json(
