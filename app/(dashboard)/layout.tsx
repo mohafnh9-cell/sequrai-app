@@ -9,6 +9,7 @@ import {
   resolveActiveWorkspaceId,
 } from "@/server/workspaces/service";
 import { readActiveWorkspaceCookie } from "@/server/workspaces/active-workspace-cookie";
+import type { WorkspacePresentation } from "@/lib/workspaces/presentation";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +29,7 @@ export default async function DashboardLayout({
   const auth = await getServerAuthContext();
   if (!auth) redirect("/login");
 
-  let workspaces = auth.organizationId
+  let workspaces: WorkspacePresentation[] = auth.organizationId
     ? [
         {
           id: auth.organizationId,
