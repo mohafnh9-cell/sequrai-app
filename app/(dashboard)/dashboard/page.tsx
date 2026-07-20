@@ -48,7 +48,31 @@ export default async function DashboardPage() {
   }
 
   const hasVerdict = await organizationHasProductionVerdict(supabase, organizationId);
-  if (!hasVerdict) redirect("/onboarding");
+
+  if (!hasVerdict) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-6 p-12">
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+          <FolderGit2 className="h-8 w-8 text-primary" />
+        </div>
+        <div className="text-center max-w-sm">
+          <h1 className="text-2xl font-bold">{t("workspaceEmptyTitle")}</h1>
+          <p className="mt-2 text-sm text-muted-foreground">{t("workspaceEmptyBody")}</p>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <Button asChild>
+            <Link href="/integrations">
+              <Plus className="mr-2 h-4 w-4" />
+              {t("connectRepository")}
+            </Link>
+          </Button>
+          <Button asChild variant="outline">
+            <Link href="/onboarding?step=welcome">{t("firstVerdictCta")}</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   const { data: org } = await supabase
     .from("organizations")

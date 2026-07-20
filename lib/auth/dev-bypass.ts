@@ -4,10 +4,8 @@ import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { isAuthBypassAllowed } from "@/lib/env/production-guard";
-import { readActiveWorkspaceCookie } from "@/server/workspaces/active-workspace-cookie";
 import {
-  readProfileWorkspacePreference,
-  resolveActiveWorkspaceId,
+  resolveActiveWorkspaceIdForUser,
 } from "@/server/workspaces/service";
 
 export function isAuthBypassEnabled(): boolean {
@@ -70,14 +68,7 @@ export async function getServerAuthContext(): Promise<ServerAuthContext | null> 
   } = await supabase.auth.getUser();
 
   if (user) {
-    const [profilePreferenceId, cookieId] = await Promise.all([
-      readProfileWorkspacePreference(supabase, user.id),
-      readActiveWorkspaceCookie(),
-    ]);
-    const organizationId = await resolveActiveWorkspaceId(supabase, user.id, {
-      profilePreferenceId,
-      cookieId,
-    });
+    const organizationId = await resolveActiveWorkspaceIdForUser(supabase, user.id);
     let orgName: string | null = null;
 
     if (organizationId) {

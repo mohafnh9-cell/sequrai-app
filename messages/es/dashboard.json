@@ -6,6 +6,8 @@
   "firstVerdictCta": "Obtén tu primer Production Verdict",
   "welcomeTitle": "Bienvenido a SequrAI",
   "welcomeBody": "Descubre si tu app construida con IA está lista para producción.",
+  "workspaceEmptyTitle": "Este Workspace aún no tiene revisión",
+  "workspaceEmptyBody": "Conecta un repositorio o ejecuta tu primera Production Review en este Workspace.",
   "projectsTitle": "Proyectos",
   "projectsSubtitle": "Abre un proyecto para ver tu Production Verdict completo y el siguiente paso.",
   "noProjectsTitle": "Aún no hay proyectos",

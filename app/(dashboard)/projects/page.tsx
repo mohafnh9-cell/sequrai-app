@@ -25,7 +25,7 @@ export default async function ProjectsPage() {
   if (!auth.organizationId) redirect("/onboarding");
 
   const hasVerdict = await organizationHasProductionVerdict(auth.supabase, auth.organizationId);
-  if (!hasVerdict) redirect("/onboarding");
+  if (!hasVerdict) redirect("/integrations");
 
   const { t } = await getTranslator("projects");
 

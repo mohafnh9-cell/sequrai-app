@@ -118,6 +118,21 @@ export async function resolveActiveWorkspaceId(
   return pickPrimaryOrganizationId(memberships as OrganizationMembershipRow[]);
 }
 
+export async function resolveActiveWorkspaceIdForUser(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<string | null> {
+  const [profilePreferenceId, cookieId] = await Promise.all([
+    readProfileWorkspacePreference(supabase, userId),
+    readActiveWorkspaceCookie(),
+  ]);
+
+  return resolveActiveWorkspaceId(supabase, userId, {
+    profilePreferenceId,
+    cookieId,
+  });
+}
+
 export async function assertWorkspaceMembership(
   supabase: SupabaseClient,
   userId: string,

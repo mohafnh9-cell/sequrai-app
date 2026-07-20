@@ -9,6 +9,7 @@ import {
   webhookErrorMessage,
 } from "@/server/github-automation/register-webhook";
 import { resolveUserOrganizationId } from "@/server/organizations/resolve-user-organization";
+import { resolveActiveWorkspaceIdForUser } from "@/server/workspaces/service";
 import { enforceRateLimit } from "@/server/http/rate-limit";
 
 const requestSchema = z.object({
@@ -139,11 +140,9 @@ async function connectRepositories(request: Request) {
     );
   }
 
-  const organizationId = await resolveUserOrganizationId(
-    supabase,
-    user.id,
-    parsed.data.organizationId
-  );
+  const organizationId = parsed.data.organizationId
+    ? await resolveUserOrganizationId(supabase, user.id, parsed.data.organizationId)
+    : await resolveActiveWorkspaceIdForUser(supabase, user.id);
   if (!organizationId) {
     return NextResponse.json({ error: "No organization found" }, { status: 404 });
   }

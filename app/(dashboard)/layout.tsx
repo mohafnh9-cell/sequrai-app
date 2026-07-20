@@ -5,10 +5,8 @@ import { I18nShell } from "@/components/shared/I18nShell";
 import { getServerAuthContext } from "@/lib/auth/dev-bypass";
 import {
   listAccessibleWorkspaces,
-  readProfileWorkspacePreference,
-  resolveActiveWorkspaceId,
+  resolveActiveWorkspaceIdForUser,
 } from "@/server/workspaces/service";
-import { readActiveWorkspaceCookie } from "@/server/workspaces/active-workspace-cookie";
 import type { WorkspacePresentation } from "@/lib/workspaces/presentation";
 import type { Metadata } from "next";
 
@@ -44,19 +42,9 @@ export default async function DashboardLayout({
     workspaces = await listAccessibleWorkspaces(auth.supabase, auth.user.id);
   }
 
-  const [profilePreferenceId, cookieId] = auth.bypass
-    ? [null, null]
-    : await Promise.all([
-        readProfileWorkspacePreference(auth.supabase, auth.user.id),
-        readActiveWorkspaceCookie(),
-      ]);
-
   const activeWorkspaceId = auth.bypass
     ? auth.organizationId
-    : await resolveActiveWorkspaceId(auth.supabase, auth.user.id, {
-        profilePreferenceId,
-        cookieId,
-      });
+    : await resolveActiveWorkspaceIdForUser(auth.supabase, auth.user.id);
 
   return (
     <I18nShell userId={auth.user.id}>

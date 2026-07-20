@@ -3,7 +3,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { generateMcpApiKey } from "@/server/mcp/auth";
-import { resolveUserOrganizationId } from "@/server/organizations/resolve-user-organization";
+import { resolveActiveWorkspaceIdForUser } from "@/server/workspaces/service";
 import { enforceRateLimit } from "@/server/http/rate-limit";
 
 const createKeySchema = z.object({
@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const organizationId = await resolveUserOrganizationId(supabase, user.id);
+  const organizationId = await resolveActiveWorkspaceIdForUser(supabase, user.id);
   if (!organizationId) {
     return NextResponse.json({ error: "No organization" }, { status: 403 });
   }
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Validation failed" }, { status: 422 });
   }
 
-  const organizationId = await resolveUserOrganizationId(supabase, user.id);
+  const organizationId = await resolveActiveWorkspaceIdForUser(supabase, user.id);
   if (!organizationId) {
     return NextResponse.json({ error: "No organization" }, { status: 403 });
   }
@@ -99,7 +99,7 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Missing key id" }, { status: 400 });
   }
 
-  const organizationId = await resolveUserOrganizationId(supabase, user.id);
+  const organizationId = await resolveActiveWorkspaceIdForUser(supabase, user.id);
   if (!organizationId) {
     return NextResponse.json({ error: "No organization" }, { status: 403 });
   }

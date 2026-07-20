@@ -6,10 +6,8 @@ import { WorkspaceManagementPanel } from "@/features/workspaces/components/Works
 import { CreateWorkspaceButton } from "@/features/workspaces/components/CreateWorkspaceButton";
 import {
   listAccessibleWorkspaces,
-  readProfileWorkspacePreference,
-  resolveActiveWorkspaceId,
+  resolveActiveWorkspaceIdForUser,
 } from "@/server/workspaces/service";
-import { readActiveWorkspaceCookie } from "@/server/workspaces/active-workspace-cookie";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Workspaces" };
@@ -19,15 +17,10 @@ export default async function WorkspacesSettingsPage() {
   if (!auth) redirect("/login");
 
   const { t } = await getTranslator("workspace");
-  const [workspaces, profilePreferenceId, cookieId] = await Promise.all([
+  const [workspaces, activeWorkspaceId] = await Promise.all([
     listAccessibleWorkspaces(auth.supabase, auth.user.id),
-    readProfileWorkspacePreference(auth.supabase, auth.user.id),
-    readActiveWorkspaceCookie(),
+    resolveActiveWorkspaceIdForUser(auth.supabase, auth.user.id),
   ]);
-  const activeWorkspaceId = await resolveActiveWorkspaceId(auth.supabase, auth.user.id, {
-    profilePreferenceId,
-    cookieId,
-  });
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-2xl">
