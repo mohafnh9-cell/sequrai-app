@@ -38,11 +38,13 @@ export function ProductionVerdictHero({
   view,
   reportHref,
   retryHref,
+  variant = "default",
 }: {
   verdict: ProductionVerdictV1;
   view: VerdictExperienceView;
   reportHref?: string;
   retryHref?: string;
+  variant?: "default" | "product";
 }) {
   const { t } = useI18n();
   const translate = (key: string, params?: Record<string, string | number | null | undefined>) =>
@@ -53,6 +55,34 @@ export function ProductionVerdictHero({
   }
 
   const tone = verdictToneClass(view.status);
+
+  if (variant === "product") {
+    const canDeploy =
+      view.status === "ready_to_ship"
+        ? "YES."
+        : view.status === "almost_ready"
+          ? "ALMOST."
+          : "NO.";
+
+    return (
+      <section className={`rounded-3xl border p-8 sm:p-10 surface-premium ${tone}`}>
+        <div className="space-y-8 max-w-3xl">
+          <div className="space-y-3">
+            <p className="text-sm uppercase tracking-[0.24em] text-muted-foreground">
+              Can I deploy?
+            </p>
+            <p className="text-5xl sm:text-6xl font-semibold tracking-tighter leading-none">
+              {canDeploy}
+            </p>
+          </div>
+          <div className="flex items-end justify-between gap-6 flex-wrap">
+            <VerdictStatusBadge status={view.status} />
+            <ProductionScoreDisplay score={view.score} status={view.status} size="lg" />
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section

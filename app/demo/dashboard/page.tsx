@@ -9,8 +9,6 @@ import { AutopilotDashboardSection } from "@/features/autopilot/components/Autop
 import { buildDemoDataset } from "@/features/demo/fixtures/build-demo-dataset";
 import { demoHref } from "@/features/demo/paths";
 import { parseDemoScenario } from "@/features/demo/scenarios";
-import { verdictHeadlineDisplay } from "@/brain/production-verdict/status-ui";
-import { verdictStatusLabel } from "@/lib/i18n/verdict-copy";
 import { getTranslator } from "@/lib/i18n/server";
 
 export default async function DemoDashboardPage({
@@ -23,7 +21,6 @@ export default async function DemoDashboardPage({
   const dataset = buildDemoDataset(scenario);
   const { t } = await getTranslator("dashboard");
   const { t: tc } = await getTranslator("common");
-  const { t: translate } = await getTranslator();
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-6xl">
@@ -74,11 +71,6 @@ export default async function DemoDashboardPage({
                       projectName={project.name}
                       summary={summary}
                       lastActivityAt={project.last_scan_at ?? project.created_at}
-                      nextActionLabel={
-                        summary
-                          ? verdictHeadlineDisplay(summary.status)
-                          : verdictStatusLabel("insufficient_data", translate)
-                      }
                     />
                   );
                 })}

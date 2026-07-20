@@ -40,12 +40,13 @@ export default async function ProjectsPage() {
   const projectList = (projects ?? []) as ProjectRow[];
 
   return (
-    <div className="p-6 space-y-6 max-w-6xl">
+    <div className="app-cinematic-bg min-h-full">
+      <div className="mx-auto max-w-5xl px-4 sm:px-8 py-10 sm:py-14 space-y-10">
       <PageHeader
         title={t("title")}
         description={t("subtitle", { count: projectList.length })}
         action={
-          <Button size="sm" asChild>
+          <Button size="sm" className="rounded-xl" asChild>
             <Link href="/integrations">
               <Plus className="mr-2 h-4 w-4" />
               {t("connectRepository")}
@@ -73,6 +74,7 @@ export default async function ProjectsPage() {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }

@@ -1,11 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  FolderGit2,
-  ExternalLink,
-  GitBranch,
-} from "lucide-react";
+import { ArrowLeft, ExternalLink, GitBranch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ProjectVerdictSummary } from "@/features/production-verdict/components/ProductionVerdictExperience";
@@ -105,24 +100,21 @@ export default async function ProjectDetailPage({
     : undefined;
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 max-w-6xl">
-      <Button variant="ghost" size="sm" asChild className="gap-1.5 -ml-1">
-        <Link href="/projects">
-          <ArrowLeft className="h-4 w-4" />
-          {t("backToProjects")}
-        </Link>
-      </Button>
+    <div className="app-cinematic-bg min-h-full">
+      <div className="mx-auto max-w-5xl px-4 sm:px-8 pb-24 space-y-12 sm:space-y-16">
+        <div className="pt-6 sm:pt-10 space-y-8 product-section">
+          <Button variant="ghost" size="sm" asChild className="gap-1.5 -ml-2 text-muted-foreground">
+            <Link href="/projects">
+              <ArrowLeft className="h-4 w-4" />
+              {t("backToProjects")}
+            </Link>
+          </Button>
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex items-center gap-4 min-w-0">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-secondary">
-            <FolderGit2 className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <div className="min-w-0">
-            <h1 className="text-2xl font-bold tracking-tight truncate">{p.name}</h1>
-            <div className="flex flex-wrap items-center gap-2 mt-1">
+          <div className="space-y-4">
+            <h1 className="text-3xl sm:text-5xl font-semibold tracking-tight">{p.name}</h1>
+            <div className="flex flex-wrap items-center gap-3">
               {p.framework && (
-                <Badge variant="secondary" className="text-xs">
+                <Badge variant="secondary" className="rounded-lg text-xs">
                   {FRAMEWORK_LABELS[p.framework] ?? p.framework}
                 </Badge>
               )}
@@ -131,84 +123,89 @@ export default async function ProjectDetailPage({
                   href={p.github_repo}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 truncate max-w-[240px]"
+                  className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1.5 transition-colors duration-200"
                 >
-                  <GitBranch className="h-3 w-3 shrink-0" />
+                  <GitBranch className="h-3.5 w-3.5 shrink-0" />
                   {p.github_repo.replace("https://github.com/", "")}
-                  <ExternalLink className="h-3 w-3 shrink-0" />
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0" />
                 </a>
               )}
             </div>
           </div>
         </div>
-      </div>
 
-      {query.connected === "1" && (
-        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-          <p className="text-sm font-medium">{t("connectedGuidanceTitle")}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{t("connectedGuidanceBody")}</p>
-        </div>
-      )}
+        {query.connected === "1" && (
+          <div className="surface-premium rounded-2xl p-5 product-section">
+            <p className="text-sm font-medium">{t("connectedGuidanceTitle")}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{t("connectedGuidanceBody")}</p>
+          </div>
+        )}
 
-      {query.reviewComplete === "1" && brain?.currentVerdict && (
-        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
-          <p className="text-sm font-medium">{t("reviewCompleteGuidanceTitle")}</p>
-          <p className="mt-1 text-sm text-muted-foreground">{t("reviewCompleteGuidanceBody")}</p>
-        </div>
-      )}
+        {query.reviewComplete === "1" && brain?.currentVerdict && (
+          <div className="surface-premium rounded-2xl p-5 product-section">
+            <p className="text-sm font-medium">{t("reviewCompleteGuidanceTitle")}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{t("reviewCompleteGuidanceBody")}</p>
+          </div>
+        )}
 
-      <ProjectSubNav projectId={p.id} latestReportHref={latestReportHref} />
+        {reviewContext.isStale && (
+          <div className="rounded-2xl border border-brand-warning/30 bg-brand-warning/5 px-5 py-4 text-sm text-foreground/90 product-section">
+            {t("latestCommitNotReviewedBanner")}
+          </div>
+        )}
 
-      {brain?.currentVerdict ? (
-        <>
-          {reviewContext.isStale && (
-            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-amber-100/90">
-              {t("latestCommitNotReviewedBanner")}
-            </div>
-          )}
-          <ProjectVerdictSummary
-            verdict={brain.currentVerdict}
-            projectId={p.id}
-            latestScanHref={latestScanHref}
-          />
-        </>
-      ) : (
-        <div className="rounded-xl border border-dashed border-border/70 p-8 text-center space-y-4">
-          <p className="text-sm text-muted-foreground">{t("notAnalyzedYet")}</p>
-        </div>
-      )}
-
-      <AnalyzeProjectButton projectId={p.id} initialContext={reviewContext} />
-
-      {brain?.currentVerdict?.topPriorities[0] && (
-        <div className="rounded-xl border border-border/50 p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {t("fixThisFirst")}
-          </p>
-          <p className="mt-2 text-sm font-medium">{brain.currentVerdict.topPriorities[0].title}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {brain.currentVerdict.topPriorities[0].reason}
-          </p>
-        </div>
-      )}
-
-      {intelligence && (
-        <details className="rounded-xl border border-border/50 p-4 group">
-          <summary className="cursor-pointer text-sm font-medium list-none [&::-webkit-details-marker]:hidden">
-            {t("secondaryDetails")}
-          </summary>
-          <div className="mt-4">
-            <ProductionIntelligencePanel
-              intelligence={intelligence}
+        {brain?.currentVerdict ? (
+          <div className="product-section">
+            <ProjectVerdictSummary
+              verdict={brain.currentVerdict}
               projectId={p.id}
-              latestReportHref={latestReportHref}
-              compact
-              topPriority={brain?.currentVerdict?.topPriorities[0]}
-              fixPromptContext={fixPromptContext}
+              latestScanHref={latestScanHref}
             />
           </div>
-        </details>
-      )}
+        ) : (
+          <div className="surface-premium rounded-3xl p-12 text-center product-section">
+            <p className="text-muted-foreground">{t("notAnalyzedYet")}</p>
+          </div>
+        )}
+
+        {brain?.currentVerdict?.topPriorities[0] && (
+          <section className="product-section space-y-3 max-w-3xl">
+            <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
+              {t("fixThisFirst")}
+            </p>
+            <p className="text-2xl sm:text-3xl font-semibold tracking-tight">
+              {brain.currentVerdict.topPriorities[0].title}
+            </p>
+            <p className="text-muted-foreground">{brain.currentVerdict.topPriorities[0].reason}</p>
+          </section>
+        )}
+
+        <div className="product-section">
+          <AnalyzeProjectButton projectId={p.id} initialContext={reviewContext} />
+        </div>
+
+        <section className="product-section space-y-6 pt-4 border-t border-border/40">
+          <ProjectSubNav projectId={p.id} latestReportHref={latestReportHref} />
+
+          {intelligence && (
+            <details className="surface-premium rounded-2xl p-5 group">
+              <summary className="cursor-pointer text-sm font-medium list-none [&::-webkit-details-marker]:hidden">
+                {t("secondaryDetails")}
+              </summary>
+              <div className="mt-6">
+                <ProductionIntelligencePanel
+                  intelligence={intelligence}
+                  projectId={p.id}
+                  latestReportHref={latestReportHref}
+                  compact
+                  topPriority={brain?.currentVerdict?.topPriorities[0]}
+                  fixPromptContext={fixPromptContext}
+                />
+              </div>
+            </details>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

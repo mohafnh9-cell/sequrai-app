@@ -93,7 +93,12 @@ export function DashboardSidebar({
   };
 
   return (
-    <aside className={cn("flex h-full w-60 shrink-0 flex-col border-r border-border bg-card", className)}>
+    <aside
+      className={cn(
+        "flex h-full w-[260px] shrink-0 flex-col border-r border-border/50 bg-card/40 backdrop-blur-xl",
+        className
+      )}
+    >
       <div className="relative flex items-center">
         <WorkspaceSwitcher
           key={activeWorkspaceId ?? "none"}
@@ -105,7 +110,7 @@ export function DashboardSidebar({
         />
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
         {PRIMARY_NAV.map((item) => (
           <NavLink
             key={item.href}
@@ -118,11 +123,11 @@ export function DashboardSidebar({
         ))}
       </nav>
 
-      <div className="border-t border-border p-3 space-y-2">
+      <div className="border-t border-border/50 p-3 space-y-2">
         <LanguageSelector variant="compact" className="w-full justify-start" />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm hover:bg-secondary/50 transition-colors">
+            <button className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm hover:bg-accent/40 transition-all duration-200">
               <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/20 text-xs font-semibold text-primary">
                 {initials}
               </div>
@@ -173,10 +178,10 @@ function NavLink({
       href={href}
       onClick={onNavigate}
       className={cn(
-        "flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors",
+        "flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-all duration-200",
         active
-          ? "bg-secondary text-foreground font-medium"
-          : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+          ? "bg-accent/60 text-foreground font-medium shadow-sm"
+          : "text-muted-foreground hover:bg-accent/30 hover:text-foreground"
       )}
     >
       <Icon className="h-4 w-4 shrink-0" />

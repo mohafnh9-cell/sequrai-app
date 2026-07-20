@@ -105,6 +105,7 @@ export function ProjectVerdictSummary({
     <ProductionVerdictHero
       verdict={verdict}
       view={view}
+      variant="product"
       reportHref={
         latestScanHref
           ? latestScanHref.includes("/report")

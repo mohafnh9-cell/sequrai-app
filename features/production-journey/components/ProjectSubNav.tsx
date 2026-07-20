@@ -41,7 +41,7 @@ export function ProjectSubNav({
   return (
     <nav
       aria-label="Project sections"
-      className="flex flex-wrap gap-1 border-b border-border/60 pb-px"
+      className="flex flex-wrap gap-2"
     >
       {tabs.map((tab) => {
         const active = tab.match(pathname);
@@ -50,10 +50,10 @@ export function ProjectSubNav({
             key={tab.href}
             href={tab.href}
             className={cn(
-              "px-3 py-2 text-sm font-medium rounded-t-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+              "px-4 py-2.5 text-sm font-medium rounded-xl transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
               active
-                ? "text-foreground border-b-2 border-primary -mb-px bg-secondary/30"
-                : "text-muted-foreground hover:text-foreground"
+                ? "bg-accent/60 text-foreground shadow-sm"
+                : "text-muted-foreground hover:text-foreground hover:bg-accent/30"
             )}
             aria-current={active ? "page" : undefined}
           >

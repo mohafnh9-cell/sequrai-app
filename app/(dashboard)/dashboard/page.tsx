@@ -3,55 +3,43 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { FolderGit2, Plus, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PortfolioVerdictCard } from "@/features/production-verdict/components/PortfolioVerdictCard";
+import { ProductionControlCenter } from "@/features/dashboard/components/ProductionControlCenter";
 import { FirstVerdictDashboardModal } from "@/features/onboarding/components/FirstVerdictDashboardModal";
 import { buildOrgBrain } from "@/server/brain/build-org-brain";
 import { organizationHasProductionVerdict } from "@/server/onboarding/has-production-verdict";
+import { getLatestVerdictsByOrganization } from "@/server/production-verdict/service";
 import { getCachedServerAuthContext } from "@/lib/server/request-cache";
 import { getTranslator } from "@/lib/i18n/server";
-import { verdictHeadlineDisplay } from "@/brain/production-verdict/status-ui";
-import { verdictStatusLabel } from "@/lib/i18n/verdict-copy";
+import {
+  firstNameFromUser,
+  greetingKeyForHour,
+  pickPrimaryDashboardFocus,
+} from "@/lib/dashboard/pick-primary-project";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Production Dashboard" };
-
-import type { ProjectBrainSummary } from "@/brain";
-
-function portfolioCounts(projects: ProjectBrainSummary[]) {
-  let ready = 0;
-  let notReady = 0;
-  let needsAnalysis = 0;
-  for (const project of projects) {
-    if (project.status === "ready_to_ship" || project.status === "almost_ready") ready += 1;
-    else if (project.status === "insufficient_data" || project.status === "analysis_failed") needsAnalysis += 1;
-    else notReady += 1;
-  }
-  return { ready, notReady, needsAnalysis };
-}
 
 export default async function DashboardPage() {
   const auth = await getCachedServerAuthContext();
   if (!auth) redirect("/login");
   const { t } = await getTranslator("dashboard");
   const { t: tc } = await getTranslator("common");
-  const translate = (key: string, params?: Record<string, string | number | null | undefined>) =>
-    tc(key, params);
 
-  const { supabase, organizationId } = auth;
+  const { supabase, organizationId, user } = auth;
 
   if (!organizationId) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-6 p-12">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+      <div className="app-cinematic-bg min-h-full flex flex-col items-center justify-center gap-8 p-12">
+        <div className="surface-premium flex h-16 w-16 items-center justify-center rounded-2xl">
           <FolderGit2 className="h-8 w-8 text-primary" />
         </div>
-        <div className="text-center max-w-sm">
-          <h1 className="text-2xl font-bold">{t("welcomeTitle")}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{t("welcomeBody")}</p>
+        <div className="text-center max-w-md space-y-3">
+          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">{t("welcomeTitle")}</h1>
+          <p className="text-muted-foreground">{t("welcomeBody")}</p>
         </div>
-        <Button asChild>
+        <Button size="lg" className="rounded-xl shadow-premium" asChild>
           <Link href="/onboarding">
             <Plus className="mr-2 h-4 w-4" />
             {t("firstVerdictCta")}
@@ -61,7 +49,7 @@ export default async function DashboardPage() {
     );
   }
 
-  const [hasVerdict, { data: recentProjects }, brain] = await Promise.all([
+  const [hasVerdict, { data: recentProjects }, brain, verdictsByProject] = await Promise.all([
     organizationHasProductionVerdict(supabase, organizationId),
     supabase
       .from("projects")
@@ -70,19 +58,20 @@ export default async function DashboardPage() {
       .order("created_at", { ascending: false })
       .limit(8),
     buildOrgBrain(supabase, organizationId),
+    getLatestVerdictsByOrganization(supabase, organizationId),
   ]);
 
   if (!hasVerdict) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-6 p-12">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+      <div className="app-cinematic-bg min-h-full flex flex-col items-center justify-center gap-8 p-12">
+        <div className="surface-premium flex h-16 w-16 items-center justify-center rounded-2xl">
           <FolderGit2 className="h-8 w-8 text-primary" />
         </div>
-        <div className="text-center max-w-sm">
-          <h1 className="text-2xl font-bold">{t("workspaceEmptyTitle")}</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{t("workspaceEmptyBody")}</p>
+        <div className="text-center max-w-md space-y-3">
+          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight">{t("workspaceEmptyTitle")}</h1>
+          <p className="text-muted-foreground">{t("workspaceEmptyBody")}</p>
         </div>
-        <Button asChild>
+        <Button size="lg" className="rounded-xl shadow-premium" asChild>
           <Link href="/integrations">
             <Plus className="mr-2 h-4 w-4" />
             {t("connectRepository")}
@@ -93,53 +82,50 @@ export default async function DashboardPage() {
   }
 
   const projectReadiness = new Map(brain.projects.map((item) => [item.projectId, item]));
-  const counts = portfolioCounts(brain.projects);
+  const focus = pickPrimaryDashboardFocus(brain.projects, verdictsByProject);
+  const firstName = firstNameFromUser({
+    fullName: user.user_metadata?.full_name as string | undefined,
+    email: user.email,
+  });
+  const greeting = t(greetingKeyForHour(new Date().getHours()), { name: firstName });
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 max-w-6xl">
-      <Suspense fallback={null}>
-        <FirstVerdictDashboardModal />
-      </Suspense>
+    <div className="app-cinematic-bg min-h-full">
+      <div className="mx-auto max-w-5xl px-4 sm:px-8 pb-20">
+        <Suspense fallback={null}>
+          <FirstVerdictDashboardModal />
+        </Suspense>
 
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t("overviewTitle")}</h1>
-        <p className="text-sm text-muted-foreground mt-1">{t("overviewSubtitle")}</p>
-      </div>
+        {focus && (
+          <ProductionControlCenter
+            greeting={greeting}
+            focus={focus}
+            labels={{
+              canDeployQuestion: t("canDeployQuestion"),
+              deployYes: t("deployYes"),
+              deployNo: t("deployNo"),
+              almostReady: t("almostReady"),
+              fixThisFirst: t("fixThisFirst"),
+              fixIssue: t("fixIssue"),
+              reviewProject: t("reviewProject"),
+              allReady: t("allReady"),
+            }}
+          />
+        )}
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Card className="border-border/50">
-          <CardHeader className="pb-2">
-            <CardDescription>{t("portfolioReady")}</CardDescription>
-            <CardTitle className="text-2xl">{counts.ready}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card className="border-border/50">
-          <CardHeader className="pb-2">
-            <CardDescription>{t("portfolioNotReady")}</CardDescription>
-            <CardTitle className="text-2xl">{counts.notReady}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card className="border-border/50">
-          <CardHeader className="pb-2">
-            <CardDescription>{t("portfolioNeedsAnalysis")}</CardDescription>
-            <CardTitle className="text-2xl">{counts.needsAnalysis}</CardTitle>
-          </CardHeader>
-        </Card>
-      </div>
-
-      <Card className="border-border/50">
-        <CardHeader className="flex-row items-center justify-between pb-4">
-          <div>
-            <CardTitle className="text-base">{t("projectsTitle")}</CardTitle>
-            <CardDescription className="text-xs mt-0.5">{t("projectsSubtitle")}</CardDescription>
+        <section className="product-section space-y-6 pt-8 border-t border-border/40">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-medium tracking-tight">{t("projectsTitle")}</h2>
+              <p className="text-sm text-muted-foreground mt-1">{t("projectsSecondary")}</p>
+            </div>
+            <Button variant="ghost" size="sm" asChild className="text-muted-foreground">
+              <Link href="/projects" className="gap-1.5">
+                {tc("viewAll")} <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </Button>
           </div>
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/projects" className="text-xs gap-1.5">
-              {tc("viewAll")} <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </Button>
-        </CardHeader>
-        <CardContent className="pt-0">
+
           {!recentProjects || recentProjects.length === 0 ? (
             <EmptyState
               icon={FolderGit2}
@@ -158,18 +144,13 @@ export default async function DashboardPage() {
                     projectName={project.name}
                     summary={summary}
                     lastActivityAt={project.last_scan_at ?? project.created_at}
-                    nextActionLabel={
-                      summary
-                        ? verdictHeadlineDisplay(summary.status)
-                        : verdictStatusLabel("insufficient_data", translate)
-                    }
                   />
                 );
               })}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </section>
+      </div>
     </div>
   );
 }
