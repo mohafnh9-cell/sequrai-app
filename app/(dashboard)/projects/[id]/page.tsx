@@ -187,7 +187,7 @@ export default async function ProjectDetailPage({
           </p>
           <p className="mt-2 text-sm font-medium">{brain.currentVerdict.topPriorities[0].title}</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {brain.currentVerdict.topPriorities[0].summary}
+            {brain.currentVerdict.topPriorities[0].reason}
           </p>
         </div>
       )}
