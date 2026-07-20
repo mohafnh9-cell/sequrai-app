@@ -9,6 +9,8 @@ import { AutopilotDashboardSection } from "@/features/autopilot/components/Autop
 import { buildDemoDataset } from "@/features/demo/fixtures/build-demo-dataset";
 import { demoHref } from "@/features/demo/paths";
 import { parseDemoScenario } from "@/features/demo/scenarios";
+import { verdictHeadlineDisplay } from "@/brain/production-verdict/status-ui";
+import { verdictStatusLabel } from "@/lib/i18n/verdict-copy";
 import { getTranslator } from "@/lib/i18n/server";
 
 export default async function DemoDashboardPage({
@@ -21,6 +23,7 @@ export default async function DemoDashboardPage({
   const dataset = buildDemoDataset(scenario);
   const { t } = await getTranslator("dashboard");
   const { t: tc } = await getTranslator("common");
+  const { t: translate } = await getTranslator();
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-6xl">
@@ -60,16 +63,25 @@ export default async function DemoDashboardPage({
             </CardHeader>
             <CardContent className="pt-0">
               <div className="space-y-2">
-                {dataset.projects.map((project) => (
-                  <PortfolioVerdictCard
-                    key={project.id}
-                    projectId={project.id}
-                    projectName={project.name}
-                    summary={dataset.orgBrain.projects.find((item) => item.projectId === project.id)}
-                    lastActivityAt={project.last_scan_at ?? project.created_at}
-                    intelligencePreview={dataset.intelligencePreviews[project.id] ?? null}
-                  />
-                ))}
+                {dataset.projects.map((project) => {
+                  const summary = dataset.orgBrain.projects.find(
+                    (item) => item.projectId === project.id
+                  );
+                  return (
+                    <PortfolioVerdictCard
+                      key={project.id}
+                      projectId={project.id}
+                      projectName={project.name}
+                      summary={summary}
+                      lastActivityAt={project.last_scan_at ?? project.created_at}
+                      nextActionLabel={
+                        summary
+                          ? verdictHeadlineDisplay(summary.status)
+                          : verdictStatusLabel("insufficient_data", translate)
+                      }
+                    />
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
