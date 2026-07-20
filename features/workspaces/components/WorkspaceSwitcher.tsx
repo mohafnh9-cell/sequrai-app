@@ -1,0 +1,341 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  BookOpen,
+  Check,
+  ChevronDown,
+  Loader2,
+  LogOut,
+  Plus,
+  Settings2,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { createClient } from "@/lib/supabase/client";
+import { useI18n } from "@/lib/i18n/client";
+import { useDemoNavigation } from "@/features/demo/use-demo-navigation";
+import { getWorkspaceDocumentationUrl } from "@/lib/workspaces/constants";
+import {
+  partitionWorkspaces,
+  type WorkspacePresentation,
+} from "@/lib/workspaces/presentation";
+import { WorkspaceIcon } from "@/features/workspaces/components/WorkspaceIcon";
+import { CreateWorkspaceDialog } from "@/features/workspaces/components/CreateWorkspaceDialog";
+
+type WorkspacesResponse = {
+  workspaces: WorkspacePresentation[];
+  activeWorkspaceId: string | null;
+};
+
+function WorkspaceRow({
+  workspace,
+  active,
+  disabled,
+  onSelect,
+}: {
+  workspace: WorkspacePresentation;
+  active?: boolean;
+  disabled?: boolean;
+  onSelect?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      disabled={disabled || active}
+      className={cn(
+        "flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left transition-colors",
+        "hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
+        active && "bg-secondary/50",
+        disabled && "opacity-60"
+      )}
+    >
+      <WorkspaceIcon name={workspace.name} logoUrl={workspace.logoUrl} size="sm" />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{workspace.name}</p>
+        {workspace.plan && (
+          <p className="truncate text-xs text-muted-foreground">{workspace.plan}</p>
+        )}
+      </div>
+      {active && <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden />}
+    </button>
+  );
+}
+
+export function WorkspaceSwitcher({
+  initialWorkspaces,
+  initialActiveWorkspaceId,
+  fallbackName = "SequrAI",
+  variant = "sidebar",
+  onNavigate,
+  headerAction,
+}: {
+  initialWorkspaces?: WorkspacePresentation[];
+  initialActiveWorkspaceId?: string | null;
+  fallbackName?: string;
+  variant?: "sidebar" | "mobile";
+  onNavigate?: () => void;
+  headerAction?: React.ReactNode;
+}) {
+  const router = useRouter();
+  const { t } = useI18n("workspace");
+  const { isDemo, href } = useDemoNavigation();
+  const documentationUrl = getWorkspaceDocumentationUrl();
+
+  const [open, setOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [workspaces, setWorkspaces] = useState<WorkspacePresentation[]>(initialWorkspaces ?? []);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(
+    initialActiveWorkspaceId ?? null
+  );
+  const [loading, setLoading] = useState(!initialWorkspaces);
+  const [error, setError] = useState<string | null>(null);
+  const [switchError, setSwitchError] = useState<string | null>(null);
+  const [isSwitching, startSwitch] = useTransition();
+
+  const refreshWorkspaces = useCallback(async () => {
+    if (isDemo) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/workspaces", { cache: "no-store" });
+      const data = (await response.json().catch(() => null)) as WorkspacesResponse | null;
+      if (!response.ok || !data) {
+        setError(t("loadFailed"));
+        return;
+      }
+      setWorkspaces(data.workspaces);
+      setActiveWorkspaceId(data.activeWorkspaceId);
+    } catch {
+      setError(t("loadFailed"));
+    } finally {
+      setLoading(false);
+    }
+  }, [isDemo, t]);
+
+  useEffect(() => {
+    if (!initialWorkspaces && !isDemo) {
+      void refreshWorkspaces();
+    }
+  }, [initialWorkspaces, isDemo, refreshWorkspaces]);
+
+  const { active, others } = useMemo(
+    () => partitionWorkspaces(workspaces, activeWorkspaceId),
+    [workspaces, activeWorkspaceId]
+  );
+
+  const displayName = active?.name ?? fallbackName;
+
+  const handleSwitch = (workspaceId: string) => {
+    if (isDemo || workspaceId === activeWorkspaceId || isSwitching) return;
+    setSwitchError(null);
+    startSwitch(async () => {
+      const response = await fetch("/api/workspaces/switch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspaceId }),
+      });
+      const data = (await response.json().catch(() => null)) as { error?: string } | null;
+      if (!response.ok) {
+        setSwitchError(data?.error ?? t("switchFailed"));
+        return;
+      }
+      setActiveWorkspaceId(workspaceId);
+      setOpen(false);
+      onNavigate?.();
+      router.push("/dashboard");
+      router.refresh();
+    });
+  };
+
+  const handleSignOut = async () => {
+    setOpen(false);
+    if (isDemo) {
+      router.push("/");
+      return;
+    }
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/");
+    router.refresh();
+  };
+
+  const handleCreated = async () => {
+    await refreshWorkspaces();
+    onNavigate?.();
+    router.push("/dashboard");
+    router.refresh();
+  };
+
+  if (isDemo) {
+    return (
+      <div
+        className={cn(
+          "flex items-center gap-2.5 min-w-0",
+          variant === "sidebar" ? "h-14 border-b border-border px-4" : "flex-1"
+        )}
+      >
+        <WorkspaceIcon name={fallbackName} size="sm" />
+        <span className="truncate text-sm font-semibold">{fallbackName}</span>
+        {headerAction}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div
+        className={cn(
+          "flex w-full items-center gap-1",
+          variant === "sidebar" ? "h-14 border-b border-border px-2" : "min-w-0 flex-1"
+        )}
+      >
+        <DropdownMenu open={open} onOpenChange={setOpen}>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={open}
+              aria-label={displayName}
+              disabled={isSwitching}
+              className={cn(
+                "group flex min-w-0 flex-1 items-center gap-2.5 rounded-md px-2 py-1.5 text-left transition-colors",
+                "hover:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+              )}
+            >
+              <WorkspaceIcon name={displayName} logoUrl={active?.logoUrl} size="sm" />
+              <div className="min-w-0 flex-1">
+                <span className="block truncate text-sm font-semibold">{displayName}</span>
+                {isSwitching && (
+                  <span className="block truncate text-[11px] text-muted-foreground">
+                    {t("switching")}
+                  </span>
+                )}
+              </div>
+              <ChevronDown
+                className={cn(
+                  "h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform",
+                  open && "rotate-180"
+                )}
+              />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+          align="start"
+          sideOffset={6}
+          className={cn(
+            "w-[min(20rem,calc(100vw-2rem))] max-w-[20rem] border-border/70 bg-card/95 p-2 shadow-xl backdrop-blur-sm",
+            "data-[state=open]:animate-in data-[state=closed]:animate-out",
+            "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+            "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+            "duration-150"
+          )}
+        >
+          {loading ? (
+            <div className="flex items-center gap-2 px-2 py-3 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              …
+            </div>
+          ) : error ? (
+            <p className="px-2 py-2 text-xs text-destructive">{error}</p>
+          ) : !active ? (
+            <p className="px-2 py-2 text-xs text-muted-foreground">{t("noWorkspaces")}</p>
+          ) : (
+            <>
+              <DropdownMenuLabel className="px-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+                {t("currentWorkspace")}
+              </DropdownMenuLabel>
+              <WorkspaceRow workspace={active} active disabled={isSwitching} />
+
+              {others.length > 0 && (
+                <>
+                  <DropdownMenuSeparator className="my-2" />
+                  <DropdownMenuLabel className="px-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+                    {t("otherWorkspaces")}
+                  </DropdownMenuLabel>
+                  <div className="space-y-0.5">
+                    {others.map((workspace) => (
+                      <WorkspaceRow
+                        key={workspace.id}
+                        workspace={workspace}
+                        disabled={isSwitching}
+                        onSelect={() => handleSwitch(workspace.id)}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
+          {switchError && (
+            <p className="mt-2 px-2 text-xs text-destructive" role="alert">
+              {switchError}
+            </p>
+          )}
+
+          <DropdownMenuSeparator className="my-2" />
+
+          <DropdownMenuItem
+            className="gap-2 text-sm"
+            onSelect={() => {
+              setOpen(false);
+              setCreateOpen(true);
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            {t("createWorkspace")}
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator className="my-2" />
+
+          <DropdownMenuItem asChild>
+            <Link href="/settings/workspaces" className="gap-2 text-sm" onClick={() => setOpen(false)}>
+              <Settings2 className="h-4 w-4" />
+              {t("manageWorkspaces")}
+            </Link>
+          </DropdownMenuItem>
+
+          {documentationUrl && (
+            <DropdownMenuItem asChild>
+              <a
+                href={documentationUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="gap-2 text-sm"
+                onClick={() => setOpen(false)}
+              >
+                <BookOpen className="h-4 w-4" />
+                {t("documentation")}
+              </a>
+            </DropdownMenuItem>
+          )}
+
+          <DropdownMenuSeparator className="my-2" />
+
+          <DropdownMenuItem
+            className="gap-2 text-sm text-muted-foreground focus:text-foreground"
+            onSelect={handleSignOut}
+          >
+            <LogOut className="h-4 w-4" />
+            {t("signOut")}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      {headerAction ? <div className="shrink-0">{headerAction}</div> : null}
+      </div>
+
+      <CreateWorkspaceDialog open={createOpen} onOpenChange={setCreateOpen} onCreated={handleCreated} />
+    </>
+  );
+}

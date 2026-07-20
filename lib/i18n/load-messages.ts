@@ -19,6 +19,7 @@ import enAutomaticVerdictUpdate from "@/messages/en/automaticVerdictUpdate.json"
 import enAutopilotExperience from "@/messages/en/autopilotExperience.json";
 import enTechnicalDetails from "@/messages/en/technicalDetails.json";
 import enMcp from "@/messages/en/mcp.json";
+import enWorkspace from "@/messages/en/workspace.json";
 
 import esCommon from "@/messages/es/common.json";
 import esNavigation from "@/messages/es/navigation.json";
@@ -38,6 +39,7 @@ import esAutomaticVerdictUpdate from "@/messages/es/automaticVerdictUpdate.json"
 import esAutopilotExperience from "@/messages/es/autopilotExperience.json";
 import esTechnicalDetails from "@/messages/es/technicalDetails.json";
 import esMcp from "@/messages/es/mcp.json";
+import esWorkspace from "@/messages/es/workspace.json";
 
 const PACKAGES: Record<AppLocale, Record<MessageNamespace, Messages>> = {
   en: {
@@ -60,6 +62,7 @@ const PACKAGES: Record<AppLocale, Record<MessageNamespace, Messages>> = {
     notifications: enCommon,
     technicalDetails: enTechnicalDetails,
     mcp: enMcp,
+    workspace: enWorkspace,
   },
   es: {
     common: esCommon,
@@ -81,6 +84,7 @@ const PACKAGES: Record<AppLocale, Record<MessageNamespace, Messages>> = {
     notifications: esCommon,
     technicalDetails: esTechnicalDetails,
     mcp: esMcp,
+    workspace: esWorkspace,
   },
 };
 
@@ -107,6 +111,7 @@ export function loadAllMessages(locale: AppLocale): Messages {
     { automaticVerdictUpdate: PACKAGES[locale].automaticVerdictUpdate },
     { autopilotExperience: PACKAGES[locale].autopilotExperience },
     { technicalDetails: PACKAGES[locale].technicalDetails },
-    { mcp: PACKAGES[locale].mcp }
+    { mcp: PACKAGES[locale].mcp },
+    { workspace: PACKAGES[locale].workspace }
   );
 }

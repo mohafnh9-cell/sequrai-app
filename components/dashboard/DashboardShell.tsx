@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
+import { WorkspaceSwitcher } from "@/features/workspaces/components/WorkspaceSwitcher";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { WorkspacePresentation } from "@/lib/workspaces/presentation";
 
 type DashboardUser = {
   id: string;
@@ -18,11 +20,15 @@ type DashboardUser = {
 export function DashboardShell({
   user,
   orgName,
+  workspaces,
+  activeWorkspaceId,
   bypass,
   children,
 }: {
   user: DashboardUser;
   orgName?: string;
+  workspaces?: WorkspacePresentation[];
+  activeWorkspaceId?: string | null;
   bypass?: boolean;
   children: React.ReactNode;
 }) {
@@ -30,7 +36,7 @@ export function DashboardShell({
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      <div className="flex md:hidden fixed top-0 left-0 right-0 z-40 h-14 items-center gap-3 border-b border-border bg-card px-4">
+      <div className="flex md:hidden fixed top-0 left-0 right-0 z-40 h-14 items-center gap-2 border-b border-border bg-card px-3">
         <Button
           variant="ghost"
           size="icon"
@@ -40,11 +46,21 @@ export function DashboardShell({
         >
           <Menu className="h-5 w-5" />
         </Button>
-        <span className="truncate text-sm font-semibold">{orgName ?? "SequrAI"}</span>
+        <WorkspaceSwitcher
+          initialWorkspaces={workspaces}
+          initialActiveWorkspaceId={activeWorkspaceId}
+          fallbackName={orgName ?? "SequrAI"}
+          variant="mobile"
+        />
       </div>
 
       <div className="hidden md:flex h-full shrink-0">
-        <DashboardSidebar user={user} orgName={orgName} />
+        <DashboardSidebar
+          user={user}
+          orgName={orgName}
+          workspaces={workspaces}
+          activeWorkspaceId={activeWorkspaceId}
+        />
       </div>
 
       {mobileOpen && (
@@ -59,6 +75,8 @@ export function DashboardShell({
             <DashboardSidebar
               user={user}
               orgName={orgName}
+              workspaces={workspaces}
+              activeWorkspaceId={activeWorkspaceId}
               onNavigate={() => setMobileOpen(false)}
               headerAction={
                 <Button

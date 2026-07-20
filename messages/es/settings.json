@@ -30,6 +30,9 @@
   "mcpLastUsed": "Último uso {date}",
   "mcpCursorSetupTitle": "Configuración en Cursor",
   "mcpCursorSetupBody": "Añade esto a ~/.cursor/mcp.json:",
+  "workspaceManageLink": "Workspaces",
+  "workspaceManageDescription": "Cambia entre los Workspaces a los que tienes acceso.",
+  "workspaceManageCta": "Gestionar Workspaces",
   "dangerTitle": "Zona de peligro",
   "dangerSubtitle": "Acciones irreversibles para tu cuenta."
 }

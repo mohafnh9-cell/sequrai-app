@@ -1,0 +1,23 @@
+{
+  "currentWorkspace": "Workspace actual",
+  "otherWorkspaces": "Otros Workspaces",
+  "createWorkspace": "Crear Workspace",
+  "manageWorkspaces": "Gestionar Workspaces",
+  "documentation": "Documentación",
+  "signOut": "Cerrar sesión",
+  "switching": "Cambiando de Workspace…",
+  "switchFailed": "No se pudo cambiar de Workspace. Tu Workspace anterior sigue activo.",
+  "loadFailed": "No se pudieron cargar los Workspaces.",
+  "noWorkspaces": "No hay Workspaces accesibles",
+  "createTitle": "Crear Workspace",
+  "createDescription": "Añade un Workspace para un producto, cliente o equipo.",
+  "createNameLabel": "Nombre del Workspace",
+  "createNamePlaceholder": "DesparaFit",
+  "createSubmit": "Crear Workspace",
+  "createFailed": "No se pudo crear el Workspace.",
+  "manageTitle": "Workspaces",
+  "manageDescription": "Cambia entre los Workspaces a los que tienes acceso.",
+  "activeBadge": "Activo",
+  "switchAction": "Cambiar",
+  "renameUnsupported": "Renombrar aún no está disponible."
+}

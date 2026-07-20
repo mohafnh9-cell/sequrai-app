@@ -23,7 +23,8 @@ export type MessageNamespace =
   | "errors"
   | "notifications"
   | "technicalDetails"
-  | "mcp";
+  | "mcp"
+  | "workspace";
 
 export type Messages = Record<string, string | Record<string, unknown>>;
 

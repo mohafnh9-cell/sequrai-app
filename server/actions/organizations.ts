@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
+import { switchActiveWorkspace } from "@/server/workspaces/mutations";
 
 // ─── Organization Server Actions ──────────────────────────────────────────────
 
@@ -33,15 +34,25 @@ export async function createOrganizationAction(formData: FormData) {
 
   const slug = `${slugify(parsed.data.name)}-${Math.random().toString(36).slice(2, 6)}`;
 
-  const { error } = await supabase.rpc("create_organization_with_owner", {
+  const { data: workspaceId, error } = await supabase.rpc("create_organization_with_owner", {
     organization_name: parsed.data.name,
     organization_slug: slug,
   });
 
-  if (error) return { error: { _root: [error.message] } };
+  if (error || !workspaceId) return { error: { _root: [error?.message ?? "Workspace could not be created"] } };
+
+  const switched = await switchActiveWorkspace(supabase, user.id, workspaceId as string);
+  if (!switched.ok) return { error: { _root: [switched.message] } };
 
   revalidatePath("/onboarding");
   revalidatePath("/dashboard");
+  revalidatePath("/settings/workspaces");
+
+  const redirectTo = (formData.get("redirectTo") as string | null)?.trim();
+  if (redirectTo === "/dashboard") {
+    redirect("/dashboard");
+  }
+
   redirect("/onboarding?step=welcome");
 }
 

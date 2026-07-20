@@ -1,0 +1,23 @@
+{
+  "currentWorkspace": "Current Workspace",
+  "otherWorkspaces": "Other Workspaces",
+  "createWorkspace": "Create Workspace",
+  "manageWorkspaces": "Manage Workspaces",
+  "documentation": "Documentation",
+  "signOut": "Sign out",
+  "switching": "Switching Workspace…",
+  "switchFailed": "Workspace could not be changed. Your previous Workspace remains active.",
+  "loadFailed": "Workspaces could not be loaded.",
+  "noWorkspaces": "No accessible Workspaces",
+  "createTitle": "Create Workspace",
+  "createDescription": "Add a new Workspace for a product, client, or team.",
+  "createNameLabel": "Workspace name",
+  "createNamePlaceholder": "DesparaFit",
+  "createSubmit": "Create Workspace",
+  "createFailed": "Workspace could not be created.",
+  "manageTitle": "Workspaces",
+  "manageDescription": "Switch between Workspaces you can access.",
+  "activeBadge": "Active",
+  "switchAction": "Switch",
+  "renameUnsupported": "Renaming is not available yet."
+}

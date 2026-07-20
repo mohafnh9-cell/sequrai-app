@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createOrganizationAction } from "@/server/actions/organizations";
+import { useI18n } from "@/lib/i18n/client";
 
 const schema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(80),
@@ -17,6 +18,7 @@ const schema = z.object({
 type FormValues = z.infer<typeof schema>;
 
 export function OrgSetupForm() {
+  const { t } = useI18n("workspace");
   const [isPending, startTransition] = useTransition();
   const {
     register,
@@ -35,7 +37,7 @@ export function OrgSetupForm() {
         const msg =
           typeof err === "string"
             ? err
-            : err._root?.[0] ?? err.name?.[0] ?? "Something went wrong. Please try again.";
+            : err._root?.[0] ?? err.name?.[0] ?? t("createFailed");
         setError("name", { message: msg });
       }
     });
@@ -44,10 +46,10 @@ export function OrgSetupForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
       <div className="space-y-1.5">
-        <Label htmlFor="name">Organization name</Label>
+        <Label htmlFor="name">{t("createNameLabel")}</Label>
         <Input
           id="name"
-          placeholder="Acme Corp"
+          placeholder={t("createNamePlaceholder")}
           disabled={isPending}
           {...register("name")}
         />
@@ -61,7 +63,7 @@ export function OrgSetupForm() {
         ) : (
           <Building2 className="mr-2 h-4 w-4" />
         )}
-        Create organization
+        {t("createSubmit")}
       </Button>
     </form>
   );

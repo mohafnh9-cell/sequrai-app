@@ -52,6 +52,20 @@ export default async function SettingsPage() {
       {org && (
         <Card className="border-border/50">
           <CardHeader className="pb-4">
+            <CardTitle className="text-base">{t("workspaceManageLink")}</CardTitle>
+            <CardDescription>{t("workspaceManageDescription")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <a href="/settings/workspaces" className="text-sm text-primary hover:underline">
+              {t("workspaceManageCta")}
+            </a>
+          </CardContent>
+        </Card>
+      )}
+
+      {org && (
+        <Card className="border-border/50">
+          <CardHeader className="pb-4">
             <CardTitle className="text-base">{t("mcpTitle")}</CardTitle>
             <CardDescription>{t("mcpSubtitle")}</CardDescription>
           </CardHeader>

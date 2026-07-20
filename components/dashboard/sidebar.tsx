@@ -3,12 +3,10 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  Shield,
   LayoutDashboard,
   FolderGit2,
   Settings,
   LogOut,
-  ChevronDown,
   Puzzle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -24,6 +22,8 @@ import { createClient } from "@/lib/supabase/client";
 import { useI18n } from "@/lib/i18n/client";
 import { LanguageSelector } from "@/components/shared/LanguageSelector";
 import { useDemoNavigation } from "@/features/demo/use-demo-navigation";
+import { WorkspaceSwitcher } from "@/features/workspaces/components/WorkspaceSwitcher";
+import type { WorkspacePresentation } from "@/lib/workspaces/presentation";
 
 const PRIMARY_NAV = [
   { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
@@ -44,12 +44,16 @@ type User = {
 export function DashboardSidebar({
   user,
   orgName,
+  workspaces,
+  activeWorkspaceId,
   onNavigate,
   headerAction,
   className,
 }: {
   user: User;
   orgName?: string;
+  workspaces?: WorkspacePresentation[];
+  activeWorkspaceId?: string | null;
   onNavigate?: () => void;
   headerAction?: React.ReactNode;
   className?: string;
@@ -90,16 +94,14 @@ export function DashboardSidebar({
 
   return (
     <aside className={cn("flex h-full w-60 shrink-0 flex-col border-r border-border bg-card", className)}>
-      <div className="flex h-14 items-center gap-2.5 border-b border-border px-4">
-        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary">
-          <Shield className="h-4 w-4 text-white" />
-        </div>
-        <div className="flex flex-1 items-center justify-between min-w-0">
-          <span className="truncate text-sm font-semibold">{orgName ?? "SequrAI"}</span>
-          {headerAction ?? (
-            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-          )}
-        </div>
+      <div className="relative flex items-center">
+        <WorkspaceSwitcher
+          initialWorkspaces={workspaces}
+          initialActiveWorkspaceId={activeWorkspaceId}
+          fallbackName={orgName ?? "SequrAI"}
+          onNavigate={onNavigate}
+          headerAction={headerAction}
+        />
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-0.5">
@@ -127,7 +129,6 @@ export function DashboardSidebar({
                 <span className="truncate text-xs font-medium">{displayName}</span>
                 <span className="truncate text-xs text-muted-foreground">{user?.email}</span>
               </div>
-              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-52">
