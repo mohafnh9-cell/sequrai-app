@@ -7,6 +7,7 @@ import {
   pickPrimaryOrganizationId,
   type OrganizationMembershipRow,
 } from "@/server/organizations/resolve-user-organization";
+import { readActiveWorkspaceCookie } from "@/server/workspaces/active-workspace-cookie";
 
 export type ActiveWorkspaceResolutionInput = {
   profilePreferenceId?: string | null;
