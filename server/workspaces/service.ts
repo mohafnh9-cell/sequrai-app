@@ -13,6 +13,32 @@ export type ActiveWorkspaceResolutionInput = {
   cookieId?: string | null;
 };
 
+type OrganizationRelationRow = {
+  id: string;
+  name: string;
+  plan: string;
+  logo_url: string | null;
+  created_at: string;
+};
+
+function readOrganizationRelation(value: unknown): OrganizationRelationRow | null {
+  if (!value) return null;
+
+  const candidate = Array.isArray(value) ? value[0] : value;
+  if (!candidate || typeof candidate !== "object") return null;
+
+  const record = candidate as Record<string, unknown>;
+  if (typeof record.id !== "string" || typeof record.name !== "string") return null;
+
+  return {
+    id: record.id,
+    name: record.name,
+    plan: typeof record.plan === "string" ? record.plan : "FREE",
+    logo_url: typeof record.logo_url === "string" ? record.logo_url : null,
+    created_at: typeof record.created_at === "string" ? record.created_at : "",
+  };
+}
+
 export async function listAccessibleWorkspaces(
   supabase: SupabaseClient,
   userId: string
@@ -28,13 +54,7 @@ export async function listAccessibleWorkspaces(
 
   const rows = data
     .map((row) => {
-      const organization = row.organization as {
-        id: string;
-        name: string;
-        plan: string;
-        logo_url: string | null;
-        created_at: string;
-      } | null;
+      const organization = readOrganizationRelation(row.organization);
       if (!organization?.id) return null;
       return {
         id: organization.id,
