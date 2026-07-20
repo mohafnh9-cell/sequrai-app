@@ -96,6 +96,7 @@ export function DashboardSidebar({
     <aside className={cn("flex h-full w-60 shrink-0 flex-col border-r border-border bg-card", className)}>
       <div className="relative flex items-center">
         <WorkspaceSwitcher
+          key={activeWorkspaceId ?? "none"}
           initialWorkspaces={workspaces}
           initialActiveWorkspaceId={activeWorkspaceId}
           fallbackName={orgName ?? "SequrAI"}

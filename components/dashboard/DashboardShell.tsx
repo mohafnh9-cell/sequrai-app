@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import { DashboardSidebar } from "@/components/dashboard/sidebar";
-import { WorkspaceSwitcher } from "@/features/workspaces/components/WorkspaceSwitcher";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { WorkspacePresentation } from "@/lib/workspaces/presentation";
@@ -46,12 +45,11 @@ export function DashboardShell({
         >
           <Menu className="h-5 w-5" />
         </Button>
-        <WorkspaceSwitcher
-          initialWorkspaces={workspaces}
-          initialActiveWorkspaceId={activeWorkspaceId}
-          fallbackName={orgName ?? "SequrAI"}
-          variant="mobile"
-        />
+        <span className="truncate text-sm font-semibold flex-1 min-w-0">
+          {workspaces?.find((workspace) => workspace.id === activeWorkspaceId)?.name ??
+            orgName ??
+            "SequrAI"}
+        </span>
       </div>
 
       <div className="hidden md:flex h-full shrink-0">

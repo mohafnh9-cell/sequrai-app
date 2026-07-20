@@ -1,7 +1,6 @@
 "use client";
 
 import { useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,7 +15,6 @@ export function WorkspaceManagementPanel({
   workspaces: WorkspacePresentation[];
   activeWorkspaceId: string | null;
 }) {
-  const router = useRouter();
   const { t } = useI18n("workspace");
   const [isPending, startTransition] = useTransition();
 
@@ -29,8 +27,7 @@ export function WorkspaceManagementPanel({
         body: JSON.stringify({ workspaceId }),
       });
       if (!response.ok) return;
-      router.push("/dashboard");
-      router.refresh();
+      window.location.assign("/dashboard");
     });
   };
 

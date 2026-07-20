@@ -107,8 +107,8 @@ export async function resolveActiveWorkspaceId(
   );
 
   const candidates = [
-    input.profilePreferenceId?.trim(),
     input.cookieId?.trim(),
+    input.profilePreferenceId?.trim(),
   ].filter(Boolean) as string[];
 
   for (const candidate of candidates) {
@@ -133,11 +133,13 @@ export async function assertWorkspaceMembership(
   return Boolean(data?.organization_id);
 }
 
+const MISSING_PROFILE_COLUMN_CODES = new Set(["PGRST204", "42703"]);
+
 export async function persistActiveWorkspaceSelection(
   supabase: SupabaseClient,
   userId: string,
   workspaceId: string
-): Promise<{ error: string | null }> {
+): Promise<{ error: string | null; profilePersisted: boolean }> {
   const { error } = await supabase
     .from("profiles")
     .update({
@@ -146,6 +148,11 @@ export async function persistActiveWorkspaceSelection(
     })
     .eq("id", userId);
 
-  if (error) return { error: error.message };
-  return { error: null };
+  if (error) {
+    if (error.code && MISSING_PROFILE_COLUMN_CODES.has(error.code)) {
+      return { error: null, profilePersisted: false };
+    }
+    return { error: error.message, profilePersisted: false };
+  }
+  return { error: null, profilePersisted: true };
 }

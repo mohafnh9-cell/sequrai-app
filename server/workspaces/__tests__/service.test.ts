@@ -32,22 +32,22 @@ describe("resolveActiveWorkspaceId", () => {
     };
   }
 
-  it("prefers profile preference when the user is a member", async () => {
+  it("prefers cookie selection when the user is a member", async () => {
     const supabase = createSupabase();
     const resolved = await resolveActiveWorkspaceId(
       supabase as never,
       "user-1",
       { profilePreferenceId: "org-b", cookieId: "org-a" }
     );
-    expect(resolved).toBe("org-b");
+    expect(resolved).toBe("org-a");
   });
 
-  it("falls back to cookie when profile preference is invalid", async () => {
+  it("falls back to profile preference when cookie is invalid", async () => {
     const supabase = createSupabase();
     const resolved = await resolveActiveWorkspaceId(
       supabase as never,
       "user-1",
-      { profilePreferenceId: "missing", cookieId: "org-b" }
+      { profilePreferenceId: "org-b", cookieId: "missing" }
     );
     expect(resolved).toBe("org-b");
   });
