@@ -2,10 +2,9 @@ import { redirect } from "next/navigation";
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { QueryProvider } from "@/lib/query/provider";
 import { I18nShell } from "@/components/shared/I18nShell";
-import { getServerAuthContext } from "@/lib/auth/dev-bypass";
+import { getCachedServerAuthContext } from "@/lib/server/request-cache";
 import {
   listAccessibleWorkspaces,
-  resolveActiveWorkspaceIdForUser,
 } from "@/server/workspaces/service";
 import type { WorkspacePresentation } from "@/lib/workspaces/presentation";
 import type { Metadata } from "next";
@@ -24,7 +23,7 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const auth = await getServerAuthContext();
+  const auth = await getCachedServerAuthContext();
   if (!auth) redirect("/login");
 
   let workspaces: WorkspacePresentation[] = auth.organizationId
@@ -42,9 +41,7 @@ export default async function DashboardLayout({
     workspaces = await listAccessibleWorkspaces(auth.supabase, auth.user.id);
   }
 
-  const activeWorkspaceId = auth.bypass
-    ? auth.organizationId
-    : await resolveActiveWorkspaceIdForUser(auth.supabase, auth.user.id);
+  const activeWorkspaceId = auth.organizationId;
 
   return (
     <I18nShell userId={auth.user.id}>

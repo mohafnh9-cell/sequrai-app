@@ -1,14 +1,12 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { getServerAuthContext } from "@/lib/auth/dev-bypass";
 import { Plus, FolderGit2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { PageHeader } from "@/components/shared/PageHeader";
 import { ProjectCard } from "@/features/projects/components/ProjectCard";
 import { buildOrgBrain } from "@/server/brain/build-org-brain";
-import { getProductionIntelligencePreview } from "@/server/production-intelligence/service";
-import { organizationHasProductionVerdict } from "@/server/onboarding/has-production-verdict";
+import { getCachedServerAuthContext } from "@/lib/server/request-cache";
 import { getTranslator } from "@/lib/i18n/server";
 import type { ProjectRow } from "@/types/database";
 import type { VerdictStatus } from "@/brain/production-verdict/schema";
@@ -20,44 +18,26 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ProjectsPage() {
-  const auth = await getServerAuthContext();
+  const auth = await getCachedServerAuthContext();
   if (!auth) redirect("/login");
   if (!auth.organizationId) redirect("/onboarding");
 
-  const hasVerdict = await organizationHasProductionVerdict(auth.supabase, auth.organizationId);
-  if (!hasVerdict) redirect("/integrations");
-
   const { t } = await getTranslator("projects");
 
-  const { data: projects } = await auth.supabase
-    .from("projects")
-    .select("*")
-    .eq("organization_id", auth.organizationId)
-    .order("created_at", { ascending: false });
+  const [{ data: projects }, brain] = await Promise.all([
+    auth.supabase
+      .from("projects")
+      .select("*")
+      .eq("organization_id", auth.organizationId)
+      .order("created_at", { ascending: false }),
+    buildOrgBrain(auth.supabase, auth.organizationId),
+  ]);
 
-  const brain = await buildOrgBrain(auth.supabase, auth.organizationId);
   const statusByProject = new Map(
     brain.projects.map((item) => [item.projectId, item.status])
   );
 
   const projectList = (projects ?? []) as ProjectRow[];
-
-  const intelligencePreviews = await Promise.all(
-    projectList.map(async (project) => {
-      try {
-        return await getProductionIntelligencePreview(
-          auth.supabase,
-          project.id,
-          auth.user.id
-        );
-      } catch {
-        return null;
-      }
-    })
-  );
-  const intelligenceByProject = new Map(
-    projectList.map((project, index) => [project.id, intelligencePreviews[index]])
-  );
 
   return (
     <div className="p-6 space-y-6 max-w-6xl">
@@ -79,7 +59,7 @@ export default async function ProjectsPage() {
           icon={FolderGit2}
           title={t("noProjectsTitle")}
           description={t("noProjectsBody")}
-          action={{ label: t("firstVerdictCta"), href: "/onboarding" }}
+          action={{ label: t("connectRepository"), href: "/integrations" }}
           className="py-20"
         />
       ) : (
@@ -89,7 +69,6 @@ export default async function ProjectsPage() {
               key={project.id}
               project={project}
               verdictStatus={(statusByProject.get(project.id) ?? "insufficient_data") as VerdictStatus}
-              intelligencePreview={intelligenceByProject.get(project.id) ?? null}
             />
           ))}
         </div>

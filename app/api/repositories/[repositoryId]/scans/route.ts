@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { InlineScanJobRunner } from "@/server/security-scanner/scan-job-runner";
@@ -195,26 +196,30 @@ export async function POST(
       throw mapDatabaseError(stateError, "Could not initialize scan state");
     }
 
-    // Serverless runtimes cannot guarantee work after a response. V1 therefore
-    // executes inline behind ScanJobRunner; swap the implementation for a durable
-    // queue worker when scans need to exceed the configured function duration.
+    // Queue the scan asynchronously so the HTTP response returns immediately.
+    // Same InlineScanJobRunner pipeline as MCP review_now and web manual reviews.
     const runner = new InlineScanJobRunner(admin);
-    await runner.run({
+    const runContext = {
       scanId: scan.id,
       repositoryId,
       organizationId: project.organization_id,
       githubRepo: project.github_repo,
       branch: parsedBody.data.branch,
       providerToken: providerToken!,
-    });
+    };
+    after(() =>
+      runner.run(runContext).catch((error) => {
+        console.error({
+          component: "repository-scans-api",
+          event: "background_scan_failed",
+          scanId: scan.id,
+          repositoryId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      })
+    );
 
-    const { data: completed, error: readError } = await supabase
-      .from("scans")
-      .select("*")
-      .eq("id", scan.id)
-      .single();
-    if (readError) throw new Error(`Could not load completed scan: ${readError.message}`);
-    return NextResponse.json({ scan_id: completed.id, scan: completed }, { status: 201 });
+    return NextResponse.json({ scan_id: scan.id, scan }, { status: 202 });
   } catch (error) {
     return responseForError(error);
   }

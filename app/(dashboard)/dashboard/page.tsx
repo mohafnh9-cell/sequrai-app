@@ -1,31 +1,45 @@
 import { redirect } from "next/navigation";
-import { getServerAuthContext } from "@/lib/auth/dev-bypass";
 import Link from "next/link";
 import { Suspense } from "react";
 import { FolderGit2, Plus, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { EmptyState } from "@/components/shared/EmptyState";
-import { ProductionHero } from "@/features/brain/components/ProductionHero";
 import { PortfolioVerdictCard } from "@/features/production-verdict/components/PortfolioVerdictCard";
 import { FirstVerdictDashboardModal } from "@/features/onboarding/components/FirstVerdictDashboardModal";
 import { buildOrgBrain } from "@/server/brain/build-org-brain";
-import { AutopilotDashboardSection } from "@/features/autopilot/components/AutopilotDashboardSection";
-import { getProductionIntelligencePreview } from "@/server/production-intelligence/service";
-import { getAutopilotDashboardView } from "@/server/autopilot";
 import { organizationHasProductionVerdict } from "@/server/onboarding/has-production-verdict";
+import { getCachedServerAuthContext } from "@/lib/server/request-cache";
 import { getTranslator } from "@/lib/i18n/server";
+import { verdictHeadlineDisplay } from "@/brain/production-verdict/status-ui";
+import { verdictStatusLabel } from "@/lib/i18n/verdict-copy";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Production Dashboard" };
 
+import type { ProjectBrainSummary } from "@/brain";
+
+function portfolioCounts(projects: ProjectBrainSummary[]) {
+  let ready = 0;
+  let notReady = 0;
+  let needsAnalysis = 0;
+  for (const project of projects) {
+    if (project.status === "ready_to_ship" || project.status === "almost_ready") ready += 1;
+    else if (project.status === "insufficient_data" || project.status === "analysis_failed") needsAnalysis += 1;
+    else notReady += 1;
+  }
+  return { ready, notReady, needsAnalysis };
+}
+
 export default async function DashboardPage() {
-  const auth = await getServerAuthContext();
+  const auth = await getCachedServerAuthContext();
   if (!auth) redirect("/login");
   const { t } = await getTranslator("dashboard");
   const { t: tc } = await getTranslator("common");
+  const translate = (key: string, params?: Record<string, string | number | null | undefined>) =>
+    tc(key, params);
 
-  const { supabase, user, organizationId } = auth;
+  const { supabase, organizationId } = auth;
 
   if (!organizationId) {
     return (
@@ -47,7 +61,16 @@ export default async function DashboardPage() {
     );
   }
 
-  const hasVerdict = await organizationHasProductionVerdict(supabase, organizationId);
+  const [hasVerdict, { data: recentProjects }, brain] = await Promise.all([
+    organizationHasProductionVerdict(supabase, organizationId),
+    supabase
+      .from("projects")
+      .select("id, name, created_at, last_scan_at")
+      .eq("organization_id", organizationId)
+      .order("created_at", { ascending: false })
+      .limit(8),
+    buildOrgBrain(supabase, organizationId),
+  ]);
 
   if (!hasVerdict) {
     return (
@@ -59,53 +82,18 @@ export default async function DashboardPage() {
           <h1 className="text-2xl font-bold">{t("workspaceEmptyTitle")}</h1>
           <p className="mt-2 text-sm text-muted-foreground">{t("workspaceEmptyBody")}</p>
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Button asChild>
-            <Link href="/integrations">
-              <Plus className="mr-2 h-4 w-4" />
-              {t("connectRepository")}
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link href="/onboarding?step=welcome">{t("firstVerdictCta")}</Link>
-          </Button>
-        </div>
+        <Button asChild>
+          <Link href="/integrations">
+            <Plus className="mr-2 h-4 w-4" />
+            {t("connectRepository")}
+          </Link>
+        </Button>
       </div>
     );
   }
 
-  const { data: org } = await supabase
-    .from("organizations")
-    .select("id, name, plan")
-    .eq("id", organizationId)
-    .maybeSingle();
-
-  if (!org) redirect("/onboarding");
-
-  const brain = await buildOrgBrain(supabase, org.id);
-  const autopilotDashboard = await getAutopilotDashboardView(supabase, org.id);
-
-  const { data: recentProjects } = await supabase
-    .from("projects")
-    .select("*")
-    .eq("organization_id", org.id)
-    .order("created_at", { ascending: false })
-    .limit(5);
-
   const projectReadiness = new Map(brain.projects.map((item) => [item.projectId, item]));
-
-  const intelligencePreviews = await Promise.all(
-    (recentProjects ?? []).map(async (project) => {
-      try {
-        return await getProductionIntelligencePreview(supabase, project.id, user.id);
-      } catch {
-        return null;
-      }
-    })
-  );
-  const intelligenceByProject = new Map(
-    (recentProjects ?? []).map((project, index) => [project.id, intelligencePreviews[index]])
-  );
+  const counts = portfolioCounts(brain.projects);
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-6xl">
@@ -113,22 +101,31 @@ export default async function DashboardPage() {
         <FirstVerdictDashboardModal />
       </Suspense>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("overviewTitle")}</h1>
-          <p className="text-sm text-muted-foreground mt-1">{t("overviewSubtitle")}</p>
-        </div>
-        <Button size="sm" variant="outline" asChild className="shrink-0">
-          <Link href="/integrations">
-            <Plus className="mr-2 h-4 w-4" />
-            {t("connectRepository")}
-          </Link>
-        </Button>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">{t("overviewTitle")}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t("overviewSubtitle")}</p>
       </div>
 
-      <ProductionHero orgBrain={brain} />
-
-      <AutopilotDashboardSection view={autopilotDashboard} />
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card className="border-border/50">
+          <CardHeader className="pb-2">
+            <CardDescription>{t("portfolioReady")}</CardDescription>
+            <CardTitle className="text-2xl">{counts.ready}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card className="border-border/50">
+          <CardHeader className="pb-2">
+            <CardDescription>{t("portfolioNotReady")}</CardDescription>
+            <CardTitle className="text-2xl">{counts.notReady}</CardTitle>
+          </CardHeader>
+        </Card>
+        <Card className="border-border/50">
+          <CardHeader className="pb-2">
+            <CardDescription>{t("portfolioNeedsAnalysis")}</CardDescription>
+            <CardTitle className="text-2xl">{counts.needsAnalysis}</CardTitle>
+          </CardHeader>
+        </Card>
+      </div>
 
       <Card className="border-border/50">
         <CardHeader className="flex-row items-center justify-between pb-4">
@@ -152,16 +149,23 @@ export default async function DashboardPage() {
             />
           ) : (
             <div className="space-y-2">
-              {recentProjects.map((project) => (
-                <PortfolioVerdictCard
-                  key={project.id}
-                  projectId={project.id}
-                  projectName={project.name}
-                  summary={projectReadiness.get(project.id)}
-                  lastActivityAt={project.last_scan_at ?? project.created_at}
-                  intelligencePreview={intelligenceByProject.get(project.id) ?? null}
-                />
-              ))}
+              {recentProjects.map((project) => {
+                const summary = projectReadiness.get(project.id);
+                return (
+                  <PortfolioVerdictCard
+                    key={project.id}
+                    projectId={project.id}
+                    projectName={project.name}
+                    summary={summary}
+                    lastActivityAt={project.last_scan_at ?? project.created_at}
+                    nextActionLabel={
+                      summary
+                        ? verdictHeadlineDisplay(summary.status)
+                        : verdictStatusLabel("insufficient_data", translate)
+                    }
+                  />
+                );
+              })}
             </div>
           )}
         </CardContent>

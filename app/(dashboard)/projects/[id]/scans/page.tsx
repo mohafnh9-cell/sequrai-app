@@ -3,7 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ProjectScanOverview } from "@/features/security-scanner/components/ProjectScanOverview";
-import { createClient } from "@/lib/supabase/server";
+import { getCachedServerAuthContext } from "@/lib/server/request-cache";
+import { getProjectReviewUiContext } from "@/server/projects/review-ui-context";
 
 export default async function ScanHistoryPage({
   params,
@@ -11,18 +12,18 @@ export default async function ScanHistoryPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const auth = await getCachedServerAuthContext();
+  if (!auth) redirect("/login");
 
-  const { data: project, error } = await supabase
+  const { data: project, error } = await auth.supabase
     .from("projects")
     .select("github_repo")
     .eq("id", id)
     .single();
   if (error || !project) notFound();
+
+  const reviewContext = await getProjectReviewUiContext(auth.supabase, id);
+  if (!reviewContext) notFound();
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 p-6">
@@ -34,6 +35,7 @@ export default async function ScanHistoryPage({
       <ProjectScanOverview
         projectId={id}
         repositoryConnected={Boolean(project.github_repo)}
+        reviewContext={reviewContext}
       />
     </div>
   );

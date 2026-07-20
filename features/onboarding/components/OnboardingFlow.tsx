@@ -116,26 +116,9 @@ export function OnboardingFlow({ initialContext }: { initialContext: OnboardingC
 
   const handleRepositoryConnected = useCallback(
     (projectId: string) => {
-      setFlow((prev) => ({ ...prev, projectId }));
-      setContext((prev) => ({
-        ...prev,
-        projects: prev.projects.some((p) => p.id === projectId)
-          ? prev.projects
-          : [
-              {
-                id: projectId,
-                name: "Connected repository",
-                githubRepo: null,
-                defaultBranch: null,
-                isPrivate: null,
-                updatedAt: null,
-              },
-              ...prev.projects,
-            ],
-      }));
-      goTo("review");
+      router.push(`/projects/${projectId}?connected=1`);
     },
-    [goTo]
+    [router]
   );
 
   const handleReviewComplete = useCallback(

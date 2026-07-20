@@ -13,7 +13,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RunSecurityScanButton } from "./RunSecurityScanButton";
+import { AnalyzeProjectButton } from "@/features/projects/components/AnalyzeProjectButton";
+import type { ProjectReviewUiContext } from "@/server/projects/review-ui-context";
 import { useI18n } from "@/lib/i18n/client";
 import {
   formatScanDate,
@@ -37,9 +38,11 @@ function statusClass(status?: string) {
 export function ProjectScanOverview({
   projectId,
   repositoryConnected,
+  reviewContext,
 }: {
   projectId: string;
   repositoryConnected: boolean;
+  reviewContext: ProjectReviewUiContext;
 }) {
   const { t } = useI18n("projects");
   const [scans, setScans] = useState<ScanRecord[]>([]);
@@ -117,7 +120,11 @@ export function ProjectScanOverview({
           </h2>
           <p className="text-sm text-muted-foreground">{t("reviewHistory.subtitle")}</p>
         </div>
-        <RunSecurityScanButton projectId={projectId} disabled={!repositoryConnected} />
+        <AnalyzeProjectButton
+          projectId={projectId}
+          initialContext={reviewContext}
+          size="sm"
+        />
       </div>
 
       {!repositoryConnected && (

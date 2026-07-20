@@ -1,43 +1,42 @@
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
 import {
   ArrowLeft,
   FolderGit2,
   ExternalLink,
-  Pencil,
   GitBranch,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ProjectDeleteButton } from "@/features/projects/components/ProjectDeleteButton";
 import { ProjectVerdictSummary } from "@/features/production-verdict/components/ProductionVerdictExperience";
-import { buildProjectBrain } from "@/server/brain/build-project-brain";
-import { getTranslator } from "@/lib/i18n/server";
-import { formatLocalizedDate } from "@/lib/i18n/format";
-import type { ProjectRow } from "@/types/database";
-import type { Metadata } from "next";
+import { AnalyzeProjectButton } from "@/features/projects/components/AnalyzeProjectButton";
 import { ProjectSubNav } from "@/features/production-journey/components/ProjectSubNav";
 import { ProductionIntelligencePanel } from "@/features/production-intelligence/components/ProductionIntelligencePanel";
-import { AutopilotSection } from "@/features/autopilot/components/AutopilotSection";
-import { getAutopilotProjectView } from "@/server/autopilot";
+import { buildProjectBrain } from "@/server/brain/build-project-brain";
+import { getProjectReviewUiContext } from "@/server/projects/review-ui-context";
+import { getCachedServerAuthContext } from "@/lib/server/request-cache";
 import { getProductionIntelligence } from "@/server/production-intelligence/service";
+import { getTranslator } from "@/lib/i18n/server";
 import { fixPromptContextFromScan } from "@/features/production-verdict/fix-prompt-context";
+import type { ProjectRow } from "@/types/database";
+import type { Metadata } from "next";
 
 interface ProjectDetailPageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ connected?: string; reviewComplete?: string }>;
 }
 
 export async function generateMetadata({
   params,
 }: ProjectDetailPageProps): Promise<Metadata> {
   const { id } = await params;
-  const supabase = await createClient();
-  const { data } = await supabase
+  const auth = await getCachedServerAuthContext();
+  if (!auth?.organizationId) return { title: "Project" };
+  const { data } = await auth.supabase
     .from("projects")
     .select("name")
     .eq("id", id)
-    .single();
+    .maybeSingle();
   return { title: data?.name ?? "Project" };
 }
 
@@ -54,17 +53,16 @@ const FRAMEWORK_LABELS: Record<string, string> = {
 
 export default async function ProjectDetailPage({
   params,
+  searchParams,
 }: ProjectDetailPageProps) {
   const { id } = await params;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const query = await searchParams;
+  const auth = await getCachedServerAuthContext();
+  if (!auth) redirect("/login");
 
-  const { locale, t } = await getTranslator("projects");
+  const { t } = await getTranslator("projects");
 
-  const { data: project, error } = await supabase
+  const { data: project, error } = await auth.supabase
     .from("projects")
     .select("*")
     .eq("id", id)
@@ -74,36 +72,27 @@ export default async function ProjectDetailPage({
 
   const p = project as ProjectRow;
 
-  const brain = await buildProjectBrain(supabase, p.id);
+  const [brain, reviewContext, latestScanResult, intelligence] = await Promise.all([
+    buildProjectBrain(auth.supabase, p.id),
+    getProjectReviewUiContext(auth.supabase, p.id),
+    auth.supabase
+      .from("scans")
+      .select("id, detected_stack")
+      .eq("project_id", p.id)
+      .eq("status", "completed")
+      .order("completed_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    getProductionIntelligence(auth.supabase, p.id, auth.user.id).catch(() => null),
+  ]);
 
-  const { data: latestScan } = await supabase
-    .from("scans")
-    .select("id, detected_stack")
-    .eq("project_id", p.id)
-    .eq("status", "completed")
-    .order("completed_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
+  if (!reviewContext) notFound();
 
-  const latestScanHref = latestScan?.id
-    ? `/projects/${p.id}/scans/${latestScan.id}`
-    : undefined;
-
+  const latestScan = latestScanResult.data;
+  const latestScanHref = latestScan?.id ? `/projects/${p.id}/scans/${latestScan.id}` : undefined;
   const latestReportHref = latestScan?.id
     ? `/projects/${p.id}/scans/${latestScan.id}/report`
     : undefined;
-
-  let intelligence = null;
-  let autopilot = null;
-  try {
-    [intelligence, autopilot] = await Promise.all([
-      getProductionIntelligence(supabase, p.id, user.id),
-      getAutopilotProjectView(supabase, p.id, user.id),
-    ]);
-  } catch {
-    intelligence = null;
-    autopilot = null;
-  }
 
   const fixPromptContext = brain?.currentVerdict
     ? fixPromptContextFromScan({
@@ -152,43 +141,74 @@ export default async function ProjectDetailPage({
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Button variant="outline" size="sm" asChild>
-            <Link href={`/projects/${p.id}/edit`}>
-              <Pencil className="mr-1.5 h-3.5 w-3.5" />
-              {t("edit")}
-            </Link>
-          </Button>
-          <ProjectDeleteButton project={p} />
-        </div>
       </div>
+
+      {query.connected === "1" && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <p className="text-sm font-medium">{t("connectedGuidanceTitle")}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("connectedGuidanceBody")}</p>
+        </div>
+      )}
+
+      {query.reviewComplete === "1" && brain?.currentVerdict && (
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <p className="text-sm font-medium">{t("reviewCompleteGuidanceTitle")}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("reviewCompleteGuidanceBody")}</p>
+        </div>
+      )}
 
       <ProjectSubNav projectId={p.id} latestReportHref={latestReportHref} />
 
       {brain?.currentVerdict ? (
-        <ProjectVerdictSummary
-          verdict={brain.currentVerdict}
-          projectId={p.id}
-          latestScanHref={latestScanHref}
-        />
+        <>
+          {reviewContext.isStale && (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-amber-100/90">
+              {t("latestCommitNotReviewedBanner")}
+            </div>
+          )}
+          <ProjectVerdictSummary
+            verdict={brain.currentVerdict}
+            projectId={p.id}
+            latestScanHref={latestScanHref}
+          />
+        </>
       ) : (
-        <div className="rounded-xl border border-dashed border-border/70 p-8 text-center text-sm text-muted-foreground">
-          {t("runFirstReview")}
+        <div className="rounded-xl border border-dashed border-border/70 p-8 text-center space-y-4">
+          <p className="text-sm text-muted-foreground">{t("notAnalyzedYet")}</p>
+        </div>
+      )}
+
+      <AnalyzeProjectButton projectId={p.id} initialContext={reviewContext} />
+
+      {brain?.currentVerdict?.topPriorities[0] && (
+        <div className="rounded-xl border border-border/50 p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {t("fixThisFirst")}
+          </p>
+          <p className="mt-2 text-sm font-medium">{brain.currentVerdict.topPriorities[0].title}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {brain.currentVerdict.topPriorities[0].summary}
+          </p>
         </div>
       )}
 
       {intelligence && (
-        <ProductionIntelligencePanel
-          intelligence={intelligence}
-          projectId={p.id}
-          latestReportHref={latestReportHref}
-          compact
-          topPriority={brain?.currentVerdict?.topPriorities[0]}
-          fixPromptContext={fixPromptContext}
-        />
+        <details className="rounded-xl border border-border/50 p-4 group">
+          <summary className="cursor-pointer text-sm font-medium list-none [&::-webkit-details-marker]:hidden">
+            {t("secondaryDetails")}
+          </summary>
+          <div className="mt-4">
+            <ProductionIntelligencePanel
+              intelligence={intelligence}
+              projectId={p.id}
+              latestReportHref={latestReportHref}
+              compact
+              topPriority={brain?.currentVerdict?.topPriorities[0]}
+              fixPromptContext={fixPromptContext}
+            />
+          </div>
+        </details>
       )}
-
-      {autopilot && <AutopilotSection view={autopilot} />}
     </div>
   );
 }

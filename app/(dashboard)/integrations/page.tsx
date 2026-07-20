@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { GitBranch, Webhook, Zap, RefreshCw, Check, Lock, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ import { useI18n } from "@/lib/i18n/client";
 type Step = "idle" | "loading" | "selecting" | "saving" | "done" | "error";
 
 export default function IntegrationsPage() {
+  const router = useRouter();
   const { t } = useI18n("integrations");
   const { t: tc } = useI18n("common");
   const [step, setStep] = useState<Step>("idle");
@@ -97,6 +99,7 @@ export default function IntegrationsPage() {
       const data = (await res.json().catch(() => null)) as
         | {
             saved?: number;
+            projectIds?: string[];
             error?: string;
             needsReauth?: boolean;
             webhooksCreated?: number;
@@ -129,6 +132,11 @@ export default function IntegrationsPage() {
         skipped: data?.webhooksSkipped ?? 0,
         warnings: data?.webhookWarnings ?? [],
       });
+      const projectIds = data?.projectIds ?? [];
+      if (projectIds.length === 1) {
+        router.push(`/projects/${projectIds[0]}?connected=1`);
+        return;
+      }
       setStep("done");
     } catch (error) {
       setErrorMsg(
