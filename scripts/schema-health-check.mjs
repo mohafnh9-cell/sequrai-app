@@ -16,6 +16,7 @@ const REQUIRED_TABLES = [
   "repository_scan_state",
   "repository_sync_status",
   "user_github_tokens",
+  "workspace_github_connections",
   "mcp_api_keys",
 ];
 

@@ -9,7 +9,7 @@ import {
   scanIsActive,
   scanIsCompleted,
 } from "@/features/onboarding/onboarding-flow";
-import { getStoredGitHubToken } from "@/lib/github/token-store";
+import { getWorkspaceGitHubConnectionView } from "@/server/github/workspace-connection-service";
 import { resolveActiveWorkspaceIdForUser } from "@/server/workspaces/service";
 
 function mapScan(row: {
@@ -35,8 +35,9 @@ export async function getOnboardingContext(
   const orgId = await resolveActiveWorkspaceIdForUser(supabase, userId);
   const hasOrg = Boolean(orgId);
 
-  const githubToken = await getStoredGitHubToken(userId);
-  const githubConnected = Boolean(githubToken);
+  const githubConnected = orgId
+    ? (await getWorkspaceGitHubConnectionView(supabase, orgId)).status === "connected"
+    : false;
 
   let projects: OnboardingProject[] = [];
   let activeScan: OnboardingScan | null = null;

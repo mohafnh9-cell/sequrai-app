@@ -46,16 +46,15 @@ function log(event: string, fields: Record<string, unknown>) {
   console.info({ component: "github-automation", event, ...fields });
 }
 
-async function findProjectByRepositoryId(
+async function findProjectsByRepositoryId(
   admin: SupabaseClient,
   repositoryId: number
-): Promise<ProjectRow | null> {
+): Promise<ProjectRow[]> {
   const { data } = await admin
     .from("projects")
     .select("id, organization_id, name, github_repo, github_repository_id, webhook_enabled, security_score")
-    .eq("github_repository_id", repositoryId)
-    .maybeSingle();
-  return data as ProjectRow | null;
+    .eq("github_repository_id", repositoryId);
+  return (data as ProjectRow[] | null) ?? [];
 }
 
 async function recordEvent(
@@ -299,95 +298,120 @@ export async function processGitHubWebhookEvent(input: {
     return { ok: true, action: "ignored", reason: "no_repository" };
   }
 
-  const project = await findProjectByRepositoryId(admin, repository.id);
-  if (!project?.github_repo) {
+  const projects = await findProjectsByRepositoryId(admin, repository.id);
+  if (!projects.length) {
     return { ok: true, action: "ignored", reason: "project_not_linked" };
   }
-  if (project.webhook_enabled === false) {
-    return { ok: true, action: "ignored", reason: "webhook_disabled" };
-  }
 
-  const tokenResult = await resolveOrganizationGitHubToken(admin, project.organization_id);
-  if (!tokenResult) {
-    await recordEvent(admin, {
-      organizationId: project.organization_id,
-      projectId: project.id,
-      deliveryId,
-      eventType,
-      payload,
-      status: "failed",
-      errorMessage: "No GitHub token available for organization",
-    });
-    await markRepositorySyncError(admin, {
-      organizationId: project.organization_id,
-      projectId: project.id,
-      githubRepositoryId: project.github_repository_id,
-      errorCode: "invalid_github_connection",
-    });
-    return { ok: false, action: "failed", reason: "no_token" };
-  }
+  const results = [];
+  for (const project of projects) {
+    if (!project.github_repo) continue;
+    if (project.webhook_enabled === false) {
+      results.push({ projectId: project.id, ok: true, action: "ignored", reason: "webhook_disabled" });
+      continue;
+    }
 
-  try {
-    if (eventType === "push") {
-      return await handlePushEvent(admin, {
-        project,
+    const tokenResult = await resolveOrganizationGitHubToken(
+      admin,
+      project.organization_id,
+      project.id
+    );
+    if (!tokenResult) {
+      await recordEvent(admin, {
+        organizationId: project.organization_id,
+        projectId: project.id,
         deliveryId,
-        payload: payload as unknown as GitHubPushPayload,
-        token: tokenResult.token,
-        userId: tokenResult.userId,
-        appUrl,
-      });
-    }
-    if (eventType === "pull_request") {
-      return await handlePullRequestEvent(admin, {
-        project,
-        deliveryId,
-        payload: payload as unknown as GitHubPullRequestPayload,
-        token: tokenResult.token,
-        userId: tokenResult.userId,
-        appUrl,
-      });
-    }
-    if (eventType === "repository") {
-      return await handleRepositoryEvent(admin, {
-        project,
-        deliveryId,
-        payload: payload as unknown as GitHubRepositoryPayload,
         eventType,
-      });
-    }
-    if (eventType === "delete") {
-      return await handleBranchDelete(admin, {
-        project,
-        deliveryId,
         payload,
-        eventType,
+        status: "failed",
+        errorMessage: "No GitHub token available for workspace",
       });
+      await markRepositorySyncError(admin, {
+        organizationId: project.organization_id,
+        projectId: project.id,
+        githubRepositoryId: project.github_repository_id,
+        errorCode: "invalid_github_connection",
+      });
+      results.push({ projectId: project.id, ok: false, action: "failed", reason: "no_token" });
+      continue;
     }
 
-    await recordEvent(admin, {
-      organizationId: project.organization_id,
-      projectId: project.id,
-      deliveryId,
-      eventType,
-      payload,
-      status: "ignored",
-    });
-    return { ok: true, action: "ignored", reason: "unsupported_event" };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Processing failed";
-    await recordEvent(admin, {
-      organizationId: project.organization_id,
-      projectId: project.id,
-      deliveryId,
-      eventType,
-      payload,
-      status: "failed",
-      errorMessage: message,
-    });
-    log("event_failed", { eventType, projectId: project.id, message });
-    throw error;
+    try {
+      if (eventType === "push") {
+        results.push(
+          await handlePushEvent(admin, {
+            project,
+            deliveryId,
+            payload: payload as unknown as GitHubPushPayload,
+            token: tokenResult.token,
+            userId: tokenResult.userId,
+            appUrl,
+          })
+        );
+        continue;
+      }
+      if (eventType === "pull_request") {
+        results.push(
+          await handlePullRequestEvent(admin, {
+            project,
+            deliveryId,
+            payload: payload as unknown as GitHubPullRequestPayload,
+            token: tokenResult.token,
+            userId: tokenResult.userId,
+            appUrl,
+          })
+        );
+        continue;
+      }
+      if (eventType === "repository") {
+        results.push(
+          await handleRepositoryEvent(admin, {
+            project,
+            deliveryId,
+            payload: payload as unknown as GitHubRepositoryPayload,
+            eventType,
+          })
+        );
+        continue;
+      }
+      if (eventType === "delete") {
+        results.push(
+          await handleBranchDelete(admin, {
+            project,
+            deliveryId,
+            payload,
+            eventType,
+          })
+        );
+        continue;
+      }
+
+      await recordEvent(admin, {
+        organizationId: project.organization_id,
+        projectId: project.id,
+        deliveryId,
+        eventType,
+        payload,
+        status: "ignored",
+      });
+      results.push({ projectId: project.id, ok: true, action: "ignored", reason: "unsupported_event" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Processing failed";
+      await recordEvent(admin, {
+        organizationId: project.organization_id,
+        projectId: project.id,
+        deliveryId,
+        eventType,
+        payload,
+        status: "failed",
+        errorMessage: message,
+      });
+      log("event_failed", { eventType, projectId: project.id, message });
+      results.push({ projectId: project.id, ok: false, action: "failed", reason: message });
+    }
   }
+
+  return { ok: true, action: "processed", results };
 }
 
 async function handlePushEvent(

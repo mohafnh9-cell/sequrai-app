@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getGitHubRepoById, type GitHubRepo } from "@/lib/github";
-import { resolveGitHubAccessToken } from "@/lib/github/resolve-token";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/server/security-scanner/admin-client";
 import {
@@ -10,6 +9,7 @@ import {
 } from "@/server/github-automation/register-webhook";
 import { resolveUserOrganizationId } from "@/server/organizations/resolve-user-organization";
 import { resolveActiveWorkspaceIdForUser } from "@/server/workspaces/service";
+import { resolveWorkspaceGitHubToken } from "@/server/github/workspace-connection-service";
 import { enforceRateLimit } from "@/server/http/rate-limit";
 
 const requestSchema = z.object({
@@ -47,7 +47,8 @@ function extendedProjectFields(repo: GitHubRepo) {
 async function upsertConnectedProject(
   supabase: Awaited<ReturnType<typeof createClient>>,
   organizationId: string,
-  repo: GitHubRepo
+  repo: GitHubRepo,
+  connectionMeta?: { connectionId: string; connectedByUserId: string }
 ): Promise<string> {
   const { data: existing } = await supabase
     .from("projects")
@@ -61,6 +62,12 @@ async function upsertConnectedProject(
       name: repo.name,
       description: repo.description,
       ...extendedProjectFields(repo),
+      ...(connectionMeta
+        ? {
+            github_connection_id: connectionMeta.connectionId,
+            connected_by_user_id: connectionMeta.connectedByUserId,
+          }
+        : {}),
     };
     let { error } = await supabase
       .from("projects")
@@ -92,6 +99,12 @@ async function upsertConnectedProject(
   const fullInsert = {
     ...baseProjectFields(repo, organizationId),
     ...extendedProjectFields(repo),
+    ...(connectionMeta
+      ? {
+          github_connection_id: connectionMeta.connectionId,
+          connected_by_user_id: connectionMeta.connectedByUserId,
+        }
+      : {}),
   };
   let insertResult = await supabase.from("projects").insert(fullInsert).select("id").single();
 
@@ -132,34 +145,70 @@ async function connectRepositories(request: Request) {
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  const providerToken = await resolveGitHubAccessToken(user.id, session);
-  if (!providerToken) {
-    return NextResponse.json(
-      { error: "Reconnect GitHub before selecting repositories", needsReauth: true },
-      { status: 403 }
-    );
-  }
+  void session;
 
   const organizationId = parsed.data.organizationId
     ? await resolveUserOrganizationId(supabase, user.id, parsed.data.organizationId)
     : await resolveActiveWorkspaceIdForUser(supabase, user.id);
   if (!organizationId) {
-    return NextResponse.json({ error: "No organization found" }, { status: 404 });
-  }
-
-  const selectedIds = [...new Set(parsed.data.repos.map((repo) => repo.id))];
-  const verifiedRepos = await Promise.all(
-    selectedIds.map((repoId) => getGitHubRepoById(providerToken, repoId))
-  );
-  if (verifiedRepos.some((repo) => !repo)) {
-    return NextResponse.json({ error: "Repository access could not be verified" }, { status: 403 });
+    return NextResponse.json(
+      { error: "No active Workspace", code: "workspace_not_found" },
+      { status: 404 }
+    );
   }
 
   let admin: ReturnType<typeof createAdminClient> | null = null;
   try {
     admin = createAdminClient();
   } catch {
-    admin = null;
+    return NextResponse.json(
+      { error: "GitHub integration is not configured", code: "internal_error" },
+      { status: 500 }
+    );
+  }
+
+  const tokenResult = await resolveWorkspaceGitHubToken(admin, organizationId);
+  if (!tokenResult) {
+    return NextResponse.json(
+      {
+        error: "Connect GitHub to this Workspace before selecting repositories.",
+        code: "github_not_connected",
+        needsReauth: true,
+      },
+      { status: 403 }
+    );
+  }
+  const providerToken = tokenResult.token;
+
+  const selectedIds = [...new Set(parsed.data.repos.map((repo) => repo.id))];
+  const verifiedRepos = await Promise.all(
+    selectedIds.map((repoId) => getGitHubRepoById(providerToken, repoId))
+  );
+  if (verifiedRepos.some((repo) => !repo)) {
+    return NextResponse.json(
+      { error: "Repository access could not be verified", code: "repository_not_authorized" },
+      { status: 403 }
+    );
+  }
+
+  for (const repo of verifiedRepos) {
+    if (!repo) continue;
+    const { data: duplicate } = await admin
+      .from("projects")
+      .select("organization_id")
+      .eq("github_repository_id", repo.id)
+      .neq("organization_id", organizationId)
+      .limit(1)
+      .maybeSingle();
+    if (duplicate) {
+      return NextResponse.json(
+        {
+          error: "This repository is already connected to another Workspace.",
+          code: "repository_already_connected",
+        },
+        { status: 409 }
+      );
+    }
   }
 
   let saved = 0;
@@ -171,7 +220,10 @@ async function connectRepositories(request: Request) {
 
   for (const repo of verifiedRepos) {
     if (!repo) continue;
-    const projectId = await upsertConnectedProject(supabase, organizationId, repo);
+    const projectId = await upsertConnectedProject(supabase, organizationId, repo, {
+      connectionId: tokenResult.connectionId,
+      connectedByUserId: tokenResult.userId,
+    });
     projectIds.push(projectId);
     saved++;
 

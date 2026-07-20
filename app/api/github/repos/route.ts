@@ -1,66 +1,68 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
 import { getGitHubRepos, getGitHubTokenScopes } from "@/lib/github";
-import { resolveGitHubAccessToken } from "@/lib/github/resolve-token";
+import { getServerAuthContext } from "@/lib/auth/dev-bypass";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveWorkspaceGitHubToken } from "@/server/github/workspace-connection-service";
 import { enforceRateLimit } from "@/server/http/rate-limit";
+
+export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   const rateLimited = enforceRateLimit(request);
   if (rateLimited) return rateLimited;
 
-  const cookieStore = await cookies();
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: (cookiesToSet) => {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          );
-        },
-      },
-    }
-  );
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const auth = await getServerAuthContext();
+  if (!auth) {
+    return NextResponse.json({ error: "Unauthorized", code: "unauthorized" }, { status: 401 });
+  }
+  if (!auth.organizationId) {
+    return NextResponse.json(
+      { error: "No active Workspace", code: "workspace_not_found", needsReauth: true },
+      { status: 404 }
+    );
   }
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  const providerToken = await resolveGitHubAccessToken(user.id, session);
-
-  if (!providerToken) {
+  let admin;
+  try {
+    admin = createAdminClient();
+  } catch {
     return NextResponse.json(
-      { error: "No GitHub token. Please reconnect with GitHub.", needsReauth: true },
+      { error: "GitHub integration is not configured", code: "internal_error" },
+      { status: 500 }
+    );
+  }
+
+  const tokenResult = await resolveWorkspaceGitHubToken(admin, auth.organizationId);
+  if (!tokenResult) {
+    return NextResponse.json(
+      {
+        error: "GitHub is not connected to this Workspace.",
+        code: "github_not_connected",
+        needsReauth: true,
+      },
       { status: 403 }
     );
   }
 
   try {
-    const scopes = await getGitHubTokenScopes(providerToken);
+    const scopes = await getGitHubTokenScopes(tokenResult.token);
     if (!scopes.includes("repo")) {
       return NextResponse.json(
         {
           error: "GitHub access must be upgraded to include private repositories.",
+          code: "github_reauthorization_required",
           needsReauth: true,
         },
         { status: 403 }
       );
     }
 
-    const repos = await getGitHubRepos(providerToken);
-    return NextResponse.json({ repos, scopes });
+    const repos = await getGitHubRepos(tokenResult.token);
+    return NextResponse.json({ repos, scopes, workspaceId: auth.organizationId });
   } catch {
-    return NextResponse.json({ error: "Failed to fetch GitHub repos" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch GitHub repositories", code: "internal_error" },
+      { status: 500 }
+    );
   }
 }

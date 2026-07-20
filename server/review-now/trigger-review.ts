@@ -139,7 +139,10 @@ export async function triggerProductionReview(
   deps: TriggerReviewDependencies = {}
 ): Promise<TriggerReviewResult> {
   const scheduleBackground = deps.scheduleBackground ?? defaultScheduler;
-  const resolveToken = deps.resolveToken ?? resolveOrganizationGitHubToken;
+  const resolveToken =
+    deps.resolveToken ??
+    ((admin, organizationId) =>
+      resolveOrganizationGitHubToken(admin, organizationId, input.projectId));
   const resolveCommit = deps.resolveCommit ?? resolveCommitReference;
   const runScan = deps.runScan ?? ((context) => new InlineScanJobRunner(admin).run(context));
 

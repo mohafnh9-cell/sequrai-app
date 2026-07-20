@@ -21,7 +21,7 @@
   "mcpCreateKeyFailed": "Could not create key",
   "mcpRevokeKeyFailed": "Could not revoke key",
   "mcpCopyKeyTitle": "Copy your API key now",
-  "mcpCopyKeyBody": "This key is shown once. Store it in your agent MCP config as SEQURAI_API_KEY.",
+  "mcpCopyKeyBody": "This key is shown once. It gives access only to the current Workspace. Store it in your agent MCP config as SEQURAI_API_KEY.",
   "mcpCopyKey": "Copy key",
   "mcpCopied": "Copied",
   "mcpActiveKeys": "Active keys",

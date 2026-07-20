@@ -9,7 +9,7 @@ import {
   type AutomaticReviewPanelView,
 } from "@/brain/automatic-review";
 import { buildRepositoryStatusView } from "@/brain/repository-sync";
-import { resolveOrganizationGitHubToken } from "@/server/github-automation/token-resolver";
+import { getWorkspaceGitHubConnectionView } from "@/server/github/workspace-connection-service";
 import { getProductionVerdictByScan } from "@/server/production-verdict/service";
 
 type LatestAutomaticReviewRow = {
@@ -51,11 +51,8 @@ export async function getAutomaticReviewPanelView(
 
   let hasOrganizationToken = true;
   if (project.github_repo) {
-    const tokenResult = await resolveOrganizationGitHubToken(
-      supabase,
-      project.organization_id
-    );
-    hasOrganizationToken = Boolean(tokenResult?.token);
+    const connection = await getWorkspaceGitHubConnectionView(supabase, project.organization_id);
+    hasOrganizationToken = connection.status === "connected";
   }
 
   const connection = buildRepositoryStatusView({

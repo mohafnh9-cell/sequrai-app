@@ -1,4 +1,4 @@
-# Database Migrations (001–015)
+# Database Migrations (001–019)
 
 Apply in numeric order. Do not skip migrations.
 
@@ -21,6 +21,10 @@ Apply in numeric order. Do not skip migrations.
 | 013 | `013_automatic_production_reviews.sql` | Automatic review type | No |
 | 014 | `014_verdict_autopilot.sql` | Continuous Reviews toggle | No |
 | 015 | `015_organization_security_hardening.sql` | Org RLS + creation RPC | No |
+| 016 | `016_fix_organization_members_select.sql` | Organization members SELECT RLS fix | No |
+| 017 | `017_webhook_callback_url.sql` | Webhook callback URL column | No |
+| 018 | `018_profiles_active_workspace.sql` | Active Workspace preference on profiles | No |
+| 019 | `019_workspace_github_connections.sql` | Workspace-scoped GitHub connections + backfill | No |
 
 ## Destructive migration warning
 

@@ -21,7 +21,7 @@
   "mcpCreateKeyFailed": "No se pudo crear la clave",
   "mcpRevokeKeyFailed": "No se pudo revocar la clave",
   "mcpCopyKeyTitle": "Copia tu clave API ahora",
-  "mcpCopyKeyBody": "Esta clave solo se muestra una vez. Guárdala en la config MCP de tu agente como SEQURAI_API_KEY.",
+  "mcpCopyKeyBody": "Esta clave solo se muestra una vez. Solo da acceso al Workspace actual. Guárdala en la config MCP de tu agente como SEQURAI_API_KEY.",
   "mcpCopyKey": "Copiar clave",
   "mcpCopied": "Copiada",
   "mcpActiveKeys": "Claves activas",

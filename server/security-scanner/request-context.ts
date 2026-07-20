@@ -1,6 +1,7 @@
 import "server-only";
 
-import { resolveGitHubAccessToken } from "@/lib/github/resolve-token";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { resolveWorkspaceGitHubToken } from "@/server/github/workspace-connection-service";
 import { createClient } from "@/lib/supabase/server";
 import { canAccessRepository } from "./authorization";
 
@@ -51,15 +52,27 @@ export async function getScanRequestContext(repositoryId: string, requireGitHubT
 
   let providerToken: string | undefined;
   if (requireGitHubToken) {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    providerToken = await resolveGitHubAccessToken(user.id, session);
+    let admin;
+    try {
+      admin = createAdminClient();
+    } catch {
+      throw new ScanRequestError(
+        500,
+        "INTERNAL_ERROR",
+        "GitHub integration is not configured"
+      );
+    }
+    const tokenResult = await resolveWorkspaceGitHubToken(
+      admin,
+      project.organization_id,
+      project.id
+    );
+    providerToken = tokenResult?.token;
     if (!providerToken) {
       throw new ScanRequestError(
         403,
         "GITHUB_REAUTH_REQUIRED",
-        "Reconnect GitHub before starting a scan"
+        "Connect GitHub to this Workspace before starting a review"
       );
     }
   }

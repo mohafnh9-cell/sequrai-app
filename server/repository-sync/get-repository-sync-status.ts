@@ -6,7 +6,7 @@ import {
   type RepositoryStatusView,
   type RepositorySyncErrorCode,
 } from "@/brain/repository-sync";
-import { resolveOrganizationGitHubToken } from "@/server/github-automation/token-resolver";
+import { getWorkspaceGitHubConnectionView } from "@/server/github/workspace-connection-service";
 
 type SyncStatusRow = {
   branch: string | null;
@@ -69,8 +69,8 @@ export async function getRepositorySyncStatus(
 
   let hasOrganizationToken = true;
   if (options?.checkOrganizationToken !== false && p.github_repo) {
-    const tokenResult = await resolveOrganizationGitHubToken(supabase, p.organization_id);
-    hasOrganizationToken = Boolean(tokenResult?.token);
+    const connection = await getWorkspaceGitHubConnectionView(supabase, p.organization_id);
+    hasOrganizationToken = connection.status === "connected";
   }
 
   return buildRepositoryStatusView({

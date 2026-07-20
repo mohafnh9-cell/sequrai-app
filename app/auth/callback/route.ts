@@ -1,6 +1,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { saveGitHubToken } from "@/lib/github/token-store";
+import {
+  githubOAuthStateCookieName,
+  parseGitHubOAuthState,
+} from "@/lib/github/oauth-state";
+import { upsertWorkspaceGitHubConnection } from "@/server/github/workspace-connection-service";
+import { assertWorkspaceMembership } from "@/server/workspaces/service";
 import { NextRequest, NextResponse } from "next/server";
+import { safeNextPath } from "@/lib/auth/safe-next-path";
+import { enforceRateLimit } from "@/server/http/rate-limit";
 
 function redirectOrigin(request: NextRequest) {
   const forwardedHost = request.headers.get("x-forwarded-host");
@@ -10,9 +18,6 @@ function redirectOrigin(request: NextRequest) {
   }
   return new URL(request.url).origin;
 }
-
-import { safeNextPath } from "@/lib/auth/safe-next-path";
-import { enforceRateLimit } from "@/server/http/rate-limit";
 
 export async function GET(request: NextRequest) {
   const rateLimited = enforceRateLimit(request);
@@ -35,12 +40,12 @@ export async function GET(request: NextRequest) {
     const supabase = await createClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
-    if (error || !data.session) {
+    if (error || !data.session || !data.user) {
       console.error("auth_callback_exchange_failed", { code: error?.code });
       return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`);
     }
 
-    if (data.session.provider_token && data.user) {
+    if (data.session.provider_token) {
       try {
         await saveGitHubToken(
           data.user.id,
@@ -54,8 +59,46 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const response = NextResponse.redirect(`${origin}${next}`);
+    const oauthStateRaw = request.cookies.get(githubOAuthStateCookieName)?.value;
+    const oauthState = parseGitHubOAuthState(oauthStateRaw);
+    let redirectPath = next;
+
+    if (oauthState && data.session.provider_token) {
+      if (oauthState.userId !== data.user.id) {
+        redirectPath = "/integrations?githubError=oauth_state_invalid";
+      } else {
+        const allowed = await assertWorkspaceMembership(
+          supabase,
+          data.user.id,
+          oauthState.workspaceId
+        );
+        if (!allowed) {
+          redirectPath = "/integrations?githubError=workspace_access_denied";
+        } else {
+          try {
+            await upsertWorkspaceGitHubConnection({
+              organizationId: oauthState.workspaceId,
+              connectedByUserId: data.user.id,
+              accessToken: data.session.provider_token,
+              refreshToken: data.session.provider_refresh_token,
+            });
+            redirectPath = "/integrations";
+          } catch (connectionError) {
+            console.error("auth_callback_workspace_connection_failed", {
+              message:
+                connectionError instanceof Error
+                  ? connectionError.message
+                  : "unknown",
+            });
+            redirectPath = "/integrations?githubError=github_connection_failed";
+          }
+        }
+      }
+    }
+
+    const response = NextResponse.redirect(`${origin}${redirectPath}`);
     response.cookies.delete("sequrai_auth_next");
+    response.cookies.delete(githubOAuthStateCookieName);
     return response;
   } catch (callbackError) {
     console.error("auth_callback_failed", {

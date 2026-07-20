@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { GitBranch, Webhook, Zap, RefreshCw, Check, Lock, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,10 +13,33 @@ import { useI18n } from "@/lib/i18n/client";
 
 type Step = "idle" | "loading" | "selecting" | "saving" | "done" | "error";
 
+type ConnectionPayload = {
+  connection: {
+    status:
+      | "connected"
+      | "not_connected"
+      | "migration_reconnection_required"
+      | "revoked"
+      | "expired"
+      | "insufficient_scope";
+    githubLogin: string | null;
+    connectedAt: string | null;
+    repositoryCount: number;
+    lastError: string | null;
+  };
+  workspaceId: string;
+  workspaceName: string | null;
+};
+
 export default function IntegrationsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useI18n("integrations");
   const { t: tc } = useI18n("common");
+  const [connectionState, setConnectionState] = useState<
+    "loading" | "ready" | "error"
+  >("loading");
+  const [connection, setConnection] = useState<ConnectionPayload | null>(null);
   const [step, setStep] = useState<Step>("idle");
   const [repos, setRepos] = useState<GitHubRepo[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -30,6 +53,24 @@ export default function IntegrationsPage() {
     warnings: string[];
   } | null>(null);
 
+  const fetchConnection = useCallback(async () => {
+    setConnectionState("loading");
+    setRepos([]);
+    setSelected(new Set());
+    setStep("idle");
+    const res = await fetch("/api/github/connection", { cache: "no-store" });
+    const data = (await res.json().catch(() => null)) as ConnectionPayload | { error?: string } | null;
+    if (!res.ok || !data || !("connection" in data)) {
+      setConnectionState("error");
+      setErrorMsg(
+        (data as { error?: string } | null)?.error ?? t("connectionLoadFailed")
+      );
+      return;
+    }
+    setConnection(data);
+    setConnectionState("ready");
+  }, [t]);
+
   const fetchRepos = useCallback(async () => {
     setStep("loading");
     setErrorMsg("");
@@ -38,17 +79,8 @@ export default function IntegrationsPage() {
     const data = await res.json();
 
     if (data.needsReauth || res.status === 403) {
-      localStorage.setItem("sequrai_github_connect", "1");
-      try {
-        await startGitHubOAuth("/integrations");
-      } catch (oauthError) {
-        setErrorMsg(
-          oauthError instanceof Error
-            ? oauthError.message
-            : "Could not start GitHub authorization."
-        );
-        setStep("error");
-      }
+      setStep("idle");
+      setErrorMsg(data.error || t("githubNotConnected"));
       return;
     }
 
@@ -60,15 +92,54 @@ export default function IntegrationsPage() {
 
     setRepos(data.repos);
     setStep("selecting");
-  }, []);
+  }, [t]);
+
+  const connectGitHub = useCallback(async () => {
+    setErrorMsg("");
+    try {
+      await startGitHubOAuth("/integrations");
+    } catch (oauthError) {
+      setErrorMsg(
+        oauthError instanceof Error ? oauthError.message : t("connectFailed")
+      );
+      setStep("error");
+    }
+  }, [t]);
+
+  const disconnectGitHub = useCallback(async () => {
+    setErrorMsg("");
+    const res = await fetch("/api/github/connection", { method: "DELETE" });
+    if (!res.ok) {
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      setErrorMsg(data?.error ?? t("disconnectFailed"));
+      return;
+    }
+    await fetchConnection();
+  }, [fetchConnection, t]);
+
+  useEffect(() => {
+    queueMicrotask(() => void fetchConnection());
+  }, [fetchConnection]);
+
+  useEffect(() => {
+    const githubError = searchParams.get("githubError");
+    if (!githubError) return;
+    const messages: Record<string, string> = {
+      oauth_state_invalid: t("oauthStateInvalid"),
+      oauth_state_expired: t("oauthStateExpired"),
+      workspace_access_denied: t("workspaceAccessDenied"),
+      github_connection_failed: t("connectFailed"),
+    };
+    setErrorMsg(messages[githubError] ?? t("connectFailed"));
+    router.replace("/integrations");
+  }, [router, searchParams, t]);
 
   useEffect(() => {
     const pending = localStorage.getItem("sequrai_github_connect");
     if (pending) {
       localStorage.removeItem("sequrai_github_connect");
-      queueMicrotask(() => void fetchRepos());
     }
-  }, [fetchRepos]);
+  }, []);
 
   const toggleRepo = (id: number) => {
     setSelected((prev) => {
@@ -178,18 +249,83 @@ export default function IntegrationsPage() {
                 <CardDescription className="text-xs">{t("githubSubtitle")}</CardDescription>
               </div>
             </div>
-            <Badge variant="outline" className="text-xs text-emerald-400 border-emerald-400/30 bg-emerald-400/10">
-              Available
+            <Badge
+              variant="outline"
+              className={`text-xs ${
+                connection?.connection.status === "connected"
+                  ? "text-emerald-400 border-emerald-400/30 bg-emerald-400/10"
+                  : "text-muted-foreground"
+              }`}
+            >
+              {connection?.connection.status === "connected"
+                ? t("statusConnected")
+                : connection?.connection.status === "migration_reconnection_required"
+                  ? t("statusReconnectRequired")
+                  : t("statusNotConnected")}
             </Badge>
           </div>
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {step === "idle" && (
-            <Button onClick={fetchRepos} className="gap-2">
-              <GitBranch className="h-4 w-4" />
-              {t("connectRepos")}
-            </Button>
+          {connectionState === "loading" && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              {t("loadingConnection")}
+            </div>
+          )}
+
+          {connectionState === "ready" && connection && (
+            <div className="rounded-lg border border-border/50 bg-secondary/20 p-3 text-sm space-y-1">
+              <p className="font-medium">{connection.workspaceName ?? t("currentWorkspace")}</p>
+              {connection.connection.status === "connected" ? (
+                <>
+                  <p className="text-muted-foreground">
+                    {t("connectedAs", { login: connection.connection.githubLogin ?? "GitHub" })}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {t("connectedRepositories", {
+                      count: connection.connection.repositoryCount,
+                    })}
+                  </p>
+                </>
+              ) : (
+                <p className="text-muted-foreground">
+                  {connection.connection.status === "migration_reconnection_required"
+                    ? t("migrationReconnectBody")
+                    : t("githubNotConnectedBody")}
+                </p>
+              )}
+            </div>
+          )}
+
+          {connectionState === "ready" &&
+            connection &&
+            connection.connection.status !== "connected" && (
+              <Button onClick={() => void connectGitHub()} className="gap-2">
+                <GitBranch className="h-4 w-4" />
+                {t("connectGitHubToWorkspace")}
+              </Button>
+            )}
+
+          {connectionState === "ready" &&
+            connection?.connection.status === "connected" &&
+            step === "idle" && (
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={() => void fetchRepos()} className="gap-2">
+                  <GitBranch className="h-4 w-4" />
+                  {t("loadRepositories")}
+                </Button>
+                <Button variant="outline" onClick={() => void connectGitHub()}>
+                  {t("reconnectGitHub")}
+                </Button>
+                <Button variant="ghost" onClick={() => void disconnectGitHub()}>
+                  {t("disconnectGitHub")}
+                </Button>
+              </div>
+            )}
+
+          {connectionState === "ready" && step === "idle" && connection?.connection.status === "connected" && repos.length === 0 && !errorMsg && (
+            <p className="text-sm text-muted-foreground">{t("loadRepositoriesHint")}</p>
           )}
 
           {step === "loading" && (
