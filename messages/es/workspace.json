@@ -19,5 +19,11 @@
   "manageDescription": "Cambia entre los Workspaces a los que tienes acceso.",
   "activeBadge": "Activo",
   "switchAction": "Cambiar",
-  "renameUnsupported": "Renombrar aún no está disponible."
+  "renameUnsupported": "Renombrar aún no está disponible.",
+  "deleteAction": "Eliminar {name}",
+  "deleteTitle": "Eliminar Workspace",
+  "deleteDescription": "¿Seguro que quieres eliminar \"{name}\"? Se borrarán permanentemente todos los proyectos, escaneos y datos de este Workspace. Esta acción no se puede deshacer.",
+  "deleteConfirm": "Eliminar Workspace",
+  "deleteCancel": "Cancelar",
+  "deleteFailed": "No se pudo eliminar el Workspace."
 }

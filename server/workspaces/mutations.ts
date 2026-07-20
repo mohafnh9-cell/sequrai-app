@@ -2,10 +2,16 @@ import "server-only";
 
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { writeActiveWorkspaceCookie } from "@/server/workspaces/active-workspace-cookie";
+import { createAdminClient } from "@/lib/supabase/admin";
+import {
+  clearActiveWorkspaceCookie,
+  writeActiveWorkspaceCookie,
+} from "@/server/workspaces/active-workspace-cookie";
 import {
   assertWorkspaceMembership,
+  listManageableWorkspaces,
   persistActiveWorkspaceSelection,
+  resolveActiveWorkspaceIdForUser,
 } from "@/server/workspaces/service";
 
 export type SwitchWorkspaceResult =
@@ -100,4 +106,76 @@ export async function createWorkspaceForUser(
   revalidatePath("/settings/workspaces");
 
   return { ok: true, workspaceId: workspaceId as string };
+}
+
+export type DeleteWorkspaceResult =
+  | { ok: true; nextActiveWorkspaceId: string | null }
+  | {
+      ok: false;
+      code: "validation" | "forbidden" | "last_workspace" | "delete_failed";
+      message: string;
+    };
+
+export async function deleteWorkspaceForUser(
+  supabase: SupabaseClient,
+  userId: string,
+  workspaceId: string
+): Promise<DeleteWorkspaceResult> {
+  const trimmed = workspaceId.trim();
+  if (!trimmed) {
+    return { ok: false, code: "validation", message: "Invalid workspace" };
+  }
+
+  const manageable = await listManageableWorkspaces(supabase, userId);
+  const target = manageable.find((workspace) => workspace.id === trimmed);
+  if (!target) {
+    return {
+      ok: false,
+      code: "forbidden",
+      message: "You do not have access to this workspace",
+    };
+  }
+
+  if (!target.canDelete) {
+    const message =
+      manageable.length <= 1
+        ? "You cannot delete your only workspace"
+        : "Only workspace owners can delete a workspace";
+    return {
+      ok: false,
+      code: manageable.length <= 1 ? "last_workspace" : "forbidden",
+      message,
+    };
+  }
+
+  const activeWorkspaceId = await resolveActiveWorkspaceIdForUser(supabase, userId);
+  const remaining = manageable.filter((workspace) => workspace.id !== trimmed);
+  const nextActiveWorkspaceId = remaining[0]?.id ?? null;
+
+  if (activeWorkspaceId === trimmed && nextActiveWorkspaceId) {
+    const switched = await switchActiveWorkspace(supabase, userId, nextActiveWorkspaceId);
+    if (!switched.ok) {
+      return { ok: false, code: "delete_failed", message: switched.message };
+    }
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("organizations").delete().eq("id", trimmed);
+  if (error) {
+    return {
+      ok: false,
+      code: "delete_failed",
+      message: error.message ?? "Workspace could not be deleted",
+    };
+  }
+
+  if (activeWorkspaceId === trimmed && !nextActiveWorkspaceId) {
+    await clearActiveWorkspaceCookie();
+  }
+
+  revalidatePath("/", "layout");
+  revalidatePath("/dashboard");
+  revalidatePath("/settings/workspaces");
+
+  return { ok: true, nextActiveWorkspaceId };
 }

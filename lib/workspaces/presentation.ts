@@ -5,6 +5,11 @@ export type WorkspacePresentation = {
   logoUrl: string | null;
 };
 
+export type ManageableWorkspace = WorkspacePresentation & {
+  role: string;
+  canDelete: boolean;
+};
+
 const PLAN_LABELS: Record<string, string> = {
   BUILDER: "Builder",
   STUDIO: "Studio",

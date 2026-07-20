@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { ManageableWorkspace } from "@/lib/workspaces/presentation";
 import { formatWorkspacePlan } from "@/lib/workspaces/presentation";
 import type { WorkspacePresentation } from "@/lib/workspaces/presentation";
 import {
@@ -76,6 +77,50 @@ export async function listAccessibleWorkspaces(
       return a.id.localeCompare(b.id);
     })
     .map(({ id, name, plan, logoUrl }) => ({ id, name, plan, logoUrl }));
+}
+
+export async function listManageableWorkspaces(
+  supabase: SupabaseClient,
+  userId: string
+): Promise<ManageableWorkspace[]> {
+  const { data, error } = await supabase
+    .from("organization_members")
+    .select(
+      "role, created_at, organization:organizations(id, name, plan, logo_url, created_at)"
+    )
+    .eq("user_id", userId);
+
+  if (error || !data?.length) return [];
+
+  const rows = data
+    .map((row) => {
+      const organization = readOrganizationRelation(row.organization);
+      if (!organization?.id) return null;
+      return {
+        id: organization.id,
+        name: organization.name,
+        plan: formatWorkspacePlan(organization.plan),
+        logoUrl: organization.logo_url,
+        role: row.role as string,
+      };
+    })
+    .filter((row): row is NonNullable<typeof row> => Boolean(row))
+    .sort((a, b) => {
+      const nameCompare = a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+      if (nameCompare !== 0) return nameCompare;
+      return a.id.localeCompare(b.id);
+    });
+
+  const canDeleteAny = rows.length > 1;
+
+  return rows.map(({ id, name, plan, logoUrl, role }) => ({
+    id,
+    name,
+    plan,
+    logoUrl,
+    role,
+    canDelete: canDeleteAny && role === "OWNER",
+  }));
 }
 
 export async function readProfileWorkspacePreference(

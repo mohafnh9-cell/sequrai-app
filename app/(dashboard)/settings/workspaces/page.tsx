@@ -5,7 +5,7 @@ import { getTranslator } from "@/lib/i18n/server";
 import { WorkspaceManagementPanel } from "@/features/workspaces/components/WorkspaceManagementPanel";
 import { CreateWorkspaceButton } from "@/features/workspaces/components/CreateWorkspaceButton";
 import {
-  listAccessibleWorkspaces,
+  listManageableWorkspaces,
   resolveActiveWorkspaceIdForUser,
 } from "@/server/workspaces/service";
 import type { Metadata } from "next";
@@ -18,7 +18,7 @@ export default async function WorkspacesSettingsPage() {
 
   const { t } = await getTranslator("workspace");
   const [workspaces, activeWorkspaceId] = await Promise.all([
-    listAccessibleWorkspaces(auth.supabase, auth.user.id),
+    listManageableWorkspaces(auth.supabase, auth.user.id),
     resolveActiveWorkspaceIdForUser(auth.supabase, auth.user.id),
   ]);
 

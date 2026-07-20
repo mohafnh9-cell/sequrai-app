@@ -19,5 +19,11 @@
   "manageDescription": "Switch between Workspaces you can access.",
   "activeBadge": "Active",
   "switchAction": "Switch",
-  "renameUnsupported": "Renaming is not available yet."
+  "renameUnsupported": "Renaming is not available yet.",
+  "deleteAction": "Delete {name}",
+  "deleteTitle": "Delete workspace",
+  "deleteDescription": "Are you sure you want to delete \"{name}\"? All projects, scans, and data in this workspace will be permanently removed. This action cannot be undone.",
+  "deleteConfirm": "Delete workspace",
+  "deleteCancel": "Cancel",
+  "deleteFailed": "Workspace could not be deleted."
 }
