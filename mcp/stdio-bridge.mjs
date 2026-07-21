@@ -61,15 +61,8 @@ async function handleMessage(raw) {
   }
 
   if (method === "initialize") {
-    send({
-      jsonrpc: "2.0",
-      id,
-      result: {
-        protocolVersion: "2024-11-05",
-        capabilities: { tools: {} },
-        serverInfo: { name: "sequrai", version: "1.0.0" },
-      },
-    });
+    const response = await forwardToApi(message);
+    send(response);
     return;
   }
 

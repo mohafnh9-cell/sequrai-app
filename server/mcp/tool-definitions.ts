@@ -1,3 +1,11 @@
+import {
+  CAN_I_DEPLOY_DESCRIPTION,
+  PRODUCTION_HISTORY_DESCRIPTION,
+  REVIEW_NOW_DESCRIPTION,
+  SAFE_FIX_DESCRIPTION,
+  WHAT_CHANGED_DESCRIPTION,
+} from "./tool-descriptions";
+
 export type McpToolDefinition = {
   name: string;
   description: string;
@@ -45,8 +53,7 @@ const PROJECT_SELECTOR_PROPERTIES: McpToolDefinition["inputSchema"]["properties"
 export const MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
   {
     name: "review_now",
-    description:
-      "Starts a real SequrAI Production Review for this project's connected repository (e.g. 'Scan this project', 'Review this repository before I deploy'). Reuses the same review pipeline as GitHub Continuous Review and manual web reviews. Returns quickly with a reviewId; the review continues asynchronously. Call can_i_deploy afterwards for the verdict.",
+    description: REVIEW_NOW_DESCRIPTION,
     inputSchema: {
       type: "object",
       properties: {
@@ -70,8 +77,7 @@ export const MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
   },
   {
     name: "can_i_deploy",
-    description:
-      "Answers 'Can I deploy this application?' using the latest persisted Production Verdict: status, score, blockers, next action, and deployment recommendation.",
+    description: CAN_I_DEPLOY_DESCRIPTION,
     inputSchema: {
       type: "object",
       properties: { ...PROJECT_SELECTOR_PROPERTIES },
@@ -80,8 +86,7 @@ export const MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
   },
   {
     name: "safe_fix",
-    description:
-      "Answers 'How do I safely fix this blocker?'. Without a blockerId, returns the current blocker list (max 5) to choose from. With a blockerId, returns a Safe Fix Prompt, confidence, risk, estimated time, and projected verdict.",
+    description: SAFE_FIX_DESCRIPTION,
     inputSchema: {
       type: "object",
       properties: {
@@ -95,8 +100,7 @@ export const MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
   },
   {
     name: "what_changed",
-    description:
-      "Answers 'What changed since my previous valid Production Review?'. Compares the two most recent persisted verdicts: score delta, resolved blockers, and newly detected blockers.",
+    description: WHAT_CHANGED_DESCRIPTION,
     inputSchema: {
       type: "object",
       properties: { ...PROJECT_SELECTOR_PROPERTIES },
@@ -105,8 +109,7 @@ export const MCP_TOOL_DEFINITIONS: McpToolDefinition[] = [
   },
   {
     name: "production_history",
-    description:
-      "Answers 'How has my project evolved?'. Returns score trend, best score, valid review count, and a concise recent-score timeline.",
+    description: PRODUCTION_HISTORY_DESCRIPTION,
     inputSchema: {
       type: "object",
       properties: {
@@ -127,7 +130,7 @@ export const MCP_PUBLIC_TOOL_NAMES = MCP_TOOL_DEFINITIONS.map((tool) => tool.nam
 
 export const MCP_SERVER_INFO = {
   name: "sequrai",
-  version: "2.1.0",
+  version: "2.2.0",
   description:
-    "SequrAI Production Engine — the last thing you ask before deploying. Trigger a real Production Review, get an independent verdict and deployment recommendation, Safe Fix prompts, and Continuous Review history for AI-built software.",
+    "SequrAI Production Engine — independent Production Engineer for AI-built software. Speak naturally; select tools by intent (review, deploy readiness, safe fix, changes, history). Five tools only; canonical verdict truth is never computed in the client.",
 };

@@ -1,0 +1,126 @@
+/**
+ * Canonical MCP intent model — documentation and evaluation only.
+ * NOT used for server-side tool routing. The MCP client selects tools.
+ */
+
+export const MCP_CANONICAL_INTENTS = [
+  "REVIEW_NOW",
+  "CAN_I_DEPLOY",
+  "SAFE_FIX",
+  "WHAT_CHANGED",
+  "PRODUCTION_HISTORY",
+] as const;
+
+export type McpCanonicalIntent = (typeof MCP_CANONICAL_INTENTS)[number];
+
+export const INTENT_TO_TOOL: Record<McpCanonicalIntent, string> = {
+  REVIEW_NOW: "review_now",
+  CAN_I_DEPLOY: "can_i_deploy",
+  SAFE_FIX: "safe_fix",
+  WHAT_CHANGED: "what_changed",
+  PRODUCTION_HISTORY: "production_history",
+};
+
+/** Keyword signals for evaluation — never use alone as production routing. */
+export const INTENT_SIGNAL_DICTIONARY = {
+  deployment: [
+    "deploy",
+    "ship",
+    "launch",
+    "publish",
+    "release",
+    "production",
+    "real users",
+    "go live",
+    "desplegar",
+    "lanzar",
+    "publicar",
+    "producción",
+    "usuarios reales",
+  ],
+  review: [
+    "review",
+    "scan",
+    "analyze",
+    "inspect",
+    "check",
+    "verify",
+    "latest commit",
+    "recent changes",
+    "revisar",
+    "revisa",
+    "escanea",
+    "analiza",
+    "analizar",
+    "inspecciona",
+    "último commit",
+    "ultimo commit",
+    "cambios recientes",
+  ],
+  fix: [
+    "fix",
+    "solve",
+    "repair",
+    "change",
+    "prompt",
+    "cursor prompt",
+    "safe fix",
+    "blocker",
+    "arreglar",
+    "arregla",
+    "solucionar",
+    "prompt",
+    "bloqueador",
+  ],
+  changes: [
+    "changed",
+    "broke",
+    "improved",
+    "regressed",
+    "introduced",
+    "resolved",
+    "latest review",
+    "previous review",
+    "cambió",
+    "cambio",
+    "rompí",
+    "rompi",
+    "mejoré",
+    "empeoró",
+    "introdujo",
+    "resolví",
+    "última review",
+    "review anterior",
+  ],
+  history: [
+    "history",
+    "evolution",
+    "trend",
+    "last week",
+    "last month",
+    "best score",
+    "progress",
+    "historial",
+    "evolución",
+    "tendencia",
+    "última semana",
+    "ultima semana",
+    "mejor score",
+    "progreso",
+  ],
+} as const;
+
+export const COMPOUND_ORCHESTRATION_EXAMPLES = [
+  {
+    phrase: "Review this and tell me whether I can deploy.",
+    sequence: ["review_now", "can_i_deploy"],
+  },
+  {
+    phrase: "Tell me what changed and give me a fix for the main problem.",
+    sequence: ["what_changed", "safe_fix"],
+  },
+  {
+    phrase: "Can I deploy, and if not, tell me how to fix it.",
+    sequence: ["can_i_deploy", "safe_fix"],
+  },
+] as const;

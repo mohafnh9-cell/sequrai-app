@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { resolveMcpAuth, McpError } from "@/server/mcp/auth";
 import { executeMcpTool } from "@/server/mcp/execute-tool";
 import { MCP_SERVER_INFO, MCP_TOOL_DEFINITIONS } from "@/server/mcp/tool-definitions";
+import { MCP_SERVER_INSTRUCTIONS } from "@/server/mcp/client-instructions";
+import {
+  MCP_PROMPT_DEFINITIONS,
+  mcpPromptMessage,
+} from "@/server/mcp/prompt-definitions";
 import { mcpPostBodySchema } from "@/server/mcp/request.schema";
 import { enforceRateLimit } from "@/server/http/rate-limit";
 
@@ -60,8 +65,41 @@ async function handleJsonRpc(body: JsonRpcRequest, auth: NonNullable<Awaited<Ret
   if (method === "initialize") {
     return jsonRpcResult(id, {
       protocolVersion: "2024-11-05",
-      capabilities: { tools: {} },
+      capabilities: {
+        tools: {},
+        prompts: { listChanged: false },
+      },
       serverInfo: MCP_SERVER_INFO,
+      instructions: MCP_SERVER_INSTRUCTIONS,
+    });
+  }
+
+  if (method === "prompts/list") {
+    return jsonRpcResult(id, {
+      prompts: MCP_PROMPT_DEFINITIONS.map((prompt) => ({
+        name: prompt.name,
+        description: prompt.description,
+        arguments: prompt.arguments.map((arg) => ({
+          name: arg.name,
+          description: arg.description,
+          required: arg.required ?? false,
+        })),
+      })),
+    });
+  }
+
+  if (method === "prompts/get") {
+    const name = params?.name as string | undefined;
+    if (!name) {
+      return jsonRpcError(id, -32602, "Missing prompt name");
+    }
+    const message = mcpPromptMessage(name);
+    if (!message) {
+      return jsonRpcError(id, -32602, `Unknown prompt: ${name}`);
+    }
+    return jsonRpcResult(id, {
+      description: MCP_PROMPT_DEFINITIONS.find((item) => item.name === name)?.description ?? "",
+      messages: [{ role: "user", content: { type: "text", text: message } }],
     });
   }
 

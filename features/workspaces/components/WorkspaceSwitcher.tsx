@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   BookOpen,
@@ -92,60 +92,49 @@ export function WorkspaceSwitcher({
 
   const [open, setOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
-  const [workspaces, setWorkspaces] = useState<WorkspacePresentation[]>(initialWorkspaces ?? []);
-  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(
-    initialActiveWorkspaceId ?? null
-  );
+  const [fetchedWorkspaces, setFetchedWorkspaces] = useState<WorkspacesResponse | null>(null);
   const [loading, setLoading] = useState(!initialWorkspaces?.length);
   const [error, setError] = useState<string | null>(null);
   const [switchError, setSwitchError] = useState<string | null>(null);
   const [isSwitching, setIsSwitching] = useState(false);
 
-  useEffect(() => {
-    if (initialWorkspaces?.length) {
-      setWorkspaces(initialWorkspaces);
-      setLoading(false);
-    }
-    if (initialActiveWorkspaceId) {
-      setActiveWorkspaceId(initialActiveWorkspaceId);
-    }
-  }, [initialWorkspaces, initialActiveWorkspaceId]);
+  const { active, others } = useMemo(() => {
+    const list = fetchedWorkspaces?.workspaces ?? initialWorkspaces ?? [];
+    const activeId = fetchedWorkspaces?.activeWorkspaceId ?? initialActiveWorkspaceId ?? null;
+    return partitionWorkspaces(list, activeId);
+  }, [fetchedWorkspaces, initialWorkspaces, initialActiveWorkspaceId]);
 
-  const refreshWorkspaces = useCallback(async () => {
-    if (isDemo) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch("/api/workspaces", { cache: "no-store" });
-      const data = (await response.json().catch(() => null)) as WorkspacesResponse | null;
-      if (!response.ok || !data) {
-        setError(t("loadFailed"));
-        return;
+  useEffect(() => {
+    if (initialWorkspaces?.length || isDemo) return;
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const response = await fetch("/api/workspaces", { cache: "no-store" });
+        const data = (await response.json().catch(() => null)) as WorkspacesResponse | null;
+        if (cancelled) return;
+        if (!response.ok || !data) {
+          setError(t("loadFailed"));
+          return;
+        }
+        setFetchedWorkspaces(data);
+      } catch {
+        if (!cancelled) setError(t("loadFailed"));
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-      setWorkspaces(data.workspaces);
-      setActiveWorkspaceId(data.activeWorkspaceId);
-    } catch {
-      setError(t("loadFailed"));
-    } finally {
-      setLoading(false);
-    }
-  }, [isDemo, t]);
+    })();
 
-  useEffect(() => {
-    if (!initialWorkspaces?.length && !isDemo) {
-      void refreshWorkspaces();
-    }
-  }, [initialWorkspaces, isDemo, refreshWorkspaces]);
-
-  const { active, others } = useMemo(
-    () => partitionWorkspaces(workspaces, activeWorkspaceId),
-    [workspaces, activeWorkspaceId]
-  );
+    return () => {
+      cancelled = true;
+    };
+  }, [initialWorkspaces, isDemo, t]);
 
   const displayName = active?.name ?? fallbackName;
 
   const handleSwitch = async (workspaceId: string) => {
-    if (isDemo || workspaceId === activeWorkspaceId || isSwitching) return;
+    if (isDemo || workspaceId === active?.id || isSwitching) return;
     setSwitchError(null);
     setIsSwitching(true);
     setOpen(false);
