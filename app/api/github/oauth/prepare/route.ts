@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { z } from "zod";
 import { getServerAuthContext } from "@/lib/auth/dev-bypass";
 import { createGitHubOAuthState, githubOAuthStateCookieName } from "@/lib/github/oauth-state";
 import { assertWorkspaceMembership } from "@/server/workspaces/service";
 import { enforceRateLimit } from "@/server/http/rate-limit";
 
 export const runtime = "nodejs";
+
+const prepareSchema = z.object({
+  workspaceId: z.string().uuid().optional(),
+});
 
 export async function POST(request: Request) {
   const rateLimited = enforceRateLimit(request);
@@ -16,8 +21,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized", code: "unauthorized" }, { status: 401 });
   }
 
-  const body = (await request.json().catch(() => ({}))) as { workspaceId?: string };
-  const workspaceId = body.workspaceId?.trim() || auth.organizationId;
+  const body = await request.json().catch(() => null);
+  const parsed = prepareSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid request body", code: "validation" }, { status: 422 });
+  }
+
+  const workspaceId = parsed.data.workspaceId ?? auth.organizationId;
   if (!workspaceId) {
     return NextResponse.json(
       { error: "No active Workspace", code: "workspace_not_found" },

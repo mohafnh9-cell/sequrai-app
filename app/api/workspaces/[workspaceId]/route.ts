@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { getServerAuthContext } from "@/lib/auth/dev-bypass";
 import { deleteWorkspaceForUser } from "@/server/workspaces/mutations";
 import { enforceRateLimit } from "@/server/http/rate-limit";
 
 export const runtime = "nodejs";
+
+const workspaceParamsSchema = z.object({
+  workspaceId: z.string().uuid(),
+});
 
 type RouteContext = {
   params: Promise<{ workspaceId: string }>;
@@ -18,8 +23,17 @@ export async function DELETE(request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Unauthorized", code: "unauthorized" }, { status: 401 });
   }
 
-  const { workspaceId } = await context.params;
-  const result = await deleteWorkspaceForUser(auth.supabase, auth.user.id, workspaceId);
+  const { workspaceId: rawWorkspaceId } = await context.params;
+  const parsed = workspaceParamsSchema.safeParse({ workspaceId: rawWorkspaceId });
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid workspace id", code: "validation" }, { status: 422 });
+  }
+
+  const result = await deleteWorkspaceForUser(
+    auth.supabase,
+    auth.user.id,
+    parsed.data.workspaceId
+  );
 
   if (!result.ok) {
     const status =

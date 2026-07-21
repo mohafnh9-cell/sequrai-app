@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { getServerAuthContext } from "@/lib/auth/dev-bypass";
 import {
   disconnectWorkspaceGitHubConnection,
@@ -8,6 +9,8 @@ import { assertWorkspaceMembership } from "@/server/workspaces/service";
 import { enforceRateLimit } from "@/server/http/rate-limit";
 
 export const runtime = "nodejs";
+
+const disconnectSchema = z.object({}).strict();
 
 async function resolveWorkspace(auth: NonNullable<Awaited<ReturnType<typeof getServerAuthContext>>>) {
   if (!auth.organizationId) {
@@ -73,6 +76,12 @@ export async function DELETE(request: Request) {
 
   const resolved = await resolveWorkspace(auth);
   if ("error" in resolved) return resolved.error;
+
+  const body = await request.json().catch(() => ({}));
+  const parsed = disconnectSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid request body", code: "validation" }, { status: 422 });
+  }
 
   const { data: membership } = await auth.supabase
     .from("organization_members")
