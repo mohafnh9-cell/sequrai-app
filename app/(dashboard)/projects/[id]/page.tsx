@@ -4,7 +4,7 @@ import { ArrowLeft, ExternalLink, GitBranch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ProjectVerdictSummary } from "@/features/production-verdict/components/ProductionVerdictExperience";
-import { AnalyzeProjectButton } from "@/features/projects/components/AnalyzeProjectButton";
+import { ProjectSafeFixHero } from "@/features/projects/components/ProjectSafeFixHero";
 import { ProjectSubNav } from "@/features/production-journey/components/ProjectSubNav";
 import { ProductionIntelligencePanel } from "@/features/production-intelligence/components/ProductionIntelligencePanel";
 import { buildProjectBrain } from "@/server/brain/build-project-brain";
@@ -168,21 +168,15 @@ export default async function ProjectDetailPage({
           </div>
         )}
 
-        {brain?.currentVerdict?.topPriorities[0] && (
-          <section className="product-section space-y-3 max-w-3xl">
-            <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground">
-              {t("fixThisFirst")}
-            </p>
-            <p className="text-2xl sm:text-3xl font-semibold tracking-tight">
-              {brain.currentVerdict.topPriorities[0].title}
-            </p>
-            <p className="text-muted-foreground">{brain.currentVerdict.topPriorities[0].reason}</p>
-          </section>
+        {brain?.currentVerdict && (
+          <ProjectSafeFixHero
+            verdict={brain.currentVerdict}
+            projectId={p.id}
+            projectName={p.name}
+            fixPromptContext={fixPromptContext}
+            reviewContext={reviewContext}
+          />
         )}
-
-        <div className="product-section">
-          <AnalyzeProjectButton projectId={p.id} initialContext={reviewContext} />
-        </div>
 
         <section className="product-section space-y-6 pt-4 border-t border-border/40">
           <ProjectSubNav projectId={p.id} latestReportHref={latestReportHref} />

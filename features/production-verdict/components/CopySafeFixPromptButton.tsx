@@ -15,6 +15,8 @@ export function CopySafeFixPromptButton({
   size = "sm",
   variant = "outline",
   className,
+  label,
+  copiedLabel,
 }: {
   input: ProductionFixPromptInput;
   source: "priority" | "finding" | "intelligence";
@@ -23,6 +25,8 @@ export function CopySafeFixPromptButton({
   size?: "sm" | "default";
   variant?: "outline" | "secondary" | "default";
   className?: string;
+  label?: string;
+  copiedLabel?: string;
 }) {
   const { t } = useI18n("verdict");
   const [copied, setCopied] = useState(false);
@@ -56,12 +60,12 @@ export function CopySafeFixPromptButton({
       {copied ? (
         <>
           <Check className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-          {t("copiedSafeFixPrompt")}
+          {copiedLabel ?? t("copiedSafeFixPrompt")}
         </>
       ) : (
         <>
           <ClipboardCopy className="mr-1.5 h-3.5 w-3.5" aria-hidden />
-          {t("copySafeFixPrompt")}
+          {label ?? t("copySafeFixPrompt")}
         </>
       )}
     </Button>
