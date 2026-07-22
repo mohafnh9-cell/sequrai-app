@@ -77,5 +77,10 @@
   "blockersIntro_one": "Tu última revisión introdujo {count} bloqueador de producción.",
   "blockersIntro_other": "Tu última revisión introdujo {count} bloqueadores de producción.",
   "estimatedProduction": "Tiempo estimado hasta producción: {minutes} minutos.",
-  "projectedScore": "Puntuación proyectada: {score} / 100"
+  "projectedScore": "Puntuación proyectada: {score} / 100",
+  "workspaceNameMin": "El nombre debe tener al menos 2 caracteres",
+  "workspaceNameMax": "El nombre debe tener como máximo 80 caracteres",
+  "reviewStalledTitle": "Esta revisión está tardando más de lo esperado",
+  "reviewStalledBody": "Los repositorios grandes pueden tardar varios minutos. Puedes esperar o reintentar la revisión.",
+  "verdictSaving": "Guardando tu Production Verdict…"
 }

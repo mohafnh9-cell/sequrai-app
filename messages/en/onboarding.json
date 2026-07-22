@@ -77,5 +77,10 @@
   "blockersIntro_one": "Your latest review introduced {count} production blocker.",
   "blockersIntro_other": "Your latest review introduced {count} production blockers.",
   "estimatedProduction": "Estimated time to production: {minutes} minutes.",
-  "projectedScore": "Projected score: {score} / 100"
+  "projectedScore": "Projected score: {score} / 100",
+  "workspaceNameMin": "Name must be at least 2 characters",
+  "workspaceNameMax": "Name must be at most 80 characters",
+  "reviewStalledTitle": "This review is taking longer than expected",
+  "reviewStalledBody": "Large repositories can take several minutes. You can wait or retry the review.",
+  "verdictSaving": "Saving your Production Verdict…"
 }

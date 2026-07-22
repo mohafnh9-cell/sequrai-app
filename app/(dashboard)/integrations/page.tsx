@@ -31,6 +31,20 @@ type ConnectionPayload = {
   workspaceName: string | null;
 };
 
+type WebhookHealthProject = {
+  projectId: string;
+  projectName: string;
+  githubRepo: string | null;
+  healthy: boolean;
+  connectionStatus: string;
+  lastError: string | null;
+};
+
+type WebhookHealthPayload = {
+  projects: WebhookHealthProject[];
+  summary: { total: number; healthy: number; degraded: number };
+};
+
 export default function IntegrationsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -52,6 +66,10 @@ export default function IntegrationsPage() {
     skipped: number;
     warnings: string[];
   } | null>(null);
+  const [webhookHealth, setWebhookHealth] = useState<WebhookHealthPayload | null>(null);
+  const [webhookHealthState, setWebhookHealthState] = useState<"idle" | "loading" | "ready" | "error">(
+    "idle"
+  );
 
   const fetchConnection = useCallback(async () => {
     setConnectionState("loading");
@@ -70,6 +88,18 @@ export default function IntegrationsPage() {
     setConnection(data);
     setConnectionState("ready");
   }, [t]);
+
+  const fetchWebhookHealth = useCallback(async () => {
+    setWebhookHealthState("loading");
+    const res = await fetch("/api/github/webhook-health", { cache: "no-store" });
+    const data = (await res.json().catch(() => null)) as WebhookHealthPayload | null;
+    if (!res.ok || !data) {
+      setWebhookHealthState("error");
+      return;
+    }
+    setWebhookHealth(data);
+    setWebhookHealthState("ready");
+  }, []);
 
   const fetchRepos = useCallback(async () => {
     setStep("loading");
@@ -120,6 +150,13 @@ export default function IntegrationsPage() {
   useEffect(() => {
     queueMicrotask(() => void fetchConnection());
   }, [fetchConnection]);
+
+  useEffect(() => {
+    if (connectionState !== "ready" || connection?.connection.status !== "connected") {
+      return;
+    }
+    queueMicrotask(() => void fetchWebhookHealth());
+  }, [connection?.connection.status, connectionState, fetchWebhookHealth]);
 
   const githubErrorParam = searchParams.get("githubError");
   const githubErrorMessage = useMemo(() => {
@@ -475,6 +512,83 @@ export default function IntegrationsPage() {
           )}
         </CardContent>
       </Card>
+
+      {connectionState === "ready" && connection?.connection.status === "connected" && (
+        <Card className="border-border/50">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Webhook className="h-4 w-4 text-primary" />
+              <CardTitle className="text-sm">{t("webhookHealthTitle")}</CardTitle>
+            </div>
+            <CardDescription className="text-xs">{t("webhookHealthSubtitle")}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 pt-0 text-sm">
+            {webhookHealthState === "loading" && (
+              <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                {t("webhookHealthLoading")}
+              </div>
+            )}
+
+            {webhookHealthState === "ready" && webhookHealth && (
+              <>
+                <p className="text-xs text-muted-foreground">
+                  {webhookHealth.summary.degraded === 0
+                    ? t("webhookHealthAllHealthy")
+                    : t("webhookHealthSomeDegraded", { count: webhookHealth.summary.degraded })}
+                </p>
+
+                {webhookHealth.projects.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">{t("webhookHealthEmpty")}</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {webhookHealth.projects.map((project) => (
+                      <li
+                        key={project.projectId}
+                        className="flex items-start justify-between gap-3 rounded-lg border border-border/50 bg-secondary/20 px-3 py-2"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-medium truncate">{project.projectName}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {project.githubRepo ?? "—"}
+                          </p>
+                          {project.lastError && (
+                            <p className="text-xs text-amber-500 mt-1">{project.lastError}</p>
+                          )}
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={`shrink-0 text-[10px] ${
+                            project.healthy
+                              ? "text-emerald-400 border-emerald-400/30 bg-emerald-400/10"
+                              : "text-amber-500 border-amber-500/30 bg-amber-500/10"
+                          }`}
+                        >
+                          {project.healthy ? t("webhookHealthHealthy") : t("webhookHealthDegraded")}
+                        </Badge>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                {webhookHealth.summary.degraded > 0 && (
+                  <p className="text-xs text-muted-foreground">{t("webhookHealthReconnect")}</p>
+                )}
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="gap-1.5 px-0 h-auto text-xs"
+                  onClick={() => void fetchWebhookHealth()}
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  {tc("retry")}
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* GitHub webhook automation */}
       <Card className="border-border/50">

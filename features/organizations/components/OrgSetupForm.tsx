@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,15 +12,7 @@ import { Label } from "@/components/ui/label";
 import { createOrganizationAction } from "@/server/actions/organizations";
 import { useI18n } from "@/lib/i18n/client";
 
-const schema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(2, "Name must be at least 2 characters")
-    .max(80, "Name must be at most 80 characters"),
-});
-
-type FormValues = z.infer<typeof schema>;
+type FormValues = { name: string };
 
 export function OrgSetupForm({ nextStep = "github" }: { nextStep?: string }) {
   const router = useRouter();
@@ -28,6 +20,19 @@ export function OrgSetupForm({ nextStep = "github" }: { nextStep?: string }) {
   const { t: to } = useI18n("onboarding");
   const [isPending, startTransition] = useTransition();
   const [submitLocked, setSubmitLocked] = useState(false);
+
+  const schema = useMemo(
+    () =>
+      z.object({
+        name: z
+          .string()
+          .trim()
+          .min(2, to("workspaceNameMin"))
+          .max(80, to("workspaceNameMax")),
+      }),
+    [to]
+  );
+
   const {
     register,
     handleSubmit,

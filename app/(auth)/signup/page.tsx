@@ -58,6 +58,7 @@ export default function SignupPage() {
     setGithubLoading(true);
     setError(null);
     try {
+      document.cookie = `sequrai_auth_next=${encodeURIComponent("/onboarding")}; path=/; max-age=600; SameSite=Lax`;
       const supabase = createClient();
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: "github",

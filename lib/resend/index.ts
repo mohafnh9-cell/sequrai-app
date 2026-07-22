@@ -18,16 +18,16 @@ export async function sendScanCompletedEmail(params: {
   await resend.emails.send({
     from: process.env.RESEND_FROM_EMAIL ?? "noreply@sequrai.com",
     to: params.to,
-    subject: `Production analysis completed for ${params.projectName}`,
+    subject: `Production Review completed for ${params.projectName}`,
     html: `
-      <h2>Security Scan Completed</h2>
-      <p>Your security scan for <strong>${params.projectName}</strong> has completed.</p>
+      <h2>Production Review completed</h2>
+      <p>Your Production Review for <strong>${params.projectName}</strong> has completed.</p>
       <ul>
-        <li>Security Score: <strong>${params.score}/100</strong></li>
-        <li>Total Vulnerabilities: <strong>${params.vulnerabilityCount}</strong></li>
-        <li>Critical Issues: <strong>${params.criticalCount}</strong></li>
+        <li>Production Ready Score: <strong>${params.score}/100</strong></li>
+        <li>Findings reviewed: <strong>${params.vulnerabilityCount}</strong></li>
+        <li>Critical blockers: <strong>${params.criticalCount}</strong></li>
       </ul>
-      <a href="${process.env.NEXT_PUBLIC_APP_URL}/projects">View Results</a>
+      <a href="${process.env.NEXT_PUBLIC_APP_URL}/projects">View Production Verdict</a>
     `,
   });
 }

@@ -1,5 +1,5 @@
 {
-  "title": "Production Reviews automáticas",
+  "title": "Continuous Reviews",
   "enabled": "Activadas.",
   "disabled": "No disponible hasta que el repositorio esté conectado.",
   "latestAutomaticReview": "Última review automática:",

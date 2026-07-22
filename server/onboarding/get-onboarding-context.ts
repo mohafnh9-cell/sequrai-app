@@ -63,6 +63,15 @@ export async function getOnboardingContext(
 
     const projectIds = projects.map((p) => p.id);
     if (projectIds.length > 0) {
+      const { count: verdictCount } = await supabase
+        .from("production_verdicts")
+        .select("id", { count: "exact", head: true })
+        .in("project_id", projectIds);
+
+      isComplete = (verdictCount ?? 0) > 0;
+    }
+
+    if (projectIds.length > 0) {
       const { data: scans } = await supabase
         .from("scans")
         .select("id, project_id, status, progress, progress_message, created_at")
@@ -79,13 +88,6 @@ export async function getOnboardingContext(
         }
       }
     }
-
-    const { count: verdictCount } = await supabase
-      .from("production_verdicts")
-      .select("id", { count: "exact", head: true })
-      .eq("organization_id", orgId);
-
-    isComplete = (verdictCount ?? 0) > 0;
 
     const scanIdForVerdict = latestCompletedScan?.id ?? activeScan?.id;
     if (scanIdForVerdict) {

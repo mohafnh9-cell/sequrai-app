@@ -10,7 +10,17 @@ if (deployedProduction && bypassEnabled) {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  turbopack: {},
+  turbopack: {
+    root: import.meta.dirname,
+  },
+  async redirects() {
+    return [
+      { source: "/timeline", destination: "/dashboard", permanent: true },
+      { source: "/ai-fixes", destination: "/projects", permanent: true },
+      { source: "/projects/:id/journey", destination: "/projects/:id", permanent: true },
+      { source: "/projects/:id/scans", destination: "/projects/:id", permanent: true },
+    ];
+  },
   async headers() {
     return [
       {

@@ -17,6 +17,8 @@ import {
   greetingKeyForHour,
   pickPrimaryDashboardFocus,
 } from "@/lib/dashboard/pick-primary-project";
+import { onboardingResumePath } from "@/lib/onboarding/resume-path";
+import { getWorkspaceGitHubConnectionView } from "@/server/github/workspace-connection-service";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Production Dashboard" };
@@ -49,7 +51,8 @@ export default async function DashboardPage() {
     );
   }
 
-  const [hasVerdict, { data: recentProjects }, brain, verdictsByProject] = await Promise.all([
+  const [hasVerdict, { data: recentProjects }, brain, verdictsByProject, githubConnection] =
+    await Promise.all([
     organizationHasProductionVerdict(supabase, organizationId),
     supabase
       .from("projects")
@@ -59,9 +62,23 @@ export default async function DashboardPage() {
       .limit(8),
     buildOrgBrain(supabase, organizationId),
     getLatestVerdictsByOrganization(supabase, organizationId),
+    getWorkspaceGitHubConnectionView(supabase, organizationId),
   ]);
 
   if (!hasVerdict) {
+    const githubConnected = githubConnection.status === "connected";
+    const resumeHref = onboardingResumePath({
+      hasProjects: (recentProjects?.length ?? 0) > 0,
+      firstProjectId: recentProjects?.[0]?.id,
+      githubConnected,
+    });
+    const resumeLabel =
+      recentProjects && recentProjects.length > 0
+        ? t("resumeReviewCta")
+        : githubConnected
+          ? t("connectRepository")
+          : t("firstVerdictCta");
+
     return (
       <div className="app-cinematic-bg min-h-full flex flex-col items-center justify-center gap-8 p-12">
         <div className="surface-premium flex h-16 w-16 items-center justify-center rounded-2xl">
@@ -72,9 +89,9 @@ export default async function DashboardPage() {
           <p className="text-muted-foreground">{t("workspaceEmptyBody")}</p>
         </div>
         <Button size="lg" className="rounded-xl shadow-premium" asChild>
-          <Link href="/integrations">
+          <Link href={resumeHref}>
             <Plus className="mr-2 h-4 w-4" />
-            {t("connectRepository")}
+            {resumeLabel}
           </Link>
         </Button>
       </div>

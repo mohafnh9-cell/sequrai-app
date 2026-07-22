@@ -26,5 +26,14 @@
   "disconnectGitHub": "Disconnect GitHub",
   "oauthStateInvalid": "GitHub authorization could not be verified. Try connecting again.",
   "oauthStateExpired": "GitHub authorization expired. Try connecting again.",
-  "workspaceAccessDenied": "You no longer have access to that Workspace."
+  "workspaceAccessDenied": "You no longer have access to that Workspace.",
+  "webhookHealthTitle": "Continuous Reviews health",
+  "webhookHealthSubtitle": "Webhook and repository connection status for each connected project.",
+  "webhookHealthLoading": "Checking Continuous Reviews health…",
+  "webhookHealthEmpty": "Connect a repository to enable Continuous Reviews.",
+  "webhookHealthHealthy": "Healthy",
+  "webhookHealthDegraded": "Needs attention",
+  "webhookHealthAllHealthy": "All connected repositories are ready for Continuous Reviews.",
+  "webhookHealthSomeDegraded": "{count} repositories need attention before Continuous Reviews can run reliably.",
+  "webhookHealthReconnect": "Reconnect GitHub or reconnect the repository to restore Continuous Reviews."
 }

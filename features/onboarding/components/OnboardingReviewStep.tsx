@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, RefreshCw, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -15,7 +15,10 @@ type ScanPayload = {
   status: string;
   progress?: number | null;
   progress_message?: string | null;
+  error_message?: string | null;
 };
+
+const STALL_MS = 8 * 60 * 1000;
 
 export function OnboardingReviewStep({
   projectId,
@@ -32,11 +35,15 @@ export function OnboardingReviewStep({
   const [scanId, setScanId] = useState<string | null>(existingScanId ?? null);
   const [scan, setScan] = useState<ScanPayload | null>(null);
   const [error, setError] = useState("");
+  const [stalled, setStalled] = useState(false);
   const [starting, setStarting] = useState(false);
+  const startedAtRef = useRef<number | null>(null);
 
   const startScan = useCallback(async () => {
     setError("");
+    setStalled(false);
     setStarting(true);
+    startedAtRef.current = Date.now();
     try {
       const response = await fetch(`/api/repositories/${projectId}/scans`, {
         method: "POST",
@@ -67,6 +74,13 @@ export function OnboardingReviewStep({
 
   const pollScan = useCallback(async () => {
     if (!scanId) return;
+    if (startedAtRef.current == null) {
+      startedAtRef.current = Date.now();
+    }
+    if (Date.now() - startedAtRef.current > STALL_MS) {
+      setStalled(true);
+    }
+
     const response = await fetch(`/api/repositories/${projectId}/scans/${scanId}`, {
       cache: "no-store",
     });
@@ -84,6 +98,11 @@ export function OnboardingReviewStep({
     }
 
     setScan(body.scan);
+
+    if (body.scan.status === "failed") {
+      setError(body.scan.error_message || te("scanStart"));
+      return;
+    }
 
     const verdict = body.verdict?.v1 ?? null;
     if (scanIsCompleted(body.scan.status) && verdict) {
@@ -115,6 +134,8 @@ export function OnboardingReviewStep({
 
   const progress = Math.max(12, Math.min(100, scan?.progress ?? (starting ? 8 : 18)));
   const active = scan ? scanIsActive(scan.status) : true;
+  const savingVerdict =
+    scan != null && scanIsCompleted(scan.status) && !error && !stalled;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -129,7 +150,9 @@ export function OnboardingReviewStep({
           </div>
           <div>
             <h2 className="text-lg font-semibold">{t("reviewTitle")}</h2>
-            <p className="text-sm text-muted-foreground">{t("reviewBuilding")}</p>
+            <p className="text-sm text-muted-foreground">
+              {savingVerdict ? t("verdictSaving") : t("reviewBuilding")}
+            </p>
           </div>
         </div>
 
@@ -164,17 +187,32 @@ export function OnboardingReviewStep({
           })}
         </ul>
 
-        {(active || starting) && (
+        {(active || starting || savingVerdict) && (
           <div className="space-y-2">
             <Progress value={progress} aria-label={tc("states.buildingVerdict")} />
             <p className="text-xs text-muted-foreground">
               {starting
                 ? t("startingReview")
-                : scan?.progress_message || t("analyzingRepo")}
+                : savingVerdict
+                  ? t("verdictSaving")
+                  : scan?.progress_message || t("analyzingRepo")}
             </p>
           </div>
         )}
       </div>
+
+      {stalled && !error && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4 space-y-3">
+          <div>
+            <p className="text-sm font-medium">{t("reviewStalledTitle")}</p>
+            <p className="text-sm text-muted-foreground mt-1">{t("reviewStalledBody")}</p>
+          </div>
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => void startScan()}>
+            <RefreshCw className="h-4 w-4" aria-hidden />
+            {t("retryReview")}
+          </Button>
+        </div>
+      )}
 
       {error && (
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 space-y-3">

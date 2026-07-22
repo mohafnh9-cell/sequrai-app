@@ -9,6 +9,10 @@ function log(event: string, fields: Record<string, unknown>) {
   console.info({ component: "production-verdict-service", event, ...fields });
 }
 
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function isMissingTableError(message: string): boolean {
   return message.includes("production_verdicts") && message.includes("does not exist");
 }
@@ -39,6 +43,33 @@ export async function getLatestVerdictsByOrganization(
     }
   }
   return map;
+}
+
+async function upsertVerdictWithRetry(
+  admin: SupabaseClient,
+  row: Record<string, unknown>,
+  maxAttempts = 3
+) {
+  let lastError: { message: string } | null = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const { data, error } = await admin
+      .from("production_verdicts")
+      .upsert(row, { onConflict: "scan_id" })
+      .select("id")
+      .single();
+
+    if (!error) {
+      return { data, error: null };
+    }
+
+    lastError = error;
+    if (attempt < maxAttempts) {
+      await sleep(150 * attempt);
+    }
+  }
+
+  return { data: null, error: lastError };
 }
 
 export async function generateAndPersistProductionVerdict(
@@ -123,42 +154,35 @@ export async function generateAndPersistProductionVerdict(
     blockersCount: verdict.blockersCount,
   });
 
-  const { data: persisted, error: persistError } = await admin
-    .from("production_verdicts")
-    .upsert(
-      {
-        organization_id: input.organizationId,
-        project_id: input.projectId,
-        repository_id: scan.repository_id ?? input.projectId,
-        scan_id: input.scanId,
-        version: verdict.version,
-        status: verdict.status,
-        score: verdict.score,
-        previous_score: verdict.previousScore,
-        score_delta: verdict.scoreDelta,
-        projected_score: verdict.projectedScore,
-        blockers_count: verdict.blockersCount,
-        critical_blockers_count: verdict.criticalBlockersCount,
-        high_blockers_count: verdict.highBlockersCount,
-        estimated_fix_minutes: verdict.estimatedFixMinutes,
-        confidence: verdict.confidence,
-        executive_summary: verdict.executiveSummary,
-        introduced_blockers: verdict.introducedBlockers,
-        resolved_blockers: verdict.resolvedBlockers,
-        verdict,
-        generated_at: verdict.generatedAt,
-      },
-      { onConflict: "scan_id" }
-    )
-    .select("id")
-    .single();
+  const { data: persisted, error: persistError } = await upsertVerdictWithRetry(admin, {
+    organization_id: input.organizationId,
+    project_id: input.projectId,
+    repository_id: scan.repository_id ?? input.projectId,
+    scan_id: input.scanId,
+    version: verdict.version,
+    status: verdict.status,
+    score: verdict.score,
+    previous_score: verdict.previousScore,
+    score_delta: verdict.scoreDelta,
+    projected_score: verdict.projectedScore,
+    blockers_count: verdict.blockersCount,
+    critical_blockers_count: verdict.criticalBlockersCount,
+    high_blockers_count: verdict.highBlockersCount,
+    estimated_fix_minutes: verdict.estimatedFixMinutes,
+    confidence: verdict.confidence,
+    executive_summary: verdict.executiveSummary,
+    introduced_blockers: verdict.introducedBlockers,
+    resolved_blockers: verdict.resolvedBlockers,
+    verdict,
+    generated_at: verdict.generatedAt,
+  });
 
   if (persistError) {
     log("verdict_persistence_failed", { scanId: input.scanId, error: persistError.message });
     throw new Error(persistError.message);
   }
 
-  await admin
+  const { error: stateError } = await admin
     .from("repository_scan_state")
     .upsert(
       {
@@ -171,6 +195,11 @@ export async function generateAndPersistProductionVerdict(
       },
       { onConflict: "repository_id" }
     );
+
+  if (stateError) {
+    log("verdict_state_update_failed", { scanId: input.scanId, error: stateError.message });
+    throw new Error(stateError.message);
+  }
 
   log("verdict_persistence_completed", { scanId: input.scanId, verdictId: persisted?.id });
   return verdict;

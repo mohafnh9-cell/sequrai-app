@@ -11,7 +11,7 @@ import { createAdminClient, mapDatabaseError } from "@/server/security-scanner/a
 import { enforceRateLimit } from "@/server/http/rate-limit";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 const paramsSchema = z.object({ repositoryId: z.string().uuid() });
 const createScanSchema = z

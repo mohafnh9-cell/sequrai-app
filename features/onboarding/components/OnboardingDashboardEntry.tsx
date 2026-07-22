@@ -10,7 +10,6 @@ export function OnboardingDashboardEntry({ projectId }: { projectId?: string | n
   const { t } = useI18n("onboarding");
 
   const finish = () => {
-    localStorage.setItem("sequrai_onboarding_complete", "1");
     if (projectId) {
       router.push(`/projects/${projectId}?onboarded=1`);
       return;

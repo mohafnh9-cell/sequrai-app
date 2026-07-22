@@ -115,8 +115,8 @@ describe("Block 7.0.2 automatic review i18n", () => {
     const en = loadNamespace("en", "automaticReview");
     const es = loadNamespace("es", "automaticReview");
 
-    expect(en.title).toBe("Automatic Production Reviews");
-    expect(es.title).toBe("Production Reviews automáticas");
+    expect(en.title).toBe("Continuous Reviews");
+    expect(es.title).toBe("Continuous Reviews");
     expect(en.enabled).toBe("Enabled.");
     expect(es.enabled).toBe("Activadas.");
     expect((en.status as Record<string, string>).completed).toBe("Completed");

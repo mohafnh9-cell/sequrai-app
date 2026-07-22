@@ -293,17 +293,24 @@ export class InlineScanJobRunner implements ScanJobRunner {
       });
 
       if (!reviewOnly) {
-        await generateAndPersistProductionVerdict(this.supabase, {
-          organizationId: context.organizationId,
-          projectId: context.repositoryId,
-          scanId: context.scanId,
-        }).catch((error) => {
-          logScan("error", "verdict_persistence_failed", {
+        try {
+          await generateAndPersistProductionVerdict(this.supabase, {
+            organizationId: context.organizationId,
+            projectId: context.repositoryId,
             scanId: context.scanId,
-            repositoryId: context.repositoryId,
-            error: error instanceof Error ? error.message : String(error),
           });
-        });
+        } catch (error) {
+          await this.updateScan(context.scanId, {
+            status: "failed",
+            progress_message: "Production Verdict could not be saved",
+            error_code: "VERDICT_PERSISTENCE_FAILED",
+            error_message:
+              error instanceof Error ? error.message : "Production Verdict persistence failed",
+            failed_at: new Date().toISOString(),
+          }).catch(() => undefined);
+          await this.updateState(context, { active_scan_id: null }).catch(() => undefined);
+          throw error;
+        }
       }
       logScan("info", "scan_completed", {
         scanId: context.scanId,
@@ -446,6 +453,14 @@ export class InlineScanJobRunner implements ScanJobRunner {
       last_commit_sha: snapshot.commitSha,
       last_security_score: score,
     });
+
+    if (context.persistMode !== "review_only") {
+      await generateAndPersistProductionVerdict(this.supabase, {
+        organizationId: context.organizationId,
+        projectId: context.repositoryId,
+        scanId: context.scanId,
+      });
+    }
   }
 
   private async updateScan(scanId: string, values: Record<string, unknown>) {

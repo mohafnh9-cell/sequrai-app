@@ -4,7 +4,7 @@ import { processGitHubWebhookEvent } from "@/server/github-automation/orchestrat
 import { enforceRateLimit } from "@/server/http/rate-limit";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 function webhookSecret(): string | null {
   return process.env.GITHUB_WEBHOOK_SECRET ?? null;
