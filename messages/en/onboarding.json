@@ -28,6 +28,7 @@
   "analyzingRepo": "Analyzing your production configuration…",
   "repoLoadFailed": "Failed to load repositories",
   "repoConnectFailed": "Could not connect repository",
+  "repoAlreadyConnectedOtherWorkspace": "This repository is already connected to another workspace you don't have access to. Choose a different repository or sign in with the account that owns it.",
   "repoSaveFailed": "Failed to save repository",
   "projectResolveFailed": "Repository connected but project could not be resolved.",
   "noReposTitle": "No repositories found.",

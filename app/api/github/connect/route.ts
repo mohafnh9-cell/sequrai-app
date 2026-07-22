@@ -8,7 +8,8 @@ import {
   webhookErrorMessage,
 } from "@/server/github-automation/register-webhook";
 import { resolveUserOrganizationId } from "@/server/organizations/resolve-user-organization";
-import { resolveActiveWorkspaceIdForUser } from "@/server/workspaces/service";
+import { resolveActiveWorkspaceIdForUser, assertWorkspaceMembership } from "@/server/workspaces/service";
+import { switchActiveWorkspace } from "@/server/workspaces/mutations";
 import { resolveWorkspaceGitHubToken } from "@/server/github/workspace-connection-service";
 import { enforceRateLimit } from "@/server/http/rate-limit";
 
@@ -195,12 +196,33 @@ async function connectRepositories(request: Request) {
     if (!repo) continue;
     const { data: duplicate } = await admin
       .from("projects")
-      .select("organization_id")
+      .select("id, organization_id")
       .eq("github_repository_id", repo.id)
       .neq("organization_id", organizationId)
       .limit(1)
       .maybeSingle();
     if (duplicate) {
+      const canAccessExistingWorkspace = await assertWorkspaceMembership(
+        supabase,
+        user.id,
+        duplicate.organization_id
+      );
+      if (canAccessExistingWorkspace) {
+        const switched = await switchActiveWorkspace(supabase, user.id, duplicate.organization_id);
+        if (switched.ok) {
+          return NextResponse.json({
+            saved: 0,
+            projectIds: [duplicate.id],
+            total: selectedIds.length,
+            recovered: true,
+            workspaceId: duplicate.organization_id,
+            webhooksCreated: 0,
+            webhooksExisting: 0,
+            webhooksSkipped: 0,
+            webhookWarnings: [],
+          });
+        }
+      }
       return NextResponse.json(
         {
           error: "This repository is already connected to another Workspace.",

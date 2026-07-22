@@ -81,7 +81,14 @@ export function OnboardingRepoPicker({
         }),
       });
       const data = (await res.json().catch(() => null)) as
-        | { projectIds?: string[]; saved?: number; error?: string; needsReauth?: boolean }
+        | {
+            projectIds?: string[];
+            saved?: number;
+            error?: string;
+            code?: string;
+            needsReauth?: boolean;
+            recovered?: boolean;
+          }
         | null;
 
       if (data?.needsReauth || res.status === 403) {
@@ -91,6 +98,9 @@ export function OnboardingRepoPicker({
       }
 
       if (!res.ok) {
+        if (data?.code === "repository_already_connected") {
+          throw new Error(t("repoAlreadyConnectedOtherWorkspace"));
+        }
         throw new Error(data?.error || t("repoConnectFailed"));
       }
 
