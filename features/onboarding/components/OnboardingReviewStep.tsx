@@ -1,20 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { CheckCircle2, Shield } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { CheckCircle2, RefreshCw, Shield } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import type { ProductionVerdictV1 } from "@/brain/production-verdict/schema";
+import { REVIEW_STAGE_KEYS, resolveReviewStageIndex } from "@/lib/onboarding/review-stages";
 import { scanIsActive, scanIsCompleted } from "../onboarding-flow";
 import { startGitHubOAuth } from "@/lib/github/oauth-client";
 import { useI18n } from "@/lib/i18n/client";
-
-const REVIEW_AREA_KEYS = [
-  "authentication",
-  "authorization",
-  "secrets",
-  "dependencies",
-  "deployment",
-] as const;
 
 type ScanPayload = {
   id: string;
@@ -38,10 +32,11 @@ export function OnboardingReviewStep({
   const [scanId, setScanId] = useState<string | null>(existingScanId ?? null);
   const [scan, setScan] = useState<ScanPayload | null>(null);
   const [error, setError] = useState("");
-  const [activeArea, setActiveArea] = useState(0);
+  const [starting, setStarting] = useState(false);
 
   const startScan = useCallback(async () => {
     setError("");
+    setStarting(true);
     try {
       const response = await fetch(`/api/repositories/${projectId}/scans`, {
         method: "POST",
@@ -65,6 +60,8 @@ export function OnboardingReviewStep({
       setScanId(body.scan_id);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : te("scanStart"));
+    } finally {
+      setStarting(false);
     }
   }, [projectId, te]);
 
@@ -111,20 +108,22 @@ export function OnboardingReviewStep({
     return () => window.clearInterval(timer);
   }, [pollScan, scanId]);
 
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setActiveArea((prev) => (prev + 1) % REVIEW_AREA_KEYS.length);
-    }, 2200);
-    return () => window.clearInterval(timer);
-  }, []);
+  const stageState = useMemo(
+    () => resolveReviewStageIndex(scan?.status, scan?.progress),
+    [scan?.progress, scan?.status]
+  );
 
-  const progress = Math.max(12, Math.min(100, scan?.progress ?? 18));
+  const progress = Math.max(12, Math.min(100, scan?.progress ?? (starting ? 8 : 18)));
   const active = scan ? scanIsActive(scan.status) : true;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="rounded-2xl border border-primary/20 bg-gradient-to-b from-primary/5 to-transparent p-6 md:p-8">
-        <div className="flex items-center gap-3 mb-6">
+      <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-b from-primary/10 via-primary/5 to-transparent p-6 md:p-8 shadow-[0_0_60px_-24px_rgba(var(--primary-rgb,99,102,241),0.45)]">
+        <div
+          className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(var(--primary-rgb,99,102,241),0.12),transparent_55%)]"
+          aria-hidden
+        />
+        <div className="relative flex items-center gap-3 mb-6">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/15">
             <Shield className="h-5 w-5 text-primary animate-pulse" aria-hidden />
           </div>
@@ -134,22 +133,19 @@ export function OnboardingReviewStep({
           </div>
         </div>
 
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground mb-3">
-          {t("reviewing")}
-        </p>
-        <ul className="space-y-2 mb-6">
-          {REVIEW_AREA_KEYS.map((areaKey, index) => {
-            const isActive = index === activeArea && active;
-            const isDone = index < activeArea && active;
+        <ul className="space-y-2 mb-6" aria-label={t("reviewing")}>
+          {REVIEW_STAGE_KEYS.map((stageKey, index) => {
+            const isDone = index <= stageState.completedThrough;
+            const isActive = index === stageState.activeIndex && active;
             return (
               <li
-                key={areaKey}
+                key={stageKey}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all duration-500 ${
                   isActive
                     ? "bg-primary/10 text-foreground translate-x-1"
                     : isDone
                       ? "text-muted-foreground"
-                      : "text-muted-foreground/70"
+                      : "text-muted-foreground/60"
                 }`}
               >
                 {isDone ? (
@@ -162,26 +158,39 @@ export function OnboardingReviewStep({
                     aria-hidden
                   />
                 )}
-                {t(`reviewAreas.${areaKey}`)}
+                {t(`reviewStages.${stageKey}`)}
               </li>
             );
           })}
         </ul>
 
-        {active && (
+        {(active || starting) && (
           <div className="space-y-2">
             <Progress value={progress} aria-label={tc("states.buildingVerdict")} />
             <p className="text-xs text-muted-foreground">
-              {scan?.progress_message || t("analyzingRepo")}
+              {starting
+                ? t("startingReview")
+                : scan?.progress_message || t("analyzingRepo")}
             </p>
           </div>
         )}
       </div>
 
       {error && (
-        <p className="text-sm text-destructive" role="alert">
-          {error}
-        </p>
+        <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 space-y-3">
+          <div>
+            <p className="text-sm font-medium">{t("reviewFailedTitle")}</p>
+            <p className="text-sm text-muted-foreground mt-1">{t("reviewFailedBody")}</p>
+          </div>
+          <details className="text-xs text-muted-foreground">
+            <summary className="cursor-pointer">{t("technicalDetails")}</summary>
+            <p className="mt-2">{error}</p>
+          </details>
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => void startScan()}>
+            <RefreshCw className="h-4 w-4" aria-hidden />
+            {t("retryReview")}
+          </Button>
+        </div>
       )}
     </div>
   );

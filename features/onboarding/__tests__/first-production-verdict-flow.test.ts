@@ -129,6 +129,7 @@ describe("Block 6.4 First Production Verdict onboarding flow", () => {
     expect(parseWizardStep("review")).toBe("review");
     expect(parseWizardStep("invalid")).toBeNull();
     expect(parseLegacyStepParam("2")).toBe("repository");
+    expect(parseLegacyStepParam("4")).toBe("verdict");
     expect(parseLegacyStepParam("5")).toBe("dashboard");
   });
 
@@ -144,7 +145,7 @@ describe("Block 6.4 First Production Verdict onboarding flow", () => {
     expect(resolveProgressIndex("github", ctx)).toBe(1);
     expect(resolveProgressIndex("repository", ctx)).toBe(1);
     expect(resolveProgressIndex("review", ctx)).toBe(2);
-    expect(resolveProgressIndex("verdict", ctx)).toBe(4);
+    expect(resolveProgressIndex("verdict", ctx)).toBe(3);
     expect(resolveProgressIndex("dashboard", ctx)).toBe(5);
   });
 

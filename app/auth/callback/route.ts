@@ -8,6 +8,10 @@ import { upsertWorkspaceGitHubConnection } from "@/server/github/workspace-conne
 import { assertWorkspaceMembership } from "@/server/workspaces/service";
 import { NextRequest, NextResponse } from "next/server";
 import { safeNextPath } from "@/lib/auth/safe-next-path";
+import {
+  resolveGitHubOAuthErrorRedirect,
+  resolveGitHubOAuthSuccessRedirect,
+} from "@/lib/github/oauth-redirect";
 import { enforceRateLimit } from "@/server/http/rate-limit";
 
 function redirectOrigin(request: NextRequest) {
@@ -65,7 +69,7 @@ export async function GET(request: NextRequest) {
 
     if (oauthState && data.session.provider_token) {
       if (oauthState.userId !== data.user.id) {
-        redirectPath = "/integrations?githubError=oauth_state_invalid";
+        redirectPath = resolveGitHubOAuthErrorRedirect(next, "oauth_state_invalid");
       } else {
         const allowed = await assertWorkspaceMembership(
           supabase,
@@ -73,7 +77,7 @@ export async function GET(request: NextRequest) {
           oauthState.workspaceId
         );
         if (!allowed) {
-          redirectPath = "/integrations?githubError=workspace_access_denied";
+          redirectPath = resolveGitHubOAuthErrorRedirect(next, "workspace_access_denied");
         } else {
           try {
             await upsertWorkspaceGitHubConnection({
@@ -82,7 +86,7 @@ export async function GET(request: NextRequest) {
               accessToken: data.session.provider_token,
               refreshToken: data.session.provider_refresh_token,
             });
-            redirectPath = "/integrations";
+            redirectPath = resolveGitHubOAuthSuccessRedirect(next);
           } catch (connectionError) {
             console.error("auth_callback_workspace_connection_failed", {
               message:
@@ -90,7 +94,7 @@ export async function GET(request: NextRequest) {
                   ? connectionError.message
                   : "unknown",
             });
-            redirectPath = "/integrations?githubError=github_connection_failed";
+            redirectPath = resolveGitHubOAuthErrorRedirect(next, "github_connection_failed");
           }
         }
       }

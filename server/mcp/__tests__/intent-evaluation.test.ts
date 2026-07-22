@@ -103,6 +103,7 @@ describe("MCP natural language intent evaluation", () => {
       const actual = recommendMcpToolsForPhrase(item.phrase);
       if (
         actual.action === "tool" &&
+        item.expected.action === "tool" &&
         actual.tools[0] === item.expected.tools[0]
       ) {
         correct += 1;

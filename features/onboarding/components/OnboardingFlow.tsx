@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { ProductionVerdictV1 } from "@/brain/production-verdict/schema";
 import {
   type OnboardingContext,
+  type OnboardingProject,
   type WizardStep,
   parseLegacyStepParam,
   parseWizardStep,
@@ -21,9 +22,12 @@ import { OnboardingDashboardEntry } from "./OnboardingDashboardEntry";
 
 type FlowState = {
   projectId: string | null;
+  projectName: string | null;
   scanId: string | null;
   verdict: ProductionVerdictV1 | null;
 };
+
+const WIDE_STEPS = new Set<WizardStep>(["review", "verdict", "dashboard"]);
 
 function normalizeStep(
   step: WizardStep,
@@ -34,8 +38,16 @@ function normalizeStep(
   if (step === "github" && shouldSkipGitHubStep(context) && explicitStep !== "github") {
     return "repository";
   }
-  if (step === "review" && !projectId) return "repository";
+  if ((step === "review" || step === "verdict") && !projectId) return "repository";
   return step;
+}
+
+function resolveProjectName(
+  projectId: string | null,
+  projects: OnboardingProject[]
+): string | null {
+  if (!projectId) return null;
+  return projects.find((project) => project.id === projectId)?.name ?? null;
 }
 
 export function OnboardingFlow({ initialContext }: { initialContext: OnboardingContext }) {
@@ -47,7 +59,6 @@ export function OnboardingFlow({ initialContext }: { initialContext: OnboardingC
     parseLegacyStepParam(searchParams.get("step"));
 
   const forcedStep = explicitStep;
-
   const paramProjectId = searchParams.get("projectId");
 
   const [context, setContext] = useState(initialContext);
@@ -61,6 +72,10 @@ export function OnboardingFlow({ initialContext }: { initialContext: OnboardingC
       initialContext.latestCompletedScan?.projectId ??
       initialContext.activeScan?.projectId ??
       null,
+    projectName: resolveProjectName(
+      paramProjectId ?? initialContext.projects[0]?.id ?? null,
+      initialContext.projects
+    ),
     scanId: initialContext.latestCompletedScan?.id ?? initialContext.activeScan?.id ?? null,
     verdict: initialContext.latestVerdict,
   }));
@@ -77,7 +92,7 @@ export function OnboardingFlow({ initialContext }: { initialContext: OnboardingC
         ? [
             {
               id: flow.projectId,
-              name: "",
+              name: flow.projectName ?? "",
               githubRepo: null,
               defaultBranch: null,
               isPrivate: null,
@@ -102,11 +117,16 @@ export function OnboardingFlow({ initialContext }: { initialContext: OnboardingC
   );
 
   const goTo = useCallback(
-    (next: WizardStep) => {
+    (next: WizardStep, options?: { projectId?: string }) => {
       setRawStep(next);
-      router.replace(`/onboarding?step=${next}`, { scroll: false });
+      const params = new URLSearchParams({ step: next });
+      const projectId = options?.projectId ?? flow.projectId;
+      if (projectId && ["review", "verdict"].includes(next)) {
+        params.set("projectId", projectId);
+      }
+      router.replace(`/onboarding?${params.toString()}`, { scroll: false });
     },
-    [router]
+    [router, flow.projectId]
   );
 
   const handleGitHubConnected = useCallback(() => {
@@ -115,23 +135,48 @@ export function OnboardingFlow({ initialContext }: { initialContext: OnboardingC
   }, [goTo]);
 
   const handleRepositoryConnected = useCallback(
-    (projectId: string) => {
-      router.push(`/projects/${projectId}?connected=1`);
+    (projectId: string, projectName?: string) => {
+      setFlow((prev) => ({
+        ...prev,
+        projectId,
+        projectName: projectName ?? prev.projectName,
+        scanId: null,
+        verdict: null,
+      }));
+      setContext((prev) => ({
+        ...prev,
+        projects: prev.projects.some((project) => project.id === projectId)
+          ? prev.projects
+          : [
+              {
+                id: projectId,
+                name: projectName ?? "",
+                githubRepo: null,
+                defaultBranch: null,
+                isPrivate: null,
+                updatedAt: null,
+              },
+              ...prev.projects,
+            ],
+      }));
+      goTo("review", { projectId });
     },
-    [router]
+    [goTo]
   );
 
   const handleReviewComplete = useCallback(
     (scanId: string, verdict: ProductionVerdictV1) => {
       setFlow((prev) => ({ ...prev, scanId, verdict }));
-      setContext((prev) => ({ ...prev, latestVerdict: verdict, isComplete: true }));
+      setContext((prev) => ({ ...prev, latestVerdict: verdict }));
       goTo("verdict");
     },
     [goTo]
   );
 
+  const containerClass = WIDE_STEPS.has(step) ? "max-w-2xl" : "max-w-xl";
+
   return (
-    <div className="w-full max-w-xl space-y-8">
+    <div className={`w-full ${containerClass} space-y-8 transition-all duration-500`}>
       {step !== "dashboard" && (
         <OnboardingProgressTracker wizardStep={step} context={progressContext} />
       )}
@@ -164,10 +209,16 @@ export function OnboardingFlow({ initialContext }: { initialContext: OnboardingC
       )}
 
       {step === "verdict" && flow.verdict && (
-        <OnboardingVerdictReveal verdict={flow.verdict} onContinue={() => goTo("dashboard")} />
+        <OnboardingVerdictReveal
+          verdict={flow.verdict}
+          projectId={flow.projectId}
+          onContinue={() => goTo("dashboard")}
+        />
       )}
 
-      {step === "dashboard" && <OnboardingDashboardEntry />}
+      {step === "dashboard" && (
+        <OnboardingDashboardEntry projectId={flow.projectId ?? context.projects[0]?.id ?? null} />
+      )}
     </div>
   );
 }

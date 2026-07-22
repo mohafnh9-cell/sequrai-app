@@ -6,12 +6,18 @@ export const WIZARD_STEPS = [
   "repository",
   "review",
   "verdict",
-  "roadmap",
-  "engineer",
   "dashboard",
 ] as const;
 
 export type WizardStep = (typeof WIZARD_STEPS)[number];
+
+/** Legacy step ids kept for deep links and bookmarks. */
+const LEGACY_STEP_ALIASES: Record<string, WizardStep> = {
+  engineer: "verdict",
+  roadmap: "verdict",
+  safefix: "verdict",
+  mcp: "dashboard",
+};
 
 export const PROGRESS_STEPS = [
   { id: "github", labelKey: "progress.github" },
@@ -69,18 +75,20 @@ export function scanIsCompleted(status?: string | null): boolean {
 
 export function resolveProgressIndex(
   wizardStep: WizardStep,
-  ctx: Pick<OnboardingContext, "githubConnected" | "projects" | "activeScan" | "latestCompletedScan" | "latestVerdict">
+  ctx: Pick<
+    OnboardingContext,
+    "githubConnected" | "projects" | "activeScan" | "latestCompletedScan" | "latestVerdict"
+  >
 ): number {
   if (wizardStep === "dashboard") return PROGRESS_STEPS.length;
-  if (wizardStep === "engineer" || wizardStep === "roadmap") return 4;
-  if (wizardStep === "verdict") return 4;
+  if (wizardStep === "verdict") return 3;
   if (wizardStep === "review") {
-    if (ctx.latestVerdict) return 4;
-    if (ctx.latestCompletedScan) return 3;
+    if (ctx.latestVerdict) return 3;
     return 2;
   }
   if (wizardStep === "repository") return ctx.projects.length > 0 ? 2 : 1;
   if (wizardStep === "github") return ctx.githubConnected ? 1 : 0;
+  if (wizardStep === "welcome") return 0;
   return 0;
 }
 
@@ -101,6 +109,8 @@ export function resolveInitialWizardStep(
 
 export function parseWizardStep(value: string | null | undefined): WizardStep | null {
   if (!value) return null;
+  const aliased = LEGACY_STEP_ALIASES[value];
+  if (aliased) return aliased;
   return WIZARD_STEPS.includes(value as WizardStep) ? (value as WizardStep) : null;
 }
 

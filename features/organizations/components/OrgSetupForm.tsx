@@ -1,6 +1,7 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Building2, Loader2 } from "lucide-react";
@@ -12,14 +13,21 @@ import { createOrganizationAction } from "@/server/actions/organizations";
 import { useI18n } from "@/lib/i18n/client";
 
 const schema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters").max(80),
+  name: z
+    .string()
+    .trim()
+    .min(2, "Name must be at least 2 characters")
+    .max(80, "Name must be at most 80 characters"),
 });
 
 type FormValues = z.infer<typeof schema>;
 
-export function OrgSetupForm() {
+export function OrgSetupForm({ nextStep = "github" }: { nextStep?: string }) {
+  const router = useRouter();
   const { t } = useI18n("workspace");
+  const { t: to } = useI18n("onboarding");
   const [isPending, startTransition] = useTransition();
+  const [submitLocked, setSubmitLocked] = useState(false);
   const {
     register,
     handleSubmit,
@@ -28,17 +36,29 @@ export function OrgSetupForm() {
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   const onSubmit = (values: FormValues) => {
+    if (submitLocked || isPending) return;
+    setSubmitLocked(true);
+
     startTransition(async () => {
-      const fd = new FormData();
-      fd.set("name", values.name);
-      const result = await createOrganizationAction(fd);
-      if (result?.error) {
-        const err = result.error as Record<string, string[]> | string;
-        const msg =
-          typeof err === "string"
-            ? err
-            : err._root?.[0] ?? err.name?.[0] ?? t("createFailed");
-        setError("name", { message: msg });
+      try {
+        const fd = new FormData();
+        fd.set("name", values.name.trim());
+        fd.set("nextStep", nextStep);
+        const result = await createOrganizationAction(fd);
+
+        if (!result.ok) {
+          setSubmitLocked(false);
+          const err = result.error;
+          const msg = err._root?.[0] ?? err.name?.[0] ?? t("createFailed");
+          setError("name", { message: msg });
+          return;
+        }
+
+        router.refresh();
+        router.push(result.redirectTo);
+      } catch {
+        setSubmitLocked(false);
+        setError("name", { message: t("createFailed") });
       }
     });
   };
@@ -46,24 +66,28 @@ export function OrgSetupForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
       <div className="space-y-1.5">
-        <Label htmlFor="name">{t("createNameLabel")}</Label>
+        <Label htmlFor="name">{to("workspaceNameLabel")}</Label>
         <Input
           id="name"
-          placeholder={t("createNamePlaceholder")}
+          placeholder={to("workspaceNamePlaceholder")}
           disabled={isPending}
+          autoComplete="organization"
           {...register("name")}
         />
-        {errors.name && (
-          <p className="text-xs text-destructive">{errors.name.message}</p>
-        )}
+        {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
       </div>
-      <Button type="submit" className="w-full" disabled={isPending}>
+      <Button type="submit" className="w-full" disabled={isPending || submitLocked}>
         {isPending ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden />
+            {to("creatingWorkspace")}
+          </>
         ) : (
-          <Building2 className="mr-2 h-4 w-4" />
+          <>
+            <Building2 className="mr-2 h-4 w-4" aria-hidden />
+            {to("workspaceContinue")}
+          </>
         )}
-        {t("createSubmit")}
       </Button>
     </form>
   );

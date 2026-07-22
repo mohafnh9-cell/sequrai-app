@@ -18,7 +18,7 @@ export function OnboardingRepoPicker({
   onBack,
 }: {
   organizationId?: string | null;
-  onRepositoryConnected: (projectId: string) => void;
+  onRepositoryConnected: (projectId: string, projectName?: string) => void;
   onBack?: () => void;
 }) {
   const { t, locale } = useI18n("onboarding");
@@ -98,7 +98,7 @@ export function OnboardingRepoPicker({
       if (!projectId) {
         throw new Error(t("projectResolveFailed"));
       }
-      onRepositoryConnected(projectId);
+      onRepositoryConnected(projectId, repo.full_name);
     } catch (error) {
       setErrorMsg(error instanceof Error ? error.message : t("repoSaveFailed"));
       setStep("error");

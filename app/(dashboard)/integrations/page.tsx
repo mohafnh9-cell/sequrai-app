@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { GitBranch, Webhook, Zap, RefreshCw, Check, Lock, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -121,18 +121,24 @@ export default function IntegrationsPage() {
     queueMicrotask(() => void fetchConnection());
   }, [fetchConnection]);
 
-  useEffect(() => {
-    const githubError = searchParams.get("githubError");
-    if (!githubError) return;
+  const githubErrorParam = searchParams.get("githubError");
+  const githubErrorMessage = useMemo(() => {
+    if (!githubErrorParam) return null;
     const messages: Record<string, string> = {
       oauth_state_invalid: t("oauthStateInvalid"),
       oauth_state_expired: t("oauthStateExpired"),
       workspace_access_denied: t("workspaceAccessDenied"),
       github_connection_failed: t("connectFailed"),
     };
-    setErrorMsg(messages[githubError] ?? t("connectFailed"));
-    router.replace("/integrations");
-  }, [router, searchParams, t]);
+    return messages[githubErrorParam] ?? t("connectFailed");
+  }, [githubErrorParam, t]);
+
+  useEffect(() => {
+    if (!githubErrorParam) return;
+    router.replace("/integrations", { scroll: false });
+  }, [githubErrorParam, router]);
+
+  const displayError = errorMsg || githubErrorMessage || "";
 
   useEffect(() => {
     const pending = localStorage.getItem("sequrai_github_connect");
@@ -324,7 +330,7 @@ export default function IntegrationsPage() {
               </div>
             )}
 
-          {connectionState === "ready" && step === "idle" && connection?.connection.status === "connected" && repos.length === 0 && !errorMsg && (
+          {connectionState === "ready" && step === "idle" && connection?.connection.status === "connected" && repos.length === 0 && !displayError && (
             <p className="text-sm text-muted-foreground">{t("loadRepositoriesHint")}</p>
           )}
 
@@ -335,9 +341,9 @@ export default function IntegrationsPage() {
             </div>
           )}
 
-          {step === "error" && (
+          {(step === "error" || (step === "idle" && displayError)) && (
             <div className="space-y-3">
-              <p className="text-sm text-destructive">{errorMsg}</p>
+              <p className="text-sm text-destructive">{displayError}</p>
               <Button variant="outline" onClick={fetchRepos} className="gap-2">
                 <RefreshCw className="h-4 w-4" />
                 {tc("retry")}

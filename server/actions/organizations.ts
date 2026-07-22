@@ -5,11 +5,15 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { z } from "zod";
 import { switchActiveWorkspace } from "@/server/workspaces/mutations";
-
-// ─── Organization Server Actions ──────────────────────────────────────────────
+import { resolveActiveWorkspaceIdForUser } from "@/server/workspaces/service";
+import { resolveOrganizationRedirect } from "@/lib/onboarding/organization-redirect";
 
 const orgSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters").max(80),
+  name: z
+    .string()
+    .trim()
+    .min(2, "Name must be at least 2 characters")
+    .max(80, "Name must be at most 80 characters"),
 });
 
 function slugify(str: string): string {
@@ -21,15 +25,31 @@ function slugify(str: string): string {
     .replace(/^-+|-+$/g, "");
 }
 
-export async function createOrganizationAction(formData: FormData) {
+export type CreateOrganizationResult =
+  | { ok: true; redirectTo: string; workspaceId: string; recovered?: boolean }
+  | { ok: false; error: Record<string, string[]> };
+
+export async function createOrganizationAction(formData: FormData): Promise<CreateOrganizationResult> {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const raw = { name: formData.get("name") as string };
-  const parsed = orgSchema.safeParse(raw);
+  const nextStep = (formData.get("nextStep") as string | null)?.trim() || "github";
+  const redirectTo = resolveOrganizationRedirect(nextStep);
+
+  const existingWorkspaceId = await resolveActiveWorkspaceIdForUser(supabase, user.id);
+  if (existingWorkspaceId) {
+    await switchActiveWorkspace(supabase, user.id, existingWorkspaceId);
+    revalidatePath("/onboarding");
+    revalidatePath("/dashboard");
+    return { ok: true, redirectTo, workspaceId: existingWorkspaceId, recovered: true };
+  }
+
+  const parsed = orgSchema.safeParse({ name: formData.get("name") });
   if (!parsed.success) {
-    return { error: parsed.error.flatten().fieldErrors };
+    return { ok: false, error: parsed.error.flatten().fieldErrors };
   }
 
   const slug = `${slugify(parsed.data.name)}-${Math.random().toString(36).slice(2, 6)}`;
@@ -39,30 +59,30 @@ export async function createOrganizationAction(formData: FormData) {
     organization_slug: slug,
   });
 
-  if (error || !workspaceId) return { error: { _root: [error?.message ?? "Workspace could not be created"] } };
+  if (error || !workspaceId) {
+    return { ok: false, error: { _root: [error?.message ?? "Workspace could not be created"] } };
+  }
 
   const switched = await switchActiveWorkspace(supabase, user.id, workspaceId as string);
-  if (!switched.ok) return { error: { _root: [switched.message] } };
+  if (!switched.ok) {
+    return { ok: false, error: { _root: [switched.message] } };
+  }
 
   revalidatePath("/onboarding");
   revalidatePath("/dashboard");
   revalidatePath("/settings/workspaces");
 
-  const redirectTo = (formData.get("redirectTo") as string | null)?.trim();
-  if (redirectTo === "/dashboard") {
-    redirect("/dashboard");
-  }
-
-  redirect("/onboarding?step=welcome");
+  return { ok: true, redirectTo, workspaceId: workspaceId as string };
 }
 
 export async function updateOrganizationAction(orgId: string, formData: FormData) {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const raw = { name: formData.get("name") as string };
-  const parsed = orgSchema.safeParse(raw);
+  const parsed = orgSchema.safeParse({ name: formData.get("name") });
   if (!parsed.success) return { error: parsed.error.flatten().fieldErrors };
 
   const { error } = await supabase

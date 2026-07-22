@@ -51,7 +51,9 @@ export function AnalyzeProjectButton({
   const { t } = useI18n("projects");
   const { t: te } = useI18n("errors");
   const [context, setContext] = useState(initialContext);
-  const [phase, setPhase] = useState<"idle" | "requesting" | "polling" | "failed">("idle");
+  const [phase, setPhase] = useState<"idle" | "requesting" | "polling" | "failed">(() =>
+    initialContext.activeScan?.id ? "polling" : "idle"
+  );
   const [activeScanId, setActiveScanId] = useState<string | null>(
     initialContext.activeScan?.id ?? null
   );
@@ -239,12 +241,6 @@ export function AnalyzeProjectButton({
     const timer = window.setInterval(() => void pollScan(), 4000);
     return () => window.clearInterval(timer);
   }, [activeScanId, phase, pollScan]);
-
-  useEffect(() => {
-    if (initialContext.activeScan?.id) {
-      setPhase("polling");
-    }
-  }, [initialContext.activeScan?.id]);
 
   const busy =
     uiState === "requesting" ||

@@ -1,32 +1,42 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Shield } from "lucide-react";
+import { ArrowRight, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n/client";
 
-export function OnboardingDashboardEntry() {
+export function OnboardingDashboardEntry({ projectId }: { projectId?: string | null }) {
   const router = useRouter();
   const { t } = useI18n("onboarding");
 
+  const finish = () => {
+    localStorage.setItem("sequrai_onboarding_complete", "1");
+    if (projectId) {
+      router.push(`/projects/${projectId}?onboarded=1`);
+      return;
+    }
+    router.push("/dashboard?firstVerdict=1");
+  };
+
   return (
-    <div className="space-y-6 text-center animate-in fade-in zoom-in-95 duration-500">
-      <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
-        <Shield className="h-7 w-7 text-primary" aria-hidden />
+    <div className="space-y-8 text-center animate-in fade-in zoom-in-95 duration-700">
+      <div className="rounded-3xl border border-emerald-500/20 bg-gradient-to-b from-emerald-500/10 to-transparent p-10">
+        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-500/15 mb-6">
+          <Rocket className="h-8 w-8 text-emerald-400" aria-hidden />
+        </div>
+        <div className="space-y-3">
+          <p className="text-xs font-medium uppercase tracking-[0.22em] text-emerald-400/90">
+            {t("dashboardEyebrow")}
+          </p>
+          <h2 className="text-2xl font-semibold tracking-tight">{t("dashboardReadyTitle")}</h2>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+            {t("dashboardReadyBody")}
+          </p>
+        </div>
       </div>
-      <div className="space-y-2">
-        <h2 className="text-xl font-semibold">{t("dashboardReadyTitle")}</h2>
-        <p className="text-sm text-muted-foreground max-w-sm mx-auto">{t("dashboardReadyBody")}</p>
-      </div>
-      <Button
-        size="lg"
-        className="w-full"
-        onClick={() => {
-          localStorage.setItem("sequrai_onboarding_complete", "1");
-          router.push("/dashboard?firstVerdict=1");
-        }}
-      >
-        {t("goToDashboard")}
+      <Button size="lg" className="w-full h-12 text-base" onClick={finish}>
+        {projectId ? t("openProject") : t("goToDashboard")}
+        <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
       </Button>
     </div>
   );
