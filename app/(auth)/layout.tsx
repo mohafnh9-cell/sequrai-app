@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <I18nShell>
-      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-6">
+      <div className="flex min-h-dvh flex-col items-center justify-center bg-background p-6">
         {children}
       </div>
     </I18nShell>

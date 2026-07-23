@@ -1,6 +1,13 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { getRequestLocale } from "@/lib/i18n/server";
+import { inter } from "@/lib/fonts";
 import "./globals.css";
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   title: {
@@ -49,8 +56,8 @@ export default async function RootLayout({
   const locale = await getRequestLocale();
 
   return (
-    <html lang={locale} suppressHydrationWarning>
-      <body className="min-h-screen bg-background font-sans antialiased">
+    <html lang={locale} className={inter.variable} suppressHydrationWarning>
+      <body className={`${inter.className} min-h-dvh antialiased`}>
         {children}
       </body>
     </html>

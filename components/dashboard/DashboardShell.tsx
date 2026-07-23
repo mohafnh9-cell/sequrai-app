@@ -34,7 +34,7 @@ export function DashboardShell({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden app-cinematic-bg">
+    <div className="flex h-dvh max-h-dvh overflow-hidden app-cinematic-bg">
       <div className="flex md:hidden fixed top-0 left-0 right-0 z-40 h-14 items-center gap-2 border-b border-border/60 bg-card/80 backdrop-blur-xl px-3">
         <Button
           variant="ghost"
